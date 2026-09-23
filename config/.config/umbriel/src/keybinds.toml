@@ -1,0 +1,55 @@
+[keybinds]
+# Screenshots
+"Print" = "spawn:noctalia msg screenshot-region"
+"Mod+Print" = "spawn:noctalia msg screenshot-fullscreen"
+"Alt+Tab" = "spawn:noctalia msg window-switcher"
+"Mod+T" = "spawn:kitty"
+"Mod+Shift+T" = "spawn:kitty"
+"Mod+Q" = "window-close"
+"Mod+I" = "overview-toggle"
+"Mod+Shift+Space" = "window-move-to-scratchpad"
+"Mod+Space" = "scratchpad-toggle"
+"Mod+Ctrl+Space" = "window-restore-from-scratchpad"
+"Mod+Tab" = "overview-toggle"
+"Mod" = "spawn:noctalia msg panel-toggle launcher"
+"Mod+Z" = "spawn:noctalia msg panel-toggle launcher /emo"
+"Mod+V" = "spawn:noctalia msg panel-toggle clipboard"
+"Mod+W" = "spawn:noctalia msg panel-toggle wallpaper"
+"Mod+N" = "spawn:noctalia msg panel-toggle noctalia/notes:panel"
+"Mod+X" = "spawn:noctalia msg bar-toggle"
+"Mod+P" = "spawn:noctalia msg screenshot-region"
+"Mod+Shift+P" = "spawn:noctalia msg screenshot-fullscreen"
+"Mod+Shift+W" = "spawn:noctalia msg desktop-widgets-toggle-edit"
+"Mod+Escape" = "spawn:noctalia msg panel-toggle session"
+
+"Mod+WheelUp" = "window-focus-left"
+"Mod+WheelDown" = "window-focus-right"
+"Mod+Shift+WheelUp" = "column-move-left"
+"Mod+Shift+WheelDown" = "column-move-right"
+"Mod+MouseMiddle" = "overview-toggle"
+
+# Volume (via Noctalia OSD)
+"XF86AudioRaiseVolume" = "spawn:noctalia msg volume-up 2%"
+"XF86AudioLowerVolume" = "spawn:noctalia msg volume-down 2%"
+"Mod+XF86AudioMute" = "spawn:wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"
+
+# Media playback (playerctl)
+"XF86AudioPlay" = "spawn:playerctl play-pause"
+"XF86AudioNext" = "spawn:playerctl next"
+"XF86AudioPrev" = "spawn:playerctl previous"
+
+# Brightness
+"XF86MonBrightnessUp" = "spawn:brightnessctl set +5%"
+"XF86MonBrightnessDown" = "spawn:brightnessctl set 5%-"
+
+"Mod+A" = "window-set-primary-extent:0.333"
+"Mod+S" = "window-set-primary-extent:0.5"
+"Mod+D" = "window-set-primary-extent:0.667"
+"Mod+F" = "window-set-primary-extent:1.0"
+
+"Mod+R" = "window-cycle-primary-extent"
+"Mod+Shift+R" = "window-cycle-primary-extent-back"
+"Mod+Alt+R" = "window-cycle-secondary-extent"
+"Mod+Alt+Shift+R" = "window-cycle-secondary-extent-back"
+
+

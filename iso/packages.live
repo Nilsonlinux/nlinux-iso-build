@@ -1,0 +1,84 @@
+# Pacotes extras do ambiente live (ISO) além do releng padrão.
+# Ferramentas do instalador + stack do desktop (modo "Experimentar").
+# Espelha os apps instalados (packages/desktop.packages) para o live ter
+# navegador e programas da mesma lista da instalação.
+
+cryptsetup
+gdisk
+btrfs-progs
+parted
+dosfstools
+python
+efibootmgr
+
+base-devel
+git
+sudo
+noctalia
+greetd
+accountsservice
+
+# Rede no live (NetworkManager; o systemd-networkd é desativado no
+# customize_airootfs.sh para não conflitar)
+networkmanager
+wpa_supplicant
+
+# Bluetooth (mesmo do packages/base.packages) — o modo offline clona o live;
+# sem bluez o clone não tem bluetooth.service e o installer 50-services falha.
+bluez
+bluez-utils
+
+# Apps e ferramentas do desktop (mesmos da instalação)
+kitty
+showtime
+fish
+starship
+fastfetch
+ttf-firacode-nerd
+flatpak
+gnome-software
+packagekit
+appstream
+
+spotify-launcher
+discord
+telegram-desktop
+gpu-screen-recorder
+power-profiles-daemon
+eartag
+firefox
+nautilus
+gvfs
+udisks2
+gnome-text-editor
+
+wl-clipboard
+grim
+slurp
+imv
+swaylock
+swayidle
+
+# Áudio no live (PipeWire + WirePlumber; serviços habilitados no
+# customize_airootfs.sh para o usuário live)
+pipewire
+pipewire-pulse
+wireplumber
+pamixer
+
+noto-fonts
+noto-fonts-cjk
+noto-fonts-emoji
+terminus-font
+
+xdg-desktop-portal
+xdg-desktop-portal-gtk
+
+zram-generator
+
+mpv
+ffmpeg
+imagemagick
+
+jq
+yq

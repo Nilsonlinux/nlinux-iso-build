@@ -1,0 +1,52 @@
+# Pacotes de desktop (segunda fase do pacstrap).
+# Inclui o stack Noctalia disponível nos repositórios oficiais:
+#   noctalia   -> shell (repositório [extra])
+#   greetd     -> gerenciador de login
+#   kitty      -> terminal usado nos keybinds do Umbriel
+# Os pacotes AUR (umbriel-git, noctalia-greeter, xdg-desktop-portal-umbriel-git)
+# ficam em packages/aur.packages e são construídos pelo yay dentro do chroot.
+
+noctalia
+greetd
+accountsservice
+
+kitty
+showtime
+fish
+starship
+fastfetch
+ttf-firacode-nerd
+flatpak
+gnome-software
+packagekit
+appstream
+zenity
+
+spotify-launcher
+discord
+telegram-desktop
+gpu-screen-recorder
+power-profiles-daemon
+eartag
+firefox
+nautilus
+gnome-text-editor
+
+wl-clipboard
+grim
+slurp
+imv
+swaylock
+swayidle
+
+xdg-desktop-portal
+xdg-desktop-portal-gtk
+
+zram-generator
+
+mpv
+ffmpeg
+imagemagick
+
+jq
+yq

@@ -1,0 +1,13 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Instalar NLinux
+Name[pt_BR]=Instalar NLinux
+Comment=Instala o NLinux no disco (apaga o disco de destino)
+Comment[pt_BR]=Instala o NLinux no disco (apaga o disco de destino)
+Exec=/usr/local/bin/nlinux-installer-gui
+Icon=/usr/share/pixmaps/nlinux-installer.png
+Terminal=false
+StartupNotify=true
+Categories=System;
+Keywords=install;arch;linux;nlinux;

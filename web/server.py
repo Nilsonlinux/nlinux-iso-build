@@ -1,0 +1,338 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""Instalador web do NLinux — servidor local (127.0.0.1).
+
+Serve a interface (HTML/CSS/JS), coleta as escolhas e executa o install.sh
+em subprocesso (GUI_DRIVEN=1), transmitindo o progresso para o navegador
+via Server-Sent Events (SSE):
+
+  event: progress   {pct, label}      atualiza a barra/anel
+  event: tail       {line}            linha viva (ex.: progresso do rsync)
+  event: log        {line}            linha de log permanente
+  event: done       {code}            fim da instalação
+  event: error      {message}
+
+Dependências: apenas a biblioteca padrão do Python.
+"""
+
+import json
+import os
+import re
+import select
+import subprocess
+import sys
+import threading
+import time
+from collections import deque
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from urllib.parse import urlparse
+
+ROOT = os.path.dirname(os.path.abspath(__file__))
+STATIC = os.path.join(ROOT, "static")
+INSTALL_SH = os.path.join(os.path.dirname(ROOT), "install.sh")
+HOST = "127.0.0.1"
+PORT = int(os.environ.get("NLINUX_WEB_PORT", "8765"))
+
+# Reusa as traduções (install/translations.py): as etapas do install.sh chegam
+# como CHAVES (ex.: stage.copy.offline) e aqui são traduzidas para o idioma
+# escolhido na página (NLLANG).
+INSTALL_DIR = os.path.join(os.path.dirname(ROOT), "install")
+sys.path.insert(0, INSTALL_DIR)
+try:
+    import translations
+except Exception:  # noqa: BLE001
+    translations = None
+
+# Idioma da INTERFACE derivado do locale escolhido (país/região), quando a
+# página não envia NLLANG explicitamente.
+LANG_FROM_LOCALE = {
+    "pt_BR.UTF-8": "pt", "pt_PT.UTF-8": "pt",
+    "en_US.UTF-8": "en", "en_GB.UTF-8": "en",
+    "es_ES.UTF-8": "es", "fr_FR.UTF-8": "fr",
+    "de_DE.UTF-8": "de", "it_IT.UTF-8": "it",
+    "ja_JP.UTF-8": "ja",
+}
+DEFAULT_LANG = "pt"
+
+_ui_lang = DEFAULT_LANG
+
+ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
+MIME = {
+    ".html": "text/html; charset=utf-8",
+    ".css": "text/css; charset=utf-8",
+    ".js": "application/javascript; charset=utf-8",
+    ".png": "image/png",
+    ".svg": "image/svg+xml",
+    ".json": "application/json",
+    ".ico": "image/x-icon",
+}
+
+
+class Broadcaster:
+    """Distribui eventos para todos os clientes SSE conectados."""
+
+    def __init__(self):
+        self._subs = []
+        self._lock = threading.Lock()
+
+    def subscribe(self):
+        q = deque()
+        with self._lock:
+            self._subs.append(q)
+        return q
+
+    def unsubscribe(self, q):
+        with self._lock:
+            if q in self._subs:
+                self._subs.remove(q)
+
+    def push(self, event, data):
+        payload = "event: %s\ndata: %s\n\n" % (
+            event, json.dumps(data, ensure_ascii=False))
+        with self._lock:
+            for q in self._subs:
+                if len(q) > 500:
+                    q.clear()
+                q.append(payload)
+
+
+BROADCAST = Broadcaster()
+
+
+def _clean(raw):
+    return ANSI_RE.sub("", raw.decode("utf-8", "replace")).rstrip("\r").strip()
+
+
+def emit_line(raw):
+    line = _clean(raw)
+    if not line:
+        return
+    if line.startswith("NLPROGRESS|"):
+        _, p, lab = line.split("|", 2)
+        try:
+            pct = int(float(p.strip()))
+        except ValueError:
+            pct = 0
+        label = lab.strip()
+        if translations is not None:
+            translated = translations.T(_ui_lang, label)
+            if translated != label:
+                label = translated
+        BROADCAST.push("progress", {"pct": pct, "label": label})
+    else:
+        BROADCAST.push("log", {"line": line})
+
+
+def drain(proc, logfh=None):
+    """Lê stdout do install.sh de forma reativa (suporta \r do rsync).
+
+    Se logfh for informado, grava TODA a saída em bytes nele (persistência do
+    log da instalação em /tmp/nlinux-install.log, independente do painel).
+    """
+    fd = proc.stdout.fileno()
+    buf = b""
+    last_tail = 0.0
+    while True:
+        r, _, _ = select.select([fd], [], [], 0.2)
+        if fd in r:
+            chunk = os.read(fd, 8192)
+            if not chunk:
+                break
+            if logfh:
+                logfh.write(chunk)
+                logfh.flush()
+            buf += chunk
+            while b"\n" in buf:
+                raw, buf = buf.split(b"\n", 1)
+                emit_line(raw)
+        now = time.time()
+        if buf and b"\r" in buf and now - last_tail > 0.25:
+            seg = buf.rsplit(b"\r", 1)[-1].decode("utf-8", "replace").strip()
+            if seg:
+                BROADCAST.push("tail", {"line": ANSI_RE.sub("", seg)})
+            last_tail = now
+
+
+def get_disks():
+    out = subprocess.run(
+        ["lsblk", "-dpno", "NAME,SIZE,MODEL,TYPE"],
+        capture_output=True, text=True).stdout
+    disks = []
+    for ln in out.splitlines():
+        parts = ln.split()
+        if not parts:
+            continue
+        name, size, kind = parts[0], parts[1], parts[-1]
+        model = " ".join(parts[2:-1]) if len(parts) > 3 else ""
+        if kind != "disk" or "loop" in name or "zram" in name:
+            continue
+        disks.append({"name": name, "size": size, "model": model})
+    return disks
+
+
+def run_install(config):
+    """Roda o install.sh com as escolhas do navegador e transmite o progresso."""
+    global _ui_lang
+    nllang = str(config.get("NLLANG") or LANG_FROM_LOCALE.get(str(config.get("LOCALE", ""))) or DEFAULT_LANG)
+    nllang = nllang.split("_")[0].split("-")[0].lower()
+    if nllang not in (translations.TRANSLATIONS if translations is not None else ()):
+        nllang = DEFAULT_LANG
+    _ui_lang = nllang
+
+    if translations is not None:
+        BROADCAST.push("progress", {"pct": 2, "label": translations.T(_ui_lang, "stage.start")})
+    else:
+        BROADCAST.push("progress", {"pct": 2, "label": "Preparando instalação"})
+    env = dict(os.environ)
+    for k, v in config.items():
+        env[str(k)] = str(v)
+    env["GUI_DRIVEN"] = "1"
+    env["NLINUX_WEB"] = "1"
+    env["NLLANG"] = _ui_lang
+    logfh = open("/tmp/nlinux-install.log", "ab")
+    logfh.write(b"\n========== instalacao iniciada: %s ==========\n" % time.asctime().encode())
+    try:
+        proc = subprocess.Popen(
+            ["bash", INSTALL_SH],
+            env=env,
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+        )
+        drain(proc, logfh)
+        code = proc.wait()
+    except Exception as exc:  # noqa: BLE001
+        BROADCAST.push("error", {"message": str(exc)})
+        code = 1
+    finally:
+        logfh.close()
+    BROADCAST.push("done", {"code": code})
+
+
+class Handler(BaseHTTPRequestHandler):
+    protocol_version = "HTTP/1.1"
+    server_version = "NLinux/1.0"
+
+    def log_message(self, *args):
+        pass
+
+    def _json(self, obj, status=200):
+        body = json.dumps(obj, ensure_ascii=False).encode("utf-8")
+        self.send_response(status)
+        self.send_header("Content-Type", "application/json; charset=utf-8")
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _i18n(self):
+        if translations is None:
+            return self._json({"error": "i18n indisponível"}, 500)
+        qs = urlparse(self.path).query
+        lang = "pt"
+        for pair in qs.split("&"):
+            if pair.startswith("lang="):
+                lang = pair.split("=", 1)[1].split("_")[0].split("-")[0].lower()
+        if lang not in translations.TRANSLATIONS:
+            lang = DEFAULT_LANG
+        # tabela do idioma com fallback para pt (chaves ainda não traduzidas)
+        table = dict(translations.TRANSLATIONS[DEFAULT_LANG])
+        table.update(translations.TRANSLATIONS[lang])
+        return self._json({"lang": lang, "table": table})
+
+    def _file(self, path):
+        try:
+            with open(path, "rb") as fh:
+                data = fh.read()
+        except OSError:
+            return self._json({"error": "not found"}, 404)
+        ext = os.path.splitext(path)[1]
+        self.send_response(200)
+        self.send_header("Content-Type", MIME.get(ext, "application/octet-stream"))
+        self.send_header("Content-Length", str(len(data)))
+        self.send_header("Cache-Control", "no-store")
+        self.end_headers()
+        self.wfile.write(data)
+
+    def do_GET(self):
+        p = urlparse(self.path).path
+        if p in ("/", "/index.html"):
+            return self._file(os.path.join(STATIC, "index.html"))
+        if p.startswith("/static/"):
+            return self._file(os.path.join(ROOT, p.lstrip("/")))
+        if p == "/api/disks":
+            return self._json({"disks": get_disks()})
+        if p == "/api/i18n":
+            return self._i18n()
+        if p == "/api/stream":
+            return self._stream()
+        return self._json({"error": "not found"}, 404)
+
+    def _stream(self):
+        q = BROADCAST.subscribe()
+        self.send_response(200)
+        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+        self.send_header("Cache-Control", "no-cache")
+        self.send_header("X-Accel-Buffering", "no")
+        self.end_headers()
+        try:
+            self.wfile.write(": connected\n\n".encode())
+            self.wfile.flush()
+            while True:
+                while q:
+                    payload = q.popleft()
+                    try:
+                        self.wfile.write(payload.encode())
+                        self.wfile.flush()
+                    except OSError:
+                        return
+                    if payload.startswith(("event: done\n", "event: error\n")):
+                        return
+                time.sleep(8)
+                try:
+                    self.wfile.write(": keepalive\n\n".encode())
+                    self.wfile.flush()
+                except OSError:
+                    return
+        finally:
+            BROADCAST.unsubscribe(q)
+
+    def do_POST(self):
+        path = urlparse(self.path).path
+        if path == "/api/install":
+            try:
+                n = int(self.headers.get("Content-Length", "0"))
+                config = json.loads(self.rfile.read(n) or b"{}")
+            except Exception:  # noqa: BLE001
+                return self._json({"error": "json inválido"}, 400)
+            if not config.get("INSTALL_DISK"):
+                return self._json({"error": "disco não informado"}, 400)
+            threading.Thread(target=run_install, args=(config,), daemon=True).start()
+            return self._json({"ok": True})
+        if path == "/api/reboot":
+            threading.Thread(
+                target=os.system, args=("systemctl reboot",), daemon=True
+            ).start()
+            return self._json({"ok": True})
+        if path == "/api/quit":
+            threading.Thread(
+                target=os.system, args=("pkill -f 'firefox --kiosk' || true",), daemon=True
+            ).start()
+            return self._json({"ok": True})
+        return self._json({"error": "not found"}, 404)
+
+
+def main():
+    if not os.path.isfile(INSTALL_SH):
+        print("install.sh não encontrado: %s" % INSTALL_SH, file=sys.stderr)
+        return 1
+    srv = ThreadingHTTPServer((HOST, PORT), Handler)
+    print("NLinux web installer em http://%s:%d" % (HOST, PORT), flush=True)
+    try:
+        srv.serve_forever()
+    except KeyboardInterrupt:
+        pass
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

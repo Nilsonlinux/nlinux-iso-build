@@ -1,0 +1,832 @@
+#!/bin/bash
+set -euo pipefail
+
+INSTALL_BASE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+CHROOT_DIR="$INSTALL_BASE/install/chroot"
+CONFIG_DIR="$INSTALL_BASE/config"
+PACKAGES_DIR="$INSTALL_BASE/packages"
+SHARE_DIR="/opt/noctalia-installer"
+MNT="/mnt"
+
+COLOR_RESET='\e[0m'
+COLOR_CYAN='\e[36m'
+COLOR_YELLOW='\e[33m'
+COLOR_RED='\e[31m'
+COLOR_GREEN='\e[32m'
+
+info()  { echo -e "${COLOR_CYAN}[instalador]${COLOR_RESET} $*"; }
+warn()  { echo -e "${COLOR_YELLOW}[atenção]${COLOR_RESET} $*"; }
+die()   { echo -e "${COLOR_RED}[erro]${COLOR_RESET} $*" >&2; exit 1; }
+ok()    { echo -e "${COLOR_GREEN}[ok]${COLOR_RESET} $*"; }
+
+GUI_DRIVEN="${GUI_DRIVEN:-0}"
+# Sinal de progresso do instalador web: NLPROGRESS|<pct>|<chave>.
+# <chave> é uma chave de tradução; o web/server.py a traduz para o NLLANG.
+# Só emite quando dirigido pela web, para não poluir o modo standalone.
+progress() {
+  [[ "$GUI_DRIVEN" == "1" ]] || return 0
+  printf 'NLPROGRESS|%s|%s\n' "$1" "$2"
+}
+
+# ---------------------------------------------------------------------------
+# Valores padrão. Sobrescreva exportando variáveis antes de executar:
+#   INSTALL_USER=foo INSTALL_DISK=/dev/sda ./install.sh
+# ---------------------------------------------------------------------------
+INSTALL_USER="${INSTALL_USER:-nlinux}"
+INSTALL_USER_PASS="${INSTALL_USER_PASS:-nlinux}"
+ROOT_PASS="${ROOT_PASS:-nlinux}"
+LUKS_PASS="${LUKS_PASS:-nlinux}"
+HOSTNAME="${HOSTNAME:-nlinux}"
+LOCALE="${LOCALE:-pt_BR.UTF-8}"
+KEYMAP="${KEYMAP:-br-abnt2}"
+ZONEINFO="${ZONEINFO:-America/Sao_Paulo}"
+MIRROR="${MIRROR:-}"
+OFFLINE="${OFFLINE:-1}"
+DISK="${INSTALL_DISK:-}"
+FS_TYPE="${FS_TYPE:-}"
+USE_LUKS="${USE_LUKS:-}"
+GPU="${GPU:-}"
+MICROCODE="${MICROCODE:-}"
+
+# Idioma da interface do instalador (escolhido no menu pelo país). É distinto de
+# LANG, que é o locale do sistema instalado.
+NLLANG="${NLLANG:-pt}"
+NLLANG="${NLLANG%%_*}"
+case "$NLLANG" in pt|en|es|fr|de|it|ja) ;; *) NLLANG=pt ;; esac
+
+# Traduções do modo standalone/terminal (exibidas no resumo/saída).
+declare -A _si18n_pt _si18n_en _si18n_es _si18n_fr _si18n_de _si18n_it _si18n_ja
+_si18n_pt["summary"]="Resumo da instalação:"
+_si18n_pt["sum.disk"]="Disco:"
+_si18n_pt["sum.fs"]="FS:"
+_si18n_pt["sum.luks"]="LUKS:"
+_si18n_pt["sum.yes"]="Sim"
+_si18n_pt["sum.no"]="Não"
+_si18n_pt["sum.user"]="Usuário:"
+_si18n_pt["sum.hostname"]="Hostname:"
+_si18n_pt["sum.locale"]="Locale:"
+_si18n_pt["sum.keymap"]="Keymap:"
+_si18n_pt["sum.zone"]="Zona:"
+_si18n_pt["sum.mirror"]="Espelho:"
+_si18n_pt["sum.mirror.auto"]="Auto (padrão)"
+_si18n_pt["sum.mode"]="Modo:"
+_si18n_pt["sum.mode.offline"]="Rápido offline (cópia do pendrive)"
+_si18n_pt["sum.mode.online"]="Completo online (pacstrap)"
+_si18n_pt["sum.gpu"]="GPU:"
+_si18n_pt["sum.microcode"]="Microcode:"
+_si18n_en["summary"]="Installation summary:"
+_si18n_en["sum.disk"]="Disk:"
+_si18n_en["sum.fs"]="FS:"
+_si18n_en["sum.luks"]="LUKS:"
+_si18n_en["sum.yes"]="Yes"
+_si18n_en["sum.no"]="No"
+_si18n_en["sum.user"]="User:"
+_si18n_en["sum.hostname"]="Hostname:"
+_si18n_en["sum.locale"]="Locale:"
+_si18n_en["sum.keymap"]="Keymap:"
+_si18n_en["sum.zone"]="Zone:"
+_si18n_en["sum.mirror"]="Mirror:"
+_si18n_en["sum.mirror.auto"]="Auto (default)"
+_si18n_en["sum.mode"]="Mode:"
+_si18n_en["sum.mode.offline"]="Quick offline (copy from USB)"
+_si18n_en["sum.mode.online"]="Full online (pacstrap)"
+_si18n_en["sum.gpu"]="GPU:"
+_si18n_en["sum.microcode"]="Microcode:"
+_si18n_es["summary"]="Resumen de la instalación:"
+_si18n_es["sum.disk"]="Disco:"
+_si18n_es["sum.fs"]="FS:"
+_si18n_es["sum.luks"]="LUKS:"
+_si18n_es["sum.yes"]="Sí"
+_si18n_es["sum.no"]="No"
+_si18n_es["sum.user"]="Usuario:"
+_si18n_es["sum.hostname"]="Hostname:"
+_si18n_es["sum.locale"]="Locale:"
+_si18n_es["sum.keymap"]="Keymap:"
+_si18n_es["sum.zone"]="Zona:"
+_si18n_es["sum.mirror"]="Espejo:"
+_si18n_es["sum.mirror.auto"]="Auto (predeterminado)"
+_si18n_es["sum.mode"]="Modo:"
+_si18n_es["sum.mode.offline"]="Rápido offline (copia desde USB)"
+_si18n_es["sum.mode.online"]="Completo online (pacstrap)"
+_si18n_es["sum.gpu"]="GPU:"
+_si18n_es["sum.microcode"]="Microcódigo:"
+_si18n_fr["summary"]="Résumé de l'installation :"
+_si18n_fr["sum.disk"]="Disque :"
+_si18n_fr["sum.fs"]="FS :"
+_si18n_fr["sum.luks"]="LUKS :"
+_si18n_fr["sum.yes"]="Oui"
+_si18n_fr["sum.no"]="Non"
+_si18n_fr["sum.user"]="Utilisateur :"
+_si18n_fr["sum.hostname"]="Nom d'hôte :"
+_si18n_fr["sum.locale"]="Locale :"
+_si18n_fr["sum.keymap"]="Keymap :"
+_si18n_fr["sum.zone"]="Zone :"
+_si18n_fr["sum.mirror"]="Miroir :"
+_si18n_fr["sum.mirror.auto"]="Auto (par défaut)"
+_si18n_fr["sum.mode"]="Mode :"
+_si18n_fr["sum.mode.offline"]="Rapide hors ligne (copie depuis la clé USB)"
+_si18n_fr["sum.mode.online"]="Complète en ligne (pacstrap)"
+_si18n_fr["sum.gpu"]="GPU :"
+_si18n_fr["sum.microcode"]="Microcode :"
+_si18n_de["summary"]="Installationsübersicht:"
+_si18n_de["sum.disk"]="Festplatte:"
+_si18n_de["sum.fs"]="FS:"
+_si18n_de["sum.luks"]="LUKS:"
+_si18n_de["sum.yes"]="Ja"
+_si18n_de["sum.no"]="Nein"
+_si18n_de["sum.user"]="Benutzer:"
+_si18n_de["sum.hostname"]="Hostname:"
+_si18n_de["sum.locale"]="Locale:"
+_si18n_de["sum.keymap"]="Keymap:"
+_si18n_de["sum.zone"]="Zone:"
+_si18n_de["sum.mirror"]="Spiegel:"
+_si18n_de["sum.mirror.auto"]="Auto (Standard)"
+_si18n_de["sum.mode"]="Modus:"
+_si18n_de["sum.mode.offline"]="Schnell offline (Kopie vom USB)"
+_si18n_de["sum.mode.online"]="Vollständig online (pacstrap)"
+_si18n_de["sum.gpu"]="GPU:"
+_si18n_de["sum.microcode"]="Mikrocode:"
+_si18n_it["summary"]="Riepilogo dell'installazione:"
+_si18n_it["sum.disk"]="Disco:"
+_si18n_it["sum.fs"]="FS:"
+_si18n_it["sum.luks"]="LUKS:"
+_si18n_it["sum.yes"]="Sì"
+_si18n_it["sum.no"]="No"
+_si18n_it["sum.user"]="Utente:"
+_si18n_it["sum.hostname"]="Hostname:"
+_si18n_it["sum.locale"]="Locale:"
+_si18n_it["sum.keymap"]="Keymap:"
+_si18n_it["sum.zone"]="Zona:"
+_si18n_it["sum.mirror"]="Mirror:"
+_si18n_it["sum.mirror.auto"]="Auto (predefinito)"
+_si18n_it["sum.mode"]="Modalità:"
+_si18n_it["sum.mode.offline"]="Rapida offline (copia dalla USB)"
+_si18n_it["sum.mode.online"]="Completa online (pacstrap)"
+_si18n_it["sum.gpu"]="GPU:"
+_si18n_it["sum.microcode"]="Microcodice:"
+_si18n_ja["summary"]="インストールの要約:"
+_si18n_ja["sum.disk"]="ディスク:"
+_si18n_ja["sum.fs"]="FS:"
+_si18n_ja["sum.luks"]="LUKS:"
+_si18n_ja["sum.yes"]="はい"
+_si18n_ja["sum.no"]="いいえ"
+_si18n_ja["sum.user"]="ユーザー:"
+_si18n_ja["sum.hostname"]="ホスト名:"
+_si18n_ja["sum.locale"]="ロケール:"
+_si18n_ja["sum.keymap"]="キーマップ:"
+_si18n_ja["sum.zone"]="ゾーン:"
+_si18n_ja["sum.mirror"]="ミラー:"
+_si18n_ja["sum.mirror.auto"]="自動 (既定)"
+_si18n_ja["sum.mode"]="モード:"
+_si18n_ja["sum.mode.offline"]="高速オフライン (USBからコピー)"
+_si18n_ja["sum.mode.online"]="完全オンライン (pacstrap)"
+_si18n_ja["sum.gpu"]="GPU:"
+_si18n_ja["sum.microcode"]="マイクロコード:"
+
+T() {
+  # t <chave>: string no idioma NLLANG, com fallback para o português.
+  local key=$1
+  local -n _tbl="_si18n_${NLLANG}"
+  if [[ -n "${_tbl[$key]:-}" ]]; then
+    printf '%s' "${_tbl[$key]}"
+  else
+    local -n _pt="_si18n_pt"
+    printf '%s' "${_pt[$key]:-$key}"
+  fi
+}
+
+
+# ---------------------------------------------------------------------------
+# Coleta de opções
+# ---------------------------------------------------------------------------
+collect_options() {
+  if [[ "$GUI_DRIVEN" == "1" ]]; then
+    # Opções fornecidas pela interface web (env). Não refaz perguntas.
+    info "Opções fornecidas pela interface web; validando..."
+    validate_options
+    print_summary
+    return 0
+  fi
+  # Modo standalone: apenas prompts de texto no terminal (sem curses; a
+  # única interface gráfica do instalador é a web — nlinux-installer).
+  info "Coletando opções de instalação."
+  collect_options_prompt
+  validate_options
+  print_summary
+  is_prompt_y "Confirmar e iniciar a instalação? ** ESTE DISCO SERÁ APAGADO **" || die "Cancelado pelo usuário."
+}
+
+collect_options_prompt() {
+  info "Coletando opções via prompts (fallback)."
+  if [[ -z "$ROOT_PASS" ]]; then
+    read_secret ROOT_PASS "Senha do usuário root"
+  fi
+  if [[ -z "$INSTALL_USER" ]]; then
+    read_val INSTALL_USER "Nome do usuário (sem espaços, minúsculo)" ""
+  fi
+  if [[ -z "$INSTALL_USER_PASS" ]]; then
+    read_secret INSTALL_USER_PASS "Senha do usuário $INSTALL_USER"
+  fi
+
+  read_val HOSTNAME "Hostname da máquina" "$HOSTNAME"
+  read_val LOCALE "Locale (ex.: pt_BR.UTF-8, en_US.UTF-8)" "$LOCALE"
+  read_val KEYMAP "Layout de teclado (ex.: br-abnt2, us, de)" "$KEYMAP"
+  read_val ZONEINFO "Fuso horário (ex.: America/Sao_Paulo)" "$ZONEINFO"
+
+  if [[ -z "$MIRROR" ]]; then
+    read -r -p "Espelho de repositórios (URL base, vazio = padrão): " MIRROR
+  fi
+  local _ans
+  read -r -p "Instalação rápida OFFLINE (copia o sistema do pendrive, sem internet)? (S/n): " _ans
+  if [[ -z "$_ans" || "${_ans,,}" == "s" || "${_ans,,}" == "y" ]]; then
+    OFFLINE=1
+  else
+    OFFLINE=0
+  fi
+
+  if [[ -z "$GPU" ]]; then
+    read_val GPU "GPU (intel | amd | nvidia | vm)" ""
+  fi
+  if [[ -z "$MICROCODE" ]]; then
+    if grep -qi "GenuineIntel" /proc/cpuinfo; then MICROCODE=intel; fi
+    if grep -qi "AuthenticAMD" /proc/cpuinfo; then MICROCODE=amd; fi
+    MICROCODE="${MICROCODE:-none}"
+    info "Microcódigo detectado: $MICROCODE."
+  fi
+
+  if [[ -z "$DISK" ]]; then
+    info "Discos disponíveis:"
+    lsblk -dplno NAME,SIZE,MODEL | grep -E '^/dev/(sd|nvme|vd)' || die "Nenhum disco encontrado."
+    read -r -p "Disco de destino (ex.: /dev/nvme0n1): " DISK
+  fi
+  if [[ -z "$FS_TYPE" ]]; then
+    read -r -p "Sistema de arquivos (ext4 | btrfs) [ext4]: " FS_TYPE
+    FS_TYPE="${FS_TYPE:-ext4}"
+  fi
+  if [[ -z "$USE_LUKS" ]]; then
+    if is_prompt_y "Criptografar o disco com LUKS2?"; then
+      USE_LUKS=1
+    else
+      USE_LUKS=0
+    fi
+  fi
+  if (( USE_LUKS )) && [[ -z "$LUKS_PASS" ]]; then
+    read_secret LUKS_PASS "Senha da criptografia (LUKS)"
+  fi
+}
+
+validate_options() {
+  [[ "$INSTALL_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || die "Usuário inválido: $INSTALL_USER"
+  [[ -b "$DISK" ]] || die "Nenhum disco válido selecionado: $DISK (use INSTALL_DISK ou escolha no menu)."
+  FS_TYPE="${FS_TYPE:-ext4}"
+  [[ "$FS_TYPE" =~ ^(ext4|btrfs)$ ]] || die "Sistema de arquivos inválido: $FS_TYPE"
+  USE_LUKS="${USE_LUKS:-0}"
+  [[ "$USE_LUKS" =~ ^(0|1)$ ]] || USE_LUKS=0
+  GPU="${GPU:-vm}"
+  if [[ "$GPU" == "auto" ]]; then
+    GPU="vm"   # "Automático" = drivers genéricos/default (sem módulo específico)
+  fi
+  [[ "$GPU" =~ ^(intel|amd|nvidia|vm)$ ]] || die "GPU inválida: $GPU"
+  if [[ -z "$MICROCODE" ]]; then
+    if grep -qi "GenuineIntel" /proc/cpuinfo; then MICROCODE=intel; fi
+    if grep -qi "AuthenticAMD" /proc/cpuinfo; then MICROCODE=amd; fi
+    MICROCODE="${MICROCODE:-none}"
+    info "Microcódigo detectado: $MICROCODE."
+  fi
+  [[ -n "$ROOT_PASS" ]] || ROOT_PASS="$INSTALL_USER_PASS"
+  [[ -n "$INSTALL_USER_PASS" ]] || INSTALL_USER_PASS="$ROOT_PASS"
+  [[ -n "$LUKS_PASS" ]] || LUKS_PASS="$ROOT_PASS"
+  OFFLINE="${OFFLINE:-1}"
+  [[ "$OFFLINE" =~ ^[01]$ ]] || OFFLINE=1
+  if [[ -n "$MIRROR" && "$MIRROR" != http* ]]; then
+    die "Espelho inválido: $MIRROR (use URL completa, ex.: https://mirror.ufscar.br/archlinux)"
+  fi
+}
+
+print_summary() {
+  info "$(T summary)"
+  echo "  $(T sum.disk):      $DISK"
+  echo "  $(T sum.fs):        $FS_TYPE"
+  if (( USE_LUKS )); then echo "  $(T sum.luks):      $(T sum.yes)"; else echo "  $(T sum.luks):      $(T sum.no)"; fi
+  echo "  $(T sum.user):      $INSTALL_USER"
+  echo "  $(T sum.hostname):  $HOSTNAME"
+  echo "  $(T sum.locale):    $LOCALE"
+  echo "  $(T sum.keymap):    $KEYMAP"
+  echo "  $(T sum.zone):      $ZONEINFO"
+  echo "  $(T sum.mirror):    ${MIRROR:-$(T sum.mirror.auto)}"
+  if (( OFFLINE )); then echo "  $(T sum.mode):      $(T sum.mode.offline)"; else echo "  $(T sum.mode):      $(T sum.mode.online)"; fi
+  echo "  $(T sum.gpu):       $GPU"
+  echo "  $(T sum.microcode): $MICROCODE"
+}
+
+read_val() {
+  local -n _out=$1
+  local _msg=$2
+  local _def=$3
+  local _v
+  read -r -p "$_msg [$_def]: " _v
+  _out="${_v:-$_def}"
+}
+
+read_secret() {
+  local -n _out=$1
+  local _msg=$2
+  local _confirm
+  while :; do
+    read -r -s -p "$_msg: " _out; echo
+    read -r -s -p "Confirme novamente: " _confirm; echo
+    if [[ -z "$_out" ]]; then
+      warn "Senha vazia não é permitida."
+      continue
+    fi
+    if [[ "$_out" != "$_confirm" ]]; then
+      warn "As senhas não conferem, tente de novo."
+      continue
+    fi
+    break
+  done
+}
+
+part_path() {
+  local d=$1 n=$2
+  if [[ $d =~ [0-9]$ ]]; then echo "${d}p${n}"; else echo "${d}${n}"; fi
+}
+
+is_prompt_y() {
+  local _msg=$1
+  local _v
+  read -r -p "$_msg (s/N): " _v
+  [[ "${_v,,}" == "s" || "${_v,,}" == "y" ]]
+}
+
+# ---------------------------------------------------------------------------
+# Pré-requisitos
+# ---------------------------------------------------------------------------
+preflight() {
+  (( EUID == 0 )) || die "Execute como root (o ISO do Arch já inicia como root)."
+  [[ -d /sys/firmware/efi ]] || die "Este instalador suporta apenas UEFI."
+  command -v pacstrap >/dev/null 2>&1 || die "Execute a partir do ISO oficial do Arch Linux (arch-install-scripts)."
+  # Checagem de rede rápida e sem DNS (evita travar em ambientes offline).
+  if [[ "${OFFLINE:-1}" != "1" ]]; then
+    timeout 3 ping -c 1 -W 2 1.1.1.1 >/dev/null 2>&1 \
+      || timeout 3 ping -c 1 -W 2 8.8.8.8 >/dev/null 2>&1 \
+      || warn "Sem rede aparente; o modo completo (online) pode falhar. Prefira o modo rápido offline."
+  else
+    info "Modo offline selecionado; rede não é necessária."
+  fi
+  command -v sgdisk >/dev/null 2>&1 || { info "Instalando gdisk no ambiente live..."; pacman -Sy --noconfirm gdisk >/dev/null 2>&1 || die "Não foi possível instalar o gdisk."; }
+  command -v cryptsetup >/dev/null 2>&1 || die "cryptsetup ausente no ambiente live."
+  timedatectl set-ntp true >/dev/null 2>&1 || true
+}
+
+# ---------------------------------------------------------------------------
+# Particionamento
+# ---------------------------------------------------------------------------
+partition_disk() {
+  local p_efi p_root
+  p_efi="$(part_path "$DISK" 1)"
+  p_root="$(part_path "$DISK" 2)"
+
+  # O ambiente live pode ter auto-montado o disco-alvo (udisks), deixando a
+  # tabela de partição ocupada: sempartprobe não consegue reler e o mount
+  # seguinte falha com "superbloco inválido". Desmonta antes.
+  info "Desmontando partições auto-montadas de $DISK (se houver)"
+  while read -r mp; do
+    [[ -n "$mp" ]] && umount "$mp" 2>/dev/null || true
+  done < <(lsblk -lnlo MOUNTPOINT "$DISK" 2>/dev/null | grep -v '^$')
+  udevadm settle 2>/dev/null || true
+
+  info "Apagando tabela de partições de $DISK"
+  sgdisk --zap-all "$DISK" >/dev/null || die "Não foi possível apagar a tabela de $DISK (partição em uso?)."
+  sgdisk -o "$DISK" >/dev/null
+  partprobe "$DISK" >/dev/null 2>&1 || true
+  udevadm settle 2>/dev/null || true
+  sleep 1
+
+  info "Criando partição EFI (1G) e raiz (restante)"
+  sgdisk --new=1:0:+1G --typecode=1:ef00 --change-name=1:EFI "$DISK" >/dev/null
+  if (( USE_LUKS )); then
+    sgdisk --new=2:0:0 --typecode=2:8309 --change-name=2:cryptroot "$DISK" >/dev/null
+  else
+    sgdisk --new=2:0:0 --typecode=2:8304 --change-name=2:archroot "$DISK" >/dev/null
+  fi
+  partprobe "$DISK" >/dev/null 2>&1 || true
+  udevadm trigger --subsystem-match=block 2>/dev/null || true
+  udevadm settle 2>/dev/null || true
+  sleep 1
+
+  # Garante que o kernel enxergou as partições novas antes de formatar.
+  local base="${DISK##*/}"
+  local i
+  for i in 1 2 3 4 5 6 7 8 9 10; do
+    if [[ -b "/dev/${base}1" && -b "/dev/${base}2" ]]; then
+      break
+    fi
+    udevadm settle 2>/dev/null || true
+    sleep 1
+  done
+  [[ -b "$p_efi" && -b "$p_root" ]] || die "Kernel não reconheceu as partições de $DISK (dmesg?)."
+
+  echo "$p_efi" > "$INSTALL_BASE/.part_efi"
+  echo "$p_root" > "$INSTALL_BASE/.part_root"
+}
+
+setup_filesystem() {
+  local p_efi p_root
+  p_efi="$(cat "$INSTALL_BASE/.part_efi")"
+  p_root="$(cat "$INSTALL_BASE/.part_root")"
+
+  local root_dev="$p_root"
+  if (( USE_LUKS )); then
+    info "Formatando LUKS2 em $p_root"
+    echo -n "$LUKS_PASS" | cryptsetup -q luksFormat --type luks2 --key-file=- "$p_root"
+    echo -n "$LUKS_PASS" | cryptsetup -q open --key-file=- "$p_root" cryptroot
+    root_dev="/dev/mapper/cryptroot"
+  fi
+
+if [[ "$FS_TYPE" == "btrfs" ]]; then
+    info "Formatando btrfs em $root_dev"
+    mkfs.btrfs -f -L archroot "$root_dev" >/dev/null
+    sync
+    udevadm settle 2>/dev/null || true
+    blkid -s UUID -o value "$root_dev" >/dev/null 2>&1 \
+      || die "mkfs.btrfs não produziu superbloco legível em $root_dev — kernel ainda vê a tabela antiga?"
+    mount "$root_dev" "$MNT"
+    info "Criando subvolumes @, @home, @log, @pkg"
+    btrfs subvolume create "$MNT/@"
+    btrfs subvolume create "$MNT/@home"
+    btrfs subvolume create "$MNT/@log"
+    btrfs subvolume create "$MNT/@pkg"
+    umount "$MNT"
+    mount -o subvol=@ "$root_dev" "$MNT"
+    mkdir -p "$MNT/home" "$MNT/var/log" "$MNT/var/cache/pacman/pkg"
+    mount -o subvol=@home "$root_dev" "$MNT/home"
+    mount -o subvol=@log "$root_dev" "$MNT/var/log"
+    mount -o subvol=@pkg "$root_dev" "$MNT/var/cache/pacman/pkg"
+  else
+    info "Formatando ext4 em $root_dev"
+    mkfs.ext4 -F -L archroot "$root_dev" >/dev/null
+    sync
+    udevadm settle 2>/dev/null || true
+    blkid -s UUID -o value "$root_dev" >/dev/null 2>&1 \
+      || die "mkfs.ext4 não produziu superbloco legível em $root_dev — kernel ainda vê a tabela antiga?"
+    mount "$root_dev" "$MNT"
+  fi
+
+  info "Formatando partição EFI (FAT32)"
+  mkfs.fat -F32 -n EFI "$p_efi" >/dev/null
+  sync
+  udevadm settle 2>/dev/null || true
+  blkid -s UUID -o value "$p_efi" >/dev/null 2>&1 \
+    || die "mkfs.fat não produziu superbloco legível em $p_efi."
+  mkdir -p "$MNT/boot"
+  mount "$p_efi" "$MNT/boot"
+}
+
+# ---------------------------------------------------------------------------
+# pacstrap + instalação em chroot
+# ---------------------------------------------------------------------------
+# Cópia offline via rsync. A raiz de um live é "viva" (arquivos mudam/somem
+# enquanto copia) e pontos montados (ESP FAT, etc.) geram avisos de atributos;
+# rc 23/24 são normais nesse cenário. Por isso o rsync NÃO pode rodar no set -e
+# cego: capturamos o rc, retomamos em caso de interrupção e só abortamos em
+# erros fatais (sem espaço, I/O, permissão, read-only). O log fica em
+# /tmp/offline-rsync.log e é copiado para /var/log no sistema instalado.
+offline_clone() {
+  if ! command -v rsync >/dev/null 2>&1; then
+    info "Instalando rsync no ambiente live..."
+    pacman -Sy --noconfirm rsync >/dev/null 2>&1 || die "Não foi possível instalar o rsync."
+  fi
+
+  local log="/tmp/offline-rsync.log"
+  local rc="" attempt=1
+  local max_attempts=4
+  local extra=()
+
+  info "Modo RÁPIDO offline: copiando o sistema do pendrive para o disco (sem internet)..."
+  # Diretórios que o live continua gravando DURANTE a cópia. Se não forem
+  # excluídos, o rsync fica num ciclo de re-transferência do último arquivo em
+  # fluxo e congela nos 99% (sintoma: log parado em to-chk=0). São tudo estado
+  # de execução que o sistema instalado regenera sozinho no primeiro boot.
+  local excludes=(
+    --exclude='/proc' --exclude='/sys' --exclude='/dev' --exclude='/run'
+    --exclude='/tmp' --exclude='/mnt' --exclude='/bootmnt'
+    --exclude='/home'
+    --exclude='/var/cache/pacman/pkg'
+    --exclude='/var/log/journal'
+    --exclude='/var/cache/app-info'
+    --exclude='/var/lib/bluetooth' --exclude='/var/lib/NetworkManager'
+    --exclude='/var/lib/systemd' --exclude='/var/lib/dhcpcd'
+    --exclude='/root/.cache'
+    --exclude='/etc/fstab' --exclude='/etc/machine-id'
+    --exclude='/root/.bash_profile' --exclude='/root/.zprofile'
+  )
+
+  while :; do
+    rm -f "$log"; umask 022
+    { echo "# NLinux - cópia offline em $(date -Is)  rsync $(rsync --version 2>/dev/null | awk 'NR==1{print $3}')"; echo "# Fonte: /  Alvo: $MNT"; echo; } >> "$log"
+    extra=()
+    (( attempt > 1 )) && extra+=(--partial)   # retoma os arquivos já copiados
+
+    # --no-inc-recursive: evita o "generator hang" do rsync (varredura
+    # incremental + árvore do live mudando em tempo real). --timeout=60
+    # transforma um I/O travado em erro limpo (rc 30) em vez de bloqueio
+    # eterno. `timeout` é o watchdog final: mata um rsync congelado (rc 124)
+    # e o laço abaixo retoma de onde parou.
+    set +e   # pipestatus tem prioridade aqui; sem -e/pipefail ativos agora
+    timeout --foreground --kill-after=15 2400 \
+    rsync -aHAXx --numeric-ids --info=progress2 --no-inc-recursive --timeout=60 \
+      "${extra[@]}" "${excludes[@]}" \
+      / "$MNT"/ 2>&1 | tee "$log"
+    rc=${PIPESTATUS[0]}
+    set -e
+
+    if (( rc == 0 )); then
+      break
+    fi
+
+    if (( rc == 24 )); then
+      # Arquivos que "sumiram" enquanto o live copia (pacman/locks/logs).
+      warn "rsync: arquivos mudaram/sumiram durante a cópia (normal no live). Prosseguindo."
+      break
+    fi
+
+    # Trava no final da cópia (timeout matou o rsync: 124/137): retoma com
+    # --partial — os arquivos já copiados são preservados. Esgotadas as
+    # tentativas no MESMO ponto, o sistema estaria incompleto: aborta.
+    if (( rc == 124 || rc == 137 )); then
+      if (( attempt >= max_attempts )); then
+        cp -f "$log" "$MNT/var/log/offline-rsync.log" 2>/dev/null || true
+        die "O rsync travou repetidamente ao final da cópia (rc=$rc). Sistema ficaria incompleto; abortado.\n  Log: /tmp/offline-rsync.log\n  Disco-alvo: $MNT/var/log/offline-rsync.log\n\nÚltimas linhas:\n$(tail -n 15 "$log")"
+      fi
+      warn "rsync travou ao final da cópia (rc=$rc); retomando de onde parou (tentativa $attempt de $max_attempts)..."
+      attempt=$((attempt + 1))
+      continue
+    fi
+
+    # Interrupção/estouro de protocolo: retoma do ponto onde parou.
+    if (( attempt < max_attempts )) && [[ "$rc" =~ ^(10|11|12|13|30)$ ]]; then
+      warn "rsync interrompido (rc=$rc); tentando retomar de onde parou (tentativa $attempt de $max_attempts)..."
+      attempt=$((attempt + 1))
+      continue
+    fi
+
+    if grep -qiE 'No space left on device|Read-only file system|Permission denied|Input/output error|mkstemp failed|Invalid argument|File name too long' "$log"; then
+      # Salva o log no próprio disco-alvo para diagnóstico após o reboot.
+      cp -f "$log" "$MNT/var/log/offline-rsync.log" 2>/dev/null || true
+      die "Falha ao copiar o sistema para o disco ($rc). O erro exato está gravado no log:\n  no pendrive/live: /tmp/offline-rsync.log\n  no disco-alvo:    $MNT/var/log/offline-rsync.log\n\nÚltimas linhas:\n$(tail -n 15 "$log")"
+    fi
+
+    # Demais casos (atributos/times/xattr em FAT, casos sem padrão fatal): avisa.
+    warn "rsync reportou avisos não fatais (rc=$rc); continuando a instalação. Log: /tmp/offline-rsync.log"
+    break
+  done
+
+  cp -f "$log" "$MNT/var/log/offline-rsync.log" 2>/dev/null || true
+
+  info "Removendo resíduos específicos do live (archiso, autologin, auto-run, usuário nlinux)"
+  # /etc/mkinitcpio.conf.d/archiso.conf injeta hooks archiso_loop_mnt/archiso_pxe_*
+  # no initramfs instalado (referem /run/archiso, inexistente). Sem ele o
+  # mkinitcpio -P do chroot (10-system.sh) gera um initramfs limpo.
+  rm -f "$MNT/etc/mkinitcpio.conf.d/archiso.conf"
+  rm -rf "$MNT/var/lib/archiso" 2>/dev/null || true
+  rm -rf "$MNT/etc/systemd/system/getty@tty1.service.d" 2>/dev/null || true
+  rm -f "$MNT/root/.bash_profile" "$MNT/root/.zprofile" 2>/dev/null || true
+  sed -i '/^nlinux:/d' "$MNT/etc/passwd" "$MNT/etc/shadow" 2>/dev/null || true
+  sed -i '/^nlinux:/d' "$MNT/etc/group" "$MNT/etc/gshadow" 2>/dev/null || true
+  rm -f "$MNT/etc/sudoers.d/10-nlinux-user" 2>/dev/null || true
+  : > "$MNT/etc/machine-id"
+  ok "Sistema copiado para o disco."
+}
+
+stage_packages() {
+  local pkgs
+  pkgs="$(grep -hvE '^\s*(#|$)' "$PACKAGES_DIR/base.packages" "$PACKAGES_DIR/desktop.packages" | awk '{print $NF}')"
+
+  case "$GPU" in
+    intel) pkgs="$pkgs mesa vulkan-intel intel-media-driver intel-gpu-tools" ;;
+    amd)   pkgs="$pkgs mesa vulkan-radeon libva-mesa-driver radeontop" ;;
+    nvidia) pkgs="$pkgs nvidia nvidia-utils" ;;
+    vm)    pkgs="$pkgs mesa" ;;
+  esac
+
+  case "$MICROCODE" in
+    intel) pkgs="$pkgs intel-ucode" ;;
+    amd)   pkgs="$pkgs amd-ucode" ;;
+  esac
+
+  info "Instalando sistema base e pacotes (pacstrap), isso pode demorar..."
+  pacstrap -K "$MNT" $pkgs
+}
+
+# ---------------------------------------------------------------------------
+# Aplicar escolhas do menu no ambiente live (locale/keymap) e no mirror
+# ---------------------------------------------------------------------------
+apply_live_options() {
+  [[ -n "$LOCALE" ]] || return 0
+  info "Aplicando idioma no ambiente live: $LOCALE"
+  if grep -q "^#$LOCALE UTF-8" /etc/locale.gen; then
+    sed -i "s|^#$LOCALE UTF-8|$LOCALE UTF-8|" /etc/locale.gen
+  elif ! grep -q "^$LOCALE UTF-8" /etc/locale.gen; then
+    echo "$LOCALE UTF-8" >> /etc/locale.gen
+  fi
+  locale-gen >/dev/null 2>&1 || true
+  echo "LANG=$LOCALE" > /etc/locale.conf
+  umask 022
+  mkdir -p /etc/profile.d
+  echo "export LANG=$LOCALE" > /etc/profile.d/nlinux-lang.sh
+  export LANG="$LOCALE"
+
+  if [[ -n "$KEYMAP" ]]; then
+    info "Aplicando layout de teclado no live: $KEYMAP"
+    echo "KEYMAP=$KEYMAP" > /etc/vconsole.conf
+    loadkeys "$KEYMAP" >/dev/null 2>&1 || true
+  fi
+}
+
+apply_mirror() {
+  local mlist=/etc/pacman.d/mirrorlist
+  if [[ -n "$MIRROR" ]]; then
+    info "Definindo espelho de repositórios: $MIRROR"
+    {
+      echo "# NLinux - espelho escolhido no instalador"
+      echo "Server = $MIRROR/\$repo/os/\$arch"
+      cat "$mlist"
+    } > "${mlist}.tmp" && mv "${mlist}.tmp" "$mlist"
+  fi
+  if ! grep -q '^DisableDownloadTimeout' /etc/pacman.conf; then
+    echo 'DisableDownloadTimeout' >> /etc/pacman.conf
+    info "Desabilitando timeout de download do pacman (evita 'Operation too slow')."
+  fi
+}
+
+run_chroot_setup() {
+  info "Copiando scripts de instalação para dentro do sistema"
+  mkdir -p "$MNT$SHARE_DIR"
+  cp -a "$CHROOT_DIR" "$MNT$SHARE_DIR/"
+  cp -a "$CONFIG_DIR" "$MNT$SHARE_DIR/"
+  cp -a "$PACKAGES_DIR" "$MNT$SHARE_DIR/"
+  chmod -R +x "$MNT$SHARE_DIR/chroot"
+
+  genfstab -U "$MNT" > "$MNT/etc/fstab"
+  # O rsync copiou /etc/resolv.conf do live (que é um symlink para
+  # /run/systemd/...). Copiar por cima dá "same file" (cp) e aborta o script;
+  # remove antes e copia o symlink em si (cp -a não segue o link).
+  rm -f "$MNT/etc/resolv.conf"
+  [[ -e /etc/resolv.conf ]] && cp -a /etc/resolv.conf "$MNT/etc/resolv.conf"
+  # Chroot herda espelho + pacman.conf escolhidos no ambiente live.
+  [[ -f /etc/pacman.d/mirrorlist ]] && cp /etc/pacman.d/mirrorlist "$MNT/etc/pacman.d/mirrorlist"
+  cp -a /etc/pacman.conf "$MNT/etc/pacman.conf"
+
+  info "Executando configuração dentro do chroot"
+  # O rsync exclui /proc,/sys,/dev,/run,/tmp — o sistema copiado não tem esses
+  # diretórios. O arch-chroot vivo (arch-install-scripts 31+) NÃO os cria mais
+  # (monta direto nos pontos); sem eles ele falha na primeira montagem com
+  # "mount: $MNT/proc: o ponto de montagem não existe.". Cria antes:
+  install -d "$MNT"/proc "$MNT"/sys "$MNT"/dev "$MNT"/run "$MNT"/tmp \
+    "$MNT"/dev/pts "$MNT"/dev/shm
+  local luks_uuid=""
+  if (( USE_LUKS )); then
+    luks_uuid="$(cryptsetup luksUUID "$(cat "$INSTALL_BASE/.part_root")")"
+  fi
+
+  arch-chroot "$MNT" env \
+    INSTALL_USER="$INSTALL_USER" \
+    INSTALL_USER_PASS="$INSTALL_USER_PASS" \
+    ROOT_PASS="$ROOT_PASS" \
+    HOSTNAME="$HOSTNAME" \
+    LOCALE="$LOCALE" \
+    KEYMAP="$KEYMAP" \
+    ZONEINFO="$ZONEINFO" \
+    FS_TYPE="$FS_TYPE" \
+    USE_LUKS="$USE_LUKS" \
+    LUKS_UUID="${luks_uuid:-}" \
+    GPU="$GPU" \
+    MICROCODE="${MICROCODE:-none}" \
+    OFFLINE="$OFFLINE" \
+    SHARE_DIR="$SHARE_DIR" \
+    /bin/bash "$SHARE_DIR/chroot/all.sh"
+}
+
+# ---------------------------------------------------------------------------
+# Boot UEFI: instala o systemd-boot, garante fallback /EFI/BOOT e registra a
+# entrada na NVRAM com o rótulo "NLinux" (o bootctl usa "Linux Boot Manager").
+# ---------------------------------------------------------------------------
+register_uefi() {
+  info "Instalando systemd-boot na ESP e registrando 'NLinux' na lista UEFI"
+  bootctl --esp-path="$MNT/boot" install >/dev/null 2>&1 || true
+
+  mkdir -p "$MNT/boot/EFI/BOOT"
+  cp -f "$MNT/boot/EFI/systemd/systemd-bootx64.efi" "$MNT/boot/EFI/BOOT/BOOTX64.EFI" 2>/dev/null || true
+
+  if command -v efibootmgr >/dev/null 2>&1; then
+    local efi_part edev en
+    efi_part="$(cat "$INSTALL_BASE/.part_efi")"
+    edev="$(lsblk -no PKNAME "$efi_part")"
+    en="$(lsblk -no PARTN "$efi_part")"
+    if [[ -n "$edev" && -n "$en" ]]; then
+      if efibootmgr --create --disk "$edev" --part "$en" \
+          --label "NLinux" \
+          --loader '\EFI\systemd\systemd-bootx64.efi' >/dev/null 2>&1; then
+        ok "Entrada 'NLinux' criada na lista de boot UEFI."
+        # Remove o "Linux Boot Manager" criado pelo bootctl, se presente.
+        local eb num
+        eb="$(efibootmgr -v 2>/dev/null | grep -i 'Linux Boot Manager' | awk '{print $1}')"
+        num="${eb#Boot}"
+        num="${num%\*}"
+        if [[ -n "$num" ]]; then
+          efibootmgr -b "$num" -B >/dev/null 2>&1 || true
+        fi
+      else
+        warn "Falha ao criar entrada 'NLinux'; a entrada do bootctl foi mantida."
+      fi
+    fi
+  else
+    warn "efibootmgr ausente; apenas fallback /EFI/BOOT garantido."
+  fi
+}
+
+# ---------------------------------------------------------------------------
+# Desmontagem
+# ---------------------------------------------------------------------------
+# Em caso de falha, grava o erro NO DISCO-ALVO antes de desmontar, para ser
+# lido depois sem a VM (ex.: /run/media/<user>/archroot/@log/install-error.log).
+_save_error_marker() {
+  local rc=$1
+  mkdir -p "$MNT/var/log" 2>/dev/null || true
+  { echo "=== INSTALAÇÃO FALHOU (rc=$rc) em $(date -Is) ==="; echo; } \
+    > "$MNT/var/log/install-error.log" 2>/dev/null || true
+  [[ -f /tmp/nlinux-install.log ]] \
+    && tail -n 150 /tmp/nlinux-install.log >> "$MNT/var/log/install-error.log" 2>/dev/null || true
+  warn "Erro da instalação salvo em: $MNT/var/log/install-error.log"
+}
+
+umount_all() {
+  info "Desmontando sistemas de arquivos"
+  umount -R "$MNT" 2>/dev/null || true
+  if ls /dev/mapper/cryptroot >/dev/null 2>&1; then
+    cryptsetup close cryptroot 2>/dev/null || true
+  fi
+
+  rm -f "$INSTALL_BASE/.part_efi" "$INSTALL_BASE/.part_root"
+}
+
+# ---------------------------------------------------------------------------
+# Main
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# O instalador (binários, /opt/noctalia-installer, atalhos e ícone) é só do
+# live. Após o chroot terminar, remove qualquer vestígio do disco instalado.
+# ---------------------------------------------------------------------------
+remove_installer_artifacts() {
+  info "Removendo o instalador do sistema instalado (menu, ícone e binários)"
+  rm -rf "$MNT/opt/noctalia-installer"
+  rm -f "$MNT/usr/local/bin/nlinux-installer" "$MNT/usr/local/bin/nlinux-installer-gui"
+  rm -f "$MNT/usr/share/applications/nlinux-installer.desktop"
+  rm -f "$MNT/usr/share/pixmaps/nlinux-installer.png"
+  rm -f "$MNT/home/$INSTALL_USER/Desktop/nlinux-installer.desktop" 2>/dev/null || true
+  rm -f "$MNT/root/.automated_script.sh" 2>/dev/null || true
+  rm -f "$MNT/etc/sudoers.d/10-nlinux-builder" 2>/dev/null || true
+}
+
+main() {
+  trap 'rc=$?; (( rc != 0 )) && _save_error_marker "$rc"; umount_all || true' EXIT
+
+  progress 2 "stage.start"
+  info "Instalador Arch Linux + Noctalia (Umbriel, greetd, noctalia-greeter)"
+  preflight
+  collect_options
+  apply_live_options
+  progress 8 "stage.lang_key"
+  apply_mirror
+  progress 12 "stage.mirror"
+  partition_disk
+  progress 25 "stage.disk"
+  setup_filesystem
+  progress 35 "stage.fs"
+  if (( OFFLINE )); then
+    progress 40 "stage.copy.offline"
+    offline_clone
+    progress 60 "stage.copy.done"
+  else
+    progress 40 "stage.copy.online"
+    stage_packages
+    progress 60 "stage.pac.done"
+  fi
+  progress 70 "stage.chroot"
+  run_chroot_setup
+  progress 90 "stage.boot"
+  remove_installer_artifacts
+
+  if [[ -d /sys/firmware/efi/efivars ]]; then
+    register_uefi
+  else
+    warn "Ambiente sem efivars; apenas o fallback /EFI/BOOT será gravado."
+  fi
+
+  progress 100 "stage.final"
+  ok "Instalação concluída com sucesso. Desmonte é feito automaticamente."
+  ok "Remova o pendrive e reinicie: reboot"
+}
+
+main "$@"

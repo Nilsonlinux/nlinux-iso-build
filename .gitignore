@@ -1,0 +1,10 @@
+# Artefatos de build (gerados pelo build-iso.sh, precisam de sudo)
+iso/out/
+iso/profile/
+
+# Python
+__pycache__/
+*.pyc
+
+# ISOs
+*.iso

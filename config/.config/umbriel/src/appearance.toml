@@ -1,0 +1,103 @@
+[appearance]
+prefer_no_csd = true
+border_width = 2               # 0-100
+outer_border_width = 0         # 0-100
+corner_radius = 10             # 0-100, final outer edge; 0 disables
+drag_opacity = 0.75
+
+[appearance.blur]
+enabled = true
+optimized = false
+passes = 3        # 0-8
+radius = 5        # 0-100
+noise = 0.02      # 0.0-1.0
+brightness = 0.9  # 0.0-2.0
+contrast = 0.9    # 0.0-2.0
+saturation = 1.1  # 0.0-2.0
+
+[appearance.shadow]
+enabled = true
+softness = 10      # 0-200
+offset_x = 2       # -200 to 200
+offset_y = 2
+
+[overview]
+zoom = 0.5
+
+[[layer_rule]]
+match.namespace = "^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd|desktop-widget-[^\"]*)$"
+blur = true
+blur_ignore_alpha = 0.5
+blur_popups = true
+
+[colors.border]
+focused = "#7AA3FFFF"
+unfocused = "#292933FF"
+scratchpad_focused = "#E5C07BFF"
+scratchpad_unfocused = "#5C4A2AFF"
+outer = "#1A1A1FFF"
+
+[colors.overview]
+background_tint = "#10101430"
+workspace_background = "#00000044"
+badge = "#7AA3FFFF"
+
+[animation]
+enabled = true
+duration_ms = 250
+curve = "easeout"
+
+[animation.windows_in]
+enabled = true
+duration_ms = 150
+curve = "easeout"
+style = "popin"       # "popin", "zoom", "slide", "fade", or "none"
+scale = 0.85          # 0.1-1.0, used by "popin"
+
+[animation.windows_out]
+enabled = true
+duration_ms = 150
+curve = "easeout"
+style = "fade"        # "fade" or "slide"
+
+[animation.windows_move]
+enabled = true
+duration_ms = 250
+curve = "snappy"
+
+[animation.workspaces]
+enabled = true
+duration_ms = 250
+curve = "easeout"
+
+[animation.overview]
+enabled = true
+duration_ms = 250
+curve = "easeout"
+workspace_curve = "spring:1,1000"
+
+[animation.scratchpad]
+enabled = false
+duration_ms = 250
+curve = "easeout"
+dim = 0.5             # 0.0-1.0
+blur = false          # requires appearance.blur.enabled
+scale = 0.0           # 0 preserves geometry; 0.1-1.0 sizes and centers on entry
+maximize = false      # maximize to edges on entry
+fullscreen = false    # fullscreen on entry
+
+[animation.border]
+enabled = true
+duration_ms = 250
+curve = "easeout"
+
+[animation.dim_unfocused]
+enabled = false
+duration_ms = 250
+curve = "easeout"
+dim = 0.0             # 0.0-1.0
+
+[animation.layers]
+enabled = false
+duration_ms = 250
+curve = "easeout"

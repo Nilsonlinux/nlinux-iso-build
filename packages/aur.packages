@@ -1,0 +1,9 @@
+# Pacotes AUR instalados via yay dentro do chroot.
+# umbriel-git depende de xdg-desktop-portal-umbriel-git (AUR) e o yay resolve.
+# noctalia-greeter precisa de greetd + wlroots0.20 (repositórios).
+# xwayland-satellite-git fornece suporte a X11 (XWayland) no Umbriel.
+
+umbriel-git
+noctalia-greeter
+xwayland-satellite-git
+whatsapp-linux-desktop-bin

@@ -1,0 +1,24 @@
+[input.touchpad]
+tap = true
+natural_scroll = true
+
+[input.mouse]
+accel_profile = "flat"
+
+[input.focus]
+follows_mouse = true
+follows_mouse_max_scroll = 0.0
+
+[input.keyboard]
+layout = "__KEYBOARD_LAYOUT__"
+options = "grp:alt_shift_toggle"
+repeat_delay = 300
+repeat_rate = 30
+numlock_toggle = true
+
+[input.cursor]
+theme = "Bibata-Modern-Ice"   # Tema do cursor
+size = 20                      # Tamanho 1-512
+hardware_cursor = true         # Usar cursor por hardware (recomendado)
+hide_when_typing = true        # Esconder ao digitar
+hide_timeout_ms = 0            # 0 desabilita timeout

@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Instalador NLinux</title>
+<link rel="stylesheet" href="/static/style.css">
+<link rel="icon" href="/static/logo.png">
+</head>
+<body>
+<div id="app" class="dark">
+
+  <!-- SPLASH -->
+  <section id="splash" class="screen active">
+    <div class="splash-center">
+      <div class="logo-ring">
+        <span class="pulse"></span>
+        <span class="pulse delay-1"></span>
+        <span class="pulse delay-2"></span>
+        <div class="logo-circle">
+          <img src="/static/logo.png" alt="NLinux">
+        </div>
+      </div>
+      <h1 class="splash-title">NLinux</h1>
+      <p class="splash-sub">Instalando sua distro</p>
+      <div class="dots"><span></span><span></span><span></span></div>
+    </div>
+  </section>
+
+  <!-- ASSISTENTE -->
+  <section id="wizard" class="screen">
+    <div class="wizard-shell">
+      <header class="stepper">
+        <div id="stepper-bar" class="stepper-bar"><span id="stepper-fill"></span></div>
+        <span id="stepper-label" class="stepper-label">Bem-vindo</span>
+      </header>
+      <div id="step" class="step"></div>
+      <footer class="nav">
+        <button id="btn-back" class="btn ghost">Voltar</button>
+        <button id="btn-next" class="btn primary">Continuar</button>
+      </footer>
+    </div>
+  </section>
+
+  <!-- INSTALANDO -->
+  <section id="installing" class="screen">
+    <div class="install-shell">
+      <h2 class="install-title">Instalando NLinux</h2>
+      <div class="ring-wrap">
+        <svg class="ring" viewBox="0 0 200 200">
+          <circle class="ring-bg" cx="100" cy="100" r="88"/>
+          <circle id="ring-fg" class="ring-fg" cx="100" cy="100" r="88"/>
+        </svg>
+        <div class="ring-center">
+          <span id="ring-pct">0%</span>
+        </div>
+      </div>
+      <p id="stage-label" class="stage-label shimmer">Iniciando…</p>
+      <div id="stage-check" class="stages"></div>
+      <p id="live-tail" class="live-tail"></p>
+      <details class="logs">
+        <summary>Registro da instalação</summary>
+        <pre id="log-box" class="log-box"></pre>
+      </details>
+    </div>
+  </section>
+
+  <!-- RESULTADO -->
+  <section id="done" class="screen">
+    <div class="done-shell">
+      <div class="logo-circle big">
+        <img id="done-img" src="/static/logo.png" alt="NLinux">
+      </div>
+      <h2 id="done-title" class="done-title">Instalação concluída!</h2>
+      <p id="done-msg" class="done-msg">Remova o pendrive e reinicie a máquina.</p>
+      <div class="done-actions">
+        <button id="btn-reboot" class="btn primary">Reiniciar</button>
+        <button id="btn-done" class="btn ghost">Fechar</button>
+      </div>
+    </div>
+  </section>
+
+</div>
+<script src="/static/app.js"></script>
+</body>
+</html>

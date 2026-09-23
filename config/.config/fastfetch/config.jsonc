@@ -1,0 +1,106 @@
+{
+  "$schema": "https://github.com/fastfetch-cli/fastfetch/raw/dev/doc/json_schema.json",
+  "logo": {
+    "source": "~/.config/fastfetch/img/nlinux.png",
+    "type": "kitty-direct",
+    "height": 18,
+    "padding": {
+      "top": 2
+    }
+  },
+  "display": {
+    "separator": " "
+  },
+  "modules": [
+    {
+      "type": "custom",
+      "format": "\u001b[90m\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500Hardware\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510"
+    },
+    {
+      "type": "host",
+      "key": "\uf109 PC",
+      "keyColor": "green"
+    },
+    {
+      "type": "cpu",
+      "key": "\u2502 \u251c\uf4bc",
+      "showPeCoreCount": true,
+      "keyColor": "green"
+    },
+    {
+      "type": "gpu",
+      "key": "\u2502 \u251c\udb80\udf5b",
+      "keyColor": "green"
+    },
+    {
+      "type": "memory",
+      "key": "\u2502 \u251c\udb80\udf5b",
+      "keyColor": "green"
+    },
+    {
+      "type": "disk",
+      "key": "\u2514 \u2514\uf489",
+      "keyColor": "green"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518"
+    },
+    "break",
+    {
+      "type": "custom",
+      "format": "\u001b[90m\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500Software\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510"
+    },
+    {
+      "type": "os",
+      "key": "\ue62a OS",
+      "keyColor": "yellow"
+    },
+    {
+      "type": "kernel",
+      "key": "\u2502 \u251c\uf013",
+      "keyColor": "yellow"
+    },
+    {
+      "type": "packages",
+      "key": "\u2502 \u251c\udb80\udfd6",
+      "keyColor": "yellow"
+    },
+    {
+      "type": "shell",
+      "key": "\u2514 \u2514\uf489",
+      "keyColor": "yellow"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518"
+    },
+    "break",
+    {
+      "type": "command",
+      "text": "noctalia -v",
+      "key": "\u2502 \u251c\uf488",
+      "keyColor": "blue"
+    },
+    {
+      "type": "lm",
+      "key": "\u2502 \u251c\uf488",
+      "keyColor": "blue"
+    },
+    {
+      "type": "wm",
+      "key": "\u2502 \u251c\uf488",
+      "keyColor": "blue"
+    },
+    {
+      "type": "gpu",
+      "key": "\u2514 \u2514\udb80\udf5b",
+      "format": "{3}",
+      "keyColor": "blue"
+    },
+    {
+      "type": "custom",
+      "format": "\u001b[90m\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518"
+    }
+  ]
+}
