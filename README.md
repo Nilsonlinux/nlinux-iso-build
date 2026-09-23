@@ -20,6 +20,9 @@ Resultado instalado / ao vivo:
 
 ---
 
+<img width="640" height="480" alt="image" src="https://github.com/user-attachments/assets/a8d601e4-ad83-4b77-933a-a67312f9afcd" />
+
+
 ## Estrutura do projeto
 
 ```
