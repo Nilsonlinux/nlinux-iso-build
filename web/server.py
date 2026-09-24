@@ -139,15 +139,16 @@ def emit_line(raw):
         except ValueError:
             pct = 0
         label = lab.strip()
+        if label.startswith("stage.copy.offline") or label.startswith("stage.copy.online"):
+            _ctx["copying"] = True
+        elif label.startswith("stage.copy.") or label == "stage.pac.done":
+            _ctx["copying"] = False
         if translations is not None:
             translated = translations.T(_ui_lang, label)
             if translated != label:
                 label = translated
-        if label.startswith("stage.copy.offline") or label.startswith("stage.copy.online"):
-            _ctx["copying"] = True
+        if _ctx["copying"]:
             _ctx["label"] = label
-        elif label.startswith("stage.copy."):
-            _ctx["copying"] = False
         BROADCAST.push("progress", {"pct": pct, "label": label})
     else:
         BROADCAST.push("log", {"line": line})
