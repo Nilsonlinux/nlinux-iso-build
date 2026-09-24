@@ -643,6 +643,12 @@ $("#btn-reboot").addEventListener("click", () => {
   } catch (e) {}
 });
 
+// Pré-carrega logo/sucesso/erro para não piscar a imagem errada ao concluir.
+["/static/logo.png", "/static/success.png", "/static/error.png"].forEach((p) => {
+  const im = new Image();
+  im.src = p;
+});
+
 (async () => {
   await loadI18n(state.NLLANG);
   render();
