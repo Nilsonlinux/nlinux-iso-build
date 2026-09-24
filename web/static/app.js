@@ -42,15 +42,16 @@ function t(key) {
 /* ---------- estado ---------- */
 const state = {
   INSTALL_DISK: "",
-  FS_TYPE: "ext4",
-  LOCALE: "pt_BR.UTF-8",
-  KEYMAP: "br-abnt2",
-  ZONEINFO: "America/Sao_Paulo",
+  FS_TYPE: "",
+  LOCALE: "",
+  KEYMAP: "",
+  ZONEINFO: "",
   MIRROR: "",
-  OFFLINE: "1",
-  USE_LUKS: "0",
+  MIRROR_PICKED: false,
+  OFFLINE: "",
+  USE_LUKS: "",
   LUKS_PASS: "",
-  GPU: "vm",
+  GPU: "",
   HOSTNAME: "nlinux",
   INSTALL_USER: "nlinux",
   INSTALL_USER_PASS: "",
@@ -92,6 +93,11 @@ GPUS.forEach((g) => (GPU_NAME[g.value] = g.k));
 let idx = 0;
 const steps = [];
 
+function hideMsg() {
+  const m = $("#step-msg");
+  if (m) m.hidden = true;
+}
+
 function cardGrid(options, pick, extra) {
   const wrap = document.createElement("div");
   wrap.className = "grid";
@@ -105,6 +111,7 @@ function cardGrid(options, pick, extra) {
       (o.desc ? `<div class="desc">${o.desc}</div>` : "") +
       `</div>`;
     c.addEventListener("click", () => {
+      hideMsg();
       wrap.querySelectorAll(".card").forEach((x) => x.classList.remove("selected"));
       c.classList.add("selected");
       pick(o);
@@ -127,7 +134,10 @@ function h(fields) {
     inp.type = f.type || "text";
     inp.value = f.value || "";
     if (f.placeholder) inp.placeholder = t(f.placeholder);
-    inp.addEventListener("input", () => f.oninput(inp.value));
+    inp.addEventListener("input", () => {
+      hideMsg();
+      f.oninput(inp.value);
+    });
     box.append(lab, inp);
     wrap.appendChild(box);
   });
@@ -219,7 +229,7 @@ function fsStep() {
       options.forEach((o, i) => o.sel() && g.children[i].classList.add("selected"));
       el.appendChild(g);
     },
-    valid: () => true,
+    valid: () => !!state.FS_TYPE,
   };
 }
 
@@ -276,10 +286,13 @@ function mirrorStep() {
     label: "web.step.mirror",
     render(el) {
       el.innerHTML = `<h2>${t("web.step.mirror")}</h2><p class="sub">${t("web.sub.mirror")}</p>`;
-      const g = cardGrid(MIRRORS, (o) => (state.MIRROR = o.value));
+      const g = cardGrid(MIRRORS, (o) => {
+        state.MIRROR = o.value;
+        state.MIRROR_PICKED = true;
+      });
       el.appendChild(g);
     },
-    valid: () => true,
+    valid: () => state.MIRROR_PICKED === true,
   };
 }
 
@@ -296,7 +309,7 @@ function typeStep() {
       options.forEach((o, i) => o.sel() && g.children[i].classList.add("selected"));
       el.appendChild(g);
     },
-    valid: () => true,
+    valid: () => state.OFFLINE === "0" || state.OFFLINE === "1",
   };
 }
 
@@ -335,7 +348,9 @@ function luksStep() {
         if (c) sync(state.USE_LUKS);
       });
     },
-    valid: () => state.USE_LUKS !== "1" || (state.LUKS_PASS.length > 0 && state.LUKS_PASS === state._luk_conf),
+    valid: () =>
+      state.USE_LUKS === "0" ||
+      (state.USE_LUKS === "1" && state.LUKS_PASS.length > 0 && state.LUKS_PASS === state._luk_conf),
   };
 }
 
@@ -348,7 +363,7 @@ function gpuStep() {
       const g = cardGrid(options, (o) => (state.GPU = o.value));
       el.appendChild(g);
     },
-    valid: () => true,
+    valid: () => !!state.GPU,
   };
 }
 
@@ -612,7 +627,16 @@ const nextBtn = $("#btn-next");
 const backBtn = $("#btn-back");
 async function next() {
   const step = steps[idx];
-  if (!step.valid()) return;
+  if (!step.valid()) {
+    const m = $("#step-msg");
+    if (m) {
+      m.textContent = t("web.required");
+      m.hidden = false;
+    }
+    return;
+  }
+  const m = $("#step-msg");
+  if (m) m.hidden = true;
   if (idx === steps.length - 1) {
     step.submit();
     return;
@@ -624,6 +648,7 @@ async function next() {
 nextBtn.addEventListener("click", next);
 backBtn.addEventListener("click", async () => {
   if (idx > 0) {
+    hideMsg();
     idx -= 1;
     await loadI18n(state.NLLANG);
     render();

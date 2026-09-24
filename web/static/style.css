@@ -220,6 +220,16 @@ body {
   font-size: .9rem;
 }
 
+.step-msg {
+  margin: 4px 26px 0;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: rgba(225, 67, 67, .12);
+  border: 1px solid rgba(225, 67, 67, .45);
+  color: var(--danger);
+  font-size: .88rem;
+}
+
 .nav {
   padding: 16px 26px;
   border-top: 1px solid var(--line);
