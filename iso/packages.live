@@ -51,6 +51,7 @@ nautilus
 gvfs
 udisks2
 gnome-text-editor
+xdg-user-dirs
 
 wl-clipboard
 grim
