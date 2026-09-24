@@ -31,4 +31,18 @@ fi
 
 chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/.config" "$user_home/.local" 2>/dev/null || true
 
+# Cria as pastas XDG padrão (Desktop, Documentos, Downloads, ...) no idioma do
+# sistema para o Nautilus mostrar na lista lateral já no primeiro login.
+if command -v xdg-user-dirs-update >/dev/null 2>&1; then
+  LANG="$LOCALE" runuser -u "$INSTALL_USER" -- xdg-user-dirs-update 2>/dev/null \
+    || log "xdg-user-dirs-update falhou; criando pastas padrão manualmente"
+else
+  log "xdg-user-dirs-update não instalado; criando pastas padrão manualmente"
+fi
+if [[ ! -f "$user_home/.config/user-dirs.dirs" ]]; then
+  for d in Desktop Documents Downloads Music Pictures Public Templates Videos Projetos; do
+    install -d -o "$INSTALL_USER" -g "$INSTALL_USER" "$user_home/$d"
+  done
+fi
+
 ok "Configurações do usuário aplicadas."
