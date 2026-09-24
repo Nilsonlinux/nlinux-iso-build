@@ -129,7 +129,10 @@ case "$MICROCODE" in
   amd)   [[ -f /boot/amd-ucode.img ]] && microcode_initrd="initrd /amd-ucode.img" ;;
 esac
 
-options="root=UUID=$root_uuid rw rootflags=subvol=/@"
+options="root=UUID=$root_uuid rw"
+if [[ "$FS_TYPE" == "btrfs" ]]; then
+  options="$options rootflags=subvol=/@"
+fi
 if [[ "$USE_LUKS" == "1" && -n "${LUKS_UUID:-}" ]]; then
   options="$options rd.luks.name=$LUKS_UUID=cryptroot rd.luks.options=discard"
 fi
