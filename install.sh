@@ -801,21 +801,21 @@ main() {
   apply_mirror
   progress 12 "stage.mirror"
   partition_disk
-  progress 25 "stage.disk"
+  progress 20 "stage.disk"
   setup_filesystem
-  progress 35 "stage.fs"
+  progress 30 "stage.fs"
   if (( OFFLINE )); then
-    progress 40 "stage.copy.offline"
+    progress 35 "stage.copy.offline"
     offline_clone
-    progress 60 "stage.copy.done"
+    progress 90 "stage.copy.done"
   else
-    progress 40 "stage.copy.online"
+    progress 35 "stage.copy.online"
     stage_packages
-    progress 60 "stage.pac.done"
+    progress 90 "stage.pac.done"
   fi
-  progress 70 "stage.chroot"
+  progress 95 "stage.chroot"
   run_chroot_setup
-  progress 90 "stage.boot"
+  progress 99 "stage.boot"
   remove_installer_artifacts
 
   if [[ -d /sys/firmware/efi/efivars ]]; then

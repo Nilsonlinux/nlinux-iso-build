@@ -480,7 +480,7 @@ const STAGES = [
   "stage.boot",
   "stage.final",
 ];
-const STAGE_THRESH = [8, 12, 25, 35, 55, 70, 90, 100];
+const STAGE_THRESH = [8, 12, 20, 30, 90, 95, 99, 100];
 const RING_CIRC = 2 * Math.PI * 88;
 
 let curPct = 0;
@@ -491,12 +491,12 @@ function tweenPct(targetPct) {
   $("#ring-fg").style.transition = "none";
   const frame = () => {
     const diff = targetPct - curPct;
-    if (Math.abs(diff) <= 0.1) {
+    if (Math.abs(diff) <= 0.5) {
       curPct = targetPct;
       tweenRaf = null;
       $("#ring-fg").style.transition = "stroke-dashoffset .3s cubic-bezier(.4, 0, .2, 1)";
     } else {
-      curPct += diff * 0.22;
+      curPct += diff * 0.35;
       tweenRaf = requestAnimationFrame(frame);
     }
     $("#ring-pct").textContent = Math.round(curPct) + "%";

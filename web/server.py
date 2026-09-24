@@ -98,9 +98,34 @@ class Broadcaster:
 
 BROADCAST = Broadcaster()
 
+# Slice de porcentagem ocupado pela etapa de cópia (rsync/pacstrap). O
+# progresso real (progress2 do rsync, "N/M" do pacman) é interpolado nele.
+COPY_SLICE = (35, 90)
+_ctx = {"copying": False, "label": ""}
+
 
 def _clean(raw):
     return ANSI_RE.sub("", raw.decode("utf-8", "replace")).rstrip("\r").strip()
+
+
+def _push_real_progress(seg):
+    """Interpola o progresso real (rsync progress2 ou N/M do pacman) no slice
+    da etapa de cópia e emite um evento de progresso para o anel."""
+    if not _ctx["copying"]:
+        return
+    base, end = COPY_SLICE
+    m = re.search(r"(\d+)%\s+.*to-chk=", seg)
+    if m:
+        frac = min(float(m.group(1)), 100.0) / 100.0
+    else:
+        m = re.search(r"\(\s*(\d+)\s*/\s*(\d+)\s*\)\s*\d+%", seg)
+        if not m:
+            return
+        done, total = float(m.group(1)), float(m.group(2))
+        if total <= 0:
+            return
+        frac = min(done / total, 1.0)
+    BROADCAST.push("progress", {"pct": int(base + (end - base) * frac), "label": _ctx["label"]})
 
 
 def emit_line(raw):
@@ -118,6 +143,11 @@ def emit_line(raw):
             translated = translations.T(_ui_lang, label)
             if translated != label:
                 label = translated
+        if label.startswith("stage.copy.offline") or label.startswith("stage.copy.online"):
+            _ctx["copying"] = True
+            _ctx["label"] = label
+        elif label.startswith("stage.copy."):
+            _ctx["copying"] = False
         BROADCAST.push("progress", {"pct": pct, "label": label})
     else:
         BROADCAST.push("log", {"line": line})
@@ -149,7 +179,9 @@ def drain(proc, logfh=None):
         if buf and b"\r" in buf and now - last_tail > 0.25:
             seg = buf.rsplit(b"\r", 1)[-1].decode("utf-8", "replace").strip()
             if seg:
-                BROADCAST.push("tail", {"line": ANSI_RE.sub("", seg)})
+                clean_seg = ANSI_RE.sub("", seg)
+                BROADCAST.push("tail", {"line": clean_seg})
+                _push_real_progress(clean_seg)
             last_tail = now
 
 
