@@ -505,6 +505,16 @@ function tweenPct(targetPct) {
   frame();
 }
 
+function enterDone(imgUrl) {
+  const img = $("#done-img");
+  const go = () => show("done");
+  if (img.getAttribute("src") === imgUrl) return go();
+  img.onload = go;
+  img.onerror = go;
+  setTimeout(go, 2000);
+  img.src = imgUrl;
+}
+
 function buildStages() {
   const box = $("#stage-check");
   box.innerHTML = "";
@@ -571,7 +581,6 @@ async function startInstall() {
     src.close();
     const d = JSON.parse(ev.data);
     if (d.code === 0) {
-      $("#done-img").src = "/static/success.png";
       $("#done-title").textContent = t("tui.done");
       $("#done-msg").textContent = t("web.done.okmsg");
       $("#btn-reboot").textContent = t("web.done.reboot");
@@ -579,23 +588,21 @@ async function startInstall() {
       $("#btn-done").textContent = t("web.done.close");
       $("#done").classList.remove("err");
     } else {
-      $("#done-img").src = "/static/error.png";
       $("#done-title").textContent = t("web.done.fail");
       $("#done-msg").textContent = t("web.done.failmsg");
       $("#btn-reboot").style.display = "none";
       $("#btn-done").textContent = t("web.done.close");
       $("#done").classList.add("err");
     }
-    show("done");
+    enterDone(d.code === 0 ? "/static/success.png" : "/static/error.png");
   });
   src.addEventListener("error", (ev) => {
     src.close();
-    $("#done-img").src = "/static/error.png";
     $("#done-title").textContent = t("web.done.fail");
     $("#done-msg").textContent = t("web.err.connect");
     $("#btn-reboot").style.display = "none";
     $("#done").classList.add("err");
-    show("done");
+    enterDone("/static/error.png");
   });
 
   fetch("/api/install", {
@@ -604,12 +611,11 @@ async function startInstall() {
     body: JSON.stringify(Object.assign({}, state)),
   }).catch((e) => {
     src.close();
-    $("#done-img").src = "/static/error.png";
     $("#done-title").textContent = t("web.done.fail");
     $("#done-msg").textContent = t("web.err.server");
     $("#btn-reboot").style.display = "none";
     $("#done").classList.add("err");
-    show("done");
+    enterDone("/static/error.png");
   });
 }
 

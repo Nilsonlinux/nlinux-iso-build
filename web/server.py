@@ -249,7 +249,12 @@ class Handler(BaseHTTPRequestHandler):
         self.send_response(200)
         self.send_header("Content-Type", MIME.get(ext, "application/octet-stream"))
         self.send_header("Content-Length", str(len(data)))
-        self.send_header("Cache-Control", "no-store")
+        # Imagens podem ser cacheadas (evita o logo piscar até o success.png
+        # baixar); código/HTML seguem no-store para não servir versão velha.
+        if ext in (".png", ".jpg", ".jpeg", ".gif", ".svg", ".webp"):
+            self.send_header("Cache-Control", "public, max-age=3600")
+        else:
+            self.send_header("Cache-Control", "no-store")
         self.end_headers()
         self.wfile.write(data)
 
