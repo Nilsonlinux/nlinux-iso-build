@@ -30,6 +30,7 @@ power-profiles-daemon
 eartag
 firefox
 nautilus
+xdg-user-dirs
 gnome-text-editor
 
 wl-clipboard
