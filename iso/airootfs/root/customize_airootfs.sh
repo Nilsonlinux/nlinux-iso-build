@@ -128,17 +128,6 @@ systemctl enable NetworkManager 2>/dev/null || true
 systemctl disable systemd-networkd 2>/dev/null || true
 systemctl disable systemd-networkd-wait-online.service 2>/dev/null || true
 
-# --- GNOME Software: habilita PackageKit e adiciona o Flathub ao usuário
-log "Habilitando PackageKit, metadados AppStream e Flathub (gnome-software)"
-systemctl enable packagekit 2>/dev/null || true
-mkdir -p /home/nlinux/.local/share/flatpak
-runuser -u nlinux -- flatpak remote-add --if-not-exists --user flathub \
-  https://flathub.org/repo/flathub.flatpakrepo 2>/dev/null || true
-if command -v appstreamcli >/dev/null 2>&1; then
-  log "Baixando metadados AppStream do Arch (para a loja listar programas)..."
-  appstreamcli refresh --force >/dev/null 2>&1 || log "aviso: refresh AppStream falhou (sem rede?)"
-fi
-
 # --- Configurações do Umbriel e ícones (cursor) para o desktop no live
 log "Configurando dotfiles do usuário nlinux (umbriel, Bibata)"
 mkdir -p /home/nlinux/.config
