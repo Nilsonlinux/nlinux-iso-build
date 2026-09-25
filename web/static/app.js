@@ -100,10 +100,10 @@ function hideMsg() {
   if (m) m.hidden = true;
 }
 
-function cardGrid(options, pick, extra) {
+function cardGrid(options, pick, extra, selMatch) {
   const wrap = document.createElement("div");
   wrap.className = "grid";
-  options.forEach((o, i) => {
+  options.forEach((o) => {
     const c = document.createElement("div");
     c.className = "card";
     c.innerHTML =
@@ -112,12 +112,14 @@ function cardGrid(options, pick, extra) {
       `<div><div class="title">${o.name}</div>` +
       (o.desc ? `<div class="desc">${o.desc}</div>` : "") +
       `</div>`;
+    const isSel = selMatch ? () => selMatch(o) : () => (typeof o.sel === "function" ? o.sel() : false);
+    if (isSel()) c.classList.add("selected");
     c.addEventListener("click", () => {
       hideMsg();
       wrap.querySelectorAll(".card").forEach((x) => x.classList.remove("selected"));
       c.classList.add("selected");
       pick(o);
-      (extra || (() => {}))(o, i);
+      (extra || (() => {}))(o);
     });
     wrap.appendChild(c);
   });
@@ -199,10 +201,15 @@ function diskStep() {
         disks.forEach((d) => {
           const c = document.createElement("div");
           c.className = "card";
+          const freeGiB = d.free && d.free > 0 ? (d.free / (1024 ** 3)).toFixed(1) : null;
+          const meta = [];
+          if (d.esp) meta.push(t("disk.esp"));
+          if (freeGiB) meta.push(`${freeGiB} ${t("disk.free")}`);
+          const metaHtml = meta.length ? `<div class="meta">${meta.join(" · ")}</div>` : "";
           c.innerHTML =
             `<div class="check">✓</div>` +
             `<div><div class="title">${d.name}</div>` +
-            `<div class="desc">${d.size} — ${d.model || "disk"}${d.name === state.INSTALL_DISK ? "" : ""}</div></div>`;
+            `<div class="desc">${d.size} — ${d.model || "disk"}</div>${metaHtml}</div>`;
           if (d.name === state.INSTALL_DISK) c.classList.add("selected");
           c.addEventListener("click", () => {
             grid.querySelectorAll(".card").forEach((x) => x.classList.remove("selected"));
@@ -264,7 +271,6 @@ function fsStep() {
       ];
       el.innerHTML = `<h2>${t("web.step.fs")}</h2><p class="sub">${t("web.sub.fs")}</p>`;
       const g = cardGrid(options, (o) => (state.FS_TYPE = o.value));
-      options.forEach((o, i) => o.sel() && g.children[i].classList.add("selected"));
       el.appendChild(g);
     },
     valid: () => !!state.FS_TYPE,
@@ -289,7 +295,7 @@ function localeStep() {
         state.ZONEINFO = o.zone;
         state.NLLANG = LANG_FROM_LOCALE[o.locale] || "pt";
         loadI18n(state.NLLANG);
-      });
+      }, null, (o) => state.LOCALE === o.locale);
       el.appendChild(g);
     },
     valid: () => !!state.LOCALE,
@@ -312,7 +318,7 @@ function keymapStep() {
     label: "web.step.keymap",
     render(el) {
       el.innerHTML = `<h2>${t("web.step.keymap")}</h2><p class="sub">${t("web.sub.keymap")}</p>`;
-      const g = cardGrid(options, (o) => (state.KEYMAP = o.value));
+      const g = cardGrid(options, (o) => (state.KEYMAP = o.value), null, (o) => state.KEYMAP === o.value);
       el.appendChild(g);
     },
     valid: () => !!state.KEYMAP,
@@ -327,7 +333,7 @@ function mirrorStep() {
       const g = cardGrid(MIRRORS, (o) => {
         state.MIRROR = o.value;
         state.MIRROR_PICKED = true;
-      });
+      }, null, (o) => state.MIRROR === o.value);
       el.appendChild(g);
     },
     valid: () => state.MIRROR_PICKED === true,
@@ -344,7 +350,6 @@ function typeStep() {
       ];
       el.innerHTML = `<h2>${t("web.step.type")}</h2><p class="sub">${t("web.sub.type")}</p>`;
       const g = cardGrid(options, (o) => (state.OFFLINE = o.value));
-      options.forEach((o, i) => o.sel() && g.children[i].classList.add("selected"));
       el.appendChild(g);
     },
     valid: () => state.OFFLINE === "0" || state.OFFLINE === "1",
@@ -398,7 +403,7 @@ function gpuStep() {
     render(el) {
       el.innerHTML = `<h2>${t("web.step.gpu")}</h2><p class="sub">${t("web.sub.gpu")}</p>`;
       const options = GPUS.map((g) => ({ name: t(g.k), desc: t(g.d), value: g.value }));
-      const g = cardGrid(options, (o) => (state.GPU = o.value));
+      const g = cardGrid(options, (o) => (state.GPU = o.value), null, (o) => state.GPU === o.value);
       el.appendChild(g);
     },
     valid: () => !!state.GPU,

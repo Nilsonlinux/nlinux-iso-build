@@ -214,17 +214,52 @@ def _disk_esp(disk):
     return esp if typ == "vfat" else None
 
 
-def _disk_dual_ok(disk):
-    """True se o disco tem ESP FAT32 e espaço livre aproveitável (>~5 GiB)."""
-    if not _disk_esp(disk):
-        return False
+def _parse_free_bytes(text):
+    """Maior trecho 'Free Space' em bytes a partir da saída de:
+    parted -s <disk> unit B print free"""
+    best = 0
+    for ln in text.splitlines():
+        if "Free Space" not in ln:
+            continue
+        cols = ln.split()
+        if len(cols) >= 3 and cols[2].endswith("B"):
+            size = int(cols[2][:-1])
+            if size > best:
+                best = size
+    return best
+
+
+def _disk_free_bytes(disk):
+    """Maior bloco contínuo livre do disco, em bytes (para o dual boot)."""
+    # parted (presente no live) reporta o espaço livre em bytes, sem assumir
+    # tamanho de setor. Pega o MAIOR trecho 'Free Space'.
+    try:
+        out = subprocess.run(
+            ["parted", "-s", disk, "unit", "B", "print", "free"],
+            capture_output=True, text=True).stdout
+        best = _parse_free_bytes(out)
+        if best > 0:
+            return best
+    except Exception:  # noqa: BLE001
+        pass
+    # Fallback: sgdisk (setor 512B). Só se parted falhou.
     try:
         first = subprocess.run(["sgdisk", "-F", disk], capture_output=True, text=True).stdout.strip()
         last = subprocess.run(["sgdisk", "-E", disk], capture_output=True, text=True).stdout.strip()
-        free_bytes = (int(last) - int(first) + 1) * 512
-        return free_bytes > 5 * 1024**3
+        return max(0, (int(last) - int(first) + 1) * 512)
     except Exception:  # noqa: BLE001
+        return 0
+
+
+def _disk_dual_ok(disk):
+    """True se o disco tem ESP FAT32 e espaço livre aproveitável (>~5 GiB).
+
+    Funciona para qualquer sistema coexistente (Windows ou outra distro com
+    ESP FAT32): a instalação ao lado só depende disso, não do sistema em si.
+    """
+    if not _disk_esp(disk):
         return False
+    return _disk_free_bytes(disk) > 5 * 1024**3
 
 
 def get_disks():
@@ -243,6 +278,7 @@ def get_disks():
         disks.append({
             "name": name, "size": size, "model": model,
             "esp": _disk_esp(name) is not None,
+            "free": _disk_free_bytes(name),
             "dual_ok": _disk_dual_ok(name),
         })
     return disks
