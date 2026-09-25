@@ -806,6 +806,7 @@ stage_software_store() {
       "$MNT/usr/share/applications/nlinux-software.desktop"
   fi
   install -Dm755 /usr/local/bin/nlinux-software "$MNT/usr/local/bin/nlinux-software"
+  chmod 0755 "$MNT/opt/nlinux-software/nlinux-software" 2>/dev/null || true
   if [[ -f /usr/share/pixmaps/nlinux-software.svg ]]; then
     install -Dm644 /usr/share/pixmaps/nlinux-software.svg \
       "$MNT/usr/share/pixmaps/nlinux-software.svg"

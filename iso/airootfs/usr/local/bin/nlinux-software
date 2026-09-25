@@ -1,5 +1,5 @@
 #!/bin/sh
-# Loja de software NLinux.
-# O app real fica em /opt/nlinux-software (embutido na ISO e copiado para o
-# sistema instalado); este wrapper só localiza e executa o launcher do app.
-exec /opt/nlinux-software/nlinux-software "$@"
+# Launcher da Loja de Software NLinux (live e sistema instalado).
+# Chama o interpretador diretamente com o main.py como argumento: dispensa o
+# bit de execução do script em /opt e qualquer noexec do ponto de montagem.
+exec /usr/bin/python3 /opt/nlinux-software/src/main.py "$@"

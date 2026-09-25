@@ -200,6 +200,7 @@ if [[ -f /usr/share/applications/nlinux-software.desktop ]]; then
   chmod +x /home/nlinux/Desktop/nlinux-software.desktop 2>/dev/null || true
 fi
 chmod +x /usr/local/bin/nlinux-software 2>/dev/null || true
+chmod 0755 /opt/nlinux-software/nlinux-software 2>/dev/null || true
 
 # --- Loja gravável: o app sincroniza o catálogo e compila bytecode na própria
 # árvore (/opt/nlinux-software). Dá dono ao usuário do live.
