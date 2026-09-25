@@ -46,6 +46,7 @@ const state = {
   LOCALE: "",
   KEYMAP: "",
   ZONEINFO: "",
+  INSTALL_MODE: "",
   MIRROR: "",
   MIRROR_PICKED: false,
   OFFLINE: "",
@@ -92,6 +93,7 @@ GPUS.forEach((g) => (GPU_NAME[g.value] = g.k));
 /* ---------- infraestrutura do wizard ---------- */
 let idx = 0;
 const steps = [];
+let DISKS = [];
 
 function hideMsg() {
   const m = $("#step-msg");
@@ -189,6 +191,7 @@ function diskStep() {
         const r = await fetch("/api/disks");
         const data = await r.json();
         const disks = data.disks || [];
+        DISKS = disks;
         if (!disks.length) {
           grid.innerHTML = `<div class="warn-box">${t("web.disk.none")}</div>`;
           return;
@@ -213,6 +216,41 @@ function diskStep() {
       }
     },
     valid: () => !!state.INSTALL_DISK,
+  };
+}
+
+function modeStep() {
+  return {
+    label: "web.step.mode",
+    render(el) {
+      el.innerHTML = `<h2>${t("web.step.mode")}</h2><p class="sub">${t("web.sub.mode")}</p>`;
+      const warn = document.createElement("div");
+      warn.className = "warn-box";
+      warn.hidden = true;
+      const options = [
+        { name: t("mode.wipe"), desc: t("mode.wipe.desc"), value: "wipe", sel: () => state.INSTALL_MODE === "wipe" },
+        { name: t("mode.dual"), desc: t("mode.dual.desc"), value: "dual", sel: () => state.INSTALL_MODE === "dual" },
+      ];
+      const refreshWarn = (mode) => {
+        if (mode !== "dual") { warn.hidden = true; return; }
+        const d = DISKS.find((x) => x.name === state.INSTALL_DISK);
+        if (d && !d.dual_ok) {
+          warn.hidden = false;
+          warn.textContent = d.esp ? t("mode.warn.space") : t("mode.warn.esp");
+        } else {
+          warn.hidden = true;
+        }
+      };
+      el.appendChild(cardGrid(options, (o) => { state.INSTALL_MODE = o.value; refreshWarn(o.value); }));
+      el.appendChild(warn);
+      refreshWarn(state.INSTALL_MODE);
+    },
+    valid: () => {
+      if (!state.INSTALL_MODE) return false;
+      if (state.INSTALL_MODE !== "dual") return true;
+      const d = DISKS.find((x) => x.name === state.INSTALL_DISK);
+      return !d || d.dual_ok;
+    },
   };
 }
 
@@ -423,6 +461,7 @@ function summaryStep() {
     render(el) {
       const rows = [
         [t("s.disk"), state.INSTALL_DISK],
+        [t("s.mode"), state.INSTALL_MODE === "dual" ? t("mode.dual") : t("mode.wipe")],
         [t("s.fs"), state.FS_TYPE],
         [t("s.locale"), state.LOCALE],
         [t("s.keymap"), state.KEYMAP],
@@ -446,7 +485,7 @@ function summaryStep() {
       el.appendChild(s);
       const w = document.createElement("div");
       w.className = "warn-box";
-      w.textContent = t("web.warn.disk");
+      w.textContent = state.INSTALL_MODE === "dual" ? t("web.warn.dual") : t("web.warn.disk");
       el.appendChild(w);
     },
     valid: () => true,
@@ -459,6 +498,7 @@ function summaryStep() {
 steps.push(
   localeStep(),
   diskStep(),
+  modeStep(),
   fsStep(),
   keymapStep(),
   mirrorStep(),

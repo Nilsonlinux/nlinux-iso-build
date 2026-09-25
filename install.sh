@@ -44,6 +44,7 @@ MIRROR="${MIRROR:-}"
 OFFLINE="${OFFLINE:-1}"
 DISK="${INSTALL_DISK:-}"
 FS_TYPE="${FS_TYPE:-}"
+INSTALL_MODE="${INSTALL_MODE:-wipe}"
 USE_LUKS="${USE_LUKS:-}"
 GPU="${GPU:-}"
 MICROCODE="${MICROCODE:-}"
@@ -58,6 +59,9 @@ case "$NLLANG" in pt|en|es|fr|de|it|ja) ;; *) NLLANG=pt ;; esac
 declare -A _si18n_pt _si18n_en _si18n_es _si18n_fr _si18n_de _si18n_it _si18n_ja
 _si18n_pt["summary"]="Resumo da instalação:"
 _si18n_pt["sum.disk"]="Disco:"
+_si18n_pt["sum.part"]="Partição:"
+_si18n_pt["part.wipe"]="Apagar disco inteiro"
+_si18n_pt["part.dual"]="Dual boot"
 _si18n_pt["sum.fs"]="FS:"
 _si18n_pt["sum.luks"]="LUKS:"
 _si18n_pt["sum.yes"]="Sim"
@@ -76,6 +80,9 @@ _si18n_pt["sum.gpu"]="GPU:"
 _si18n_pt["sum.microcode"]="Microcode:"
 _si18n_en["summary"]="Installation summary:"
 _si18n_en["sum.disk"]="Disk:"
+_si18n_en["sum.part"]="Partition:"
+_si18n_en["part.wipe"]="Wipe entire disk"
+_si18n_en["part.dual"]="Dual boot"
 _si18n_en["sum.fs"]="FS:"
 _si18n_en["sum.luks"]="LUKS:"
 _si18n_en["sum.yes"]="Yes"
@@ -94,6 +101,9 @@ _si18n_en["sum.gpu"]="GPU:"
 _si18n_en["sum.microcode"]="Microcode:"
 _si18n_es["summary"]="Resumen de la instalación:"
 _si18n_es["sum.disk"]="Disco:"
+_si18n_es["sum.part"]="Partición:"
+_si18n_es["part.wipe"]="Borrar disco entero"
+_si18n_es["part.dual"]="Dual boot"
 _si18n_es["sum.fs"]="FS:"
 _si18n_es["sum.luks"]="LUKS:"
 _si18n_es["sum.yes"]="Sí"
@@ -112,6 +122,9 @@ _si18n_es["sum.gpu"]="GPU:"
 _si18n_es["sum.microcode"]="Microcódigo:"
 _si18n_fr["summary"]="Résumé de l'installation :"
 _si18n_fr["sum.disk"]="Disque :"
+_si18n_fr["sum.part"]="Partition :"
+_si18n_fr["part.wipe"]="Effacer le disque"
+_si18n_fr["part.dual"]="Dual boot"
 _si18n_fr["sum.fs"]="FS :"
 _si18n_fr["sum.luks"]="LUKS :"
 _si18n_fr["sum.yes"]="Oui"
@@ -130,6 +143,9 @@ _si18n_fr["sum.gpu"]="GPU :"
 _si18n_fr["sum.microcode"]="Microcode :"
 _si18n_de["summary"]="Installationsübersicht:"
 _si18n_de["sum.disk"]="Festplatte:"
+_si18n_de["sum.part"]="Partition:"
+_si18n_de["part.wipe"]="Festplatte löschen"
+_si18n_de["part.dual"]="Dualboot"
 _si18n_de["sum.fs"]="FS:"
 _si18n_de["sum.luks"]="LUKS:"
 _si18n_de["sum.yes"]="Ja"
@@ -148,6 +164,9 @@ _si18n_de["sum.gpu"]="GPU:"
 _si18n_de["sum.microcode"]="Mikrocode:"
 _si18n_it["summary"]="Riepilogo dell'installazione:"
 _si18n_it["sum.disk"]="Disco:"
+_si18n_it["sum.part"]="Partizione:"
+_si18n_it["part.wipe"]="Cancella disco"
+_si18n_it["part.dual"]="Dual boot"
 _si18n_it["sum.fs"]="FS:"
 _si18n_it["sum.luks"]="LUKS:"
 _si18n_it["sum.yes"]="Sì"
@@ -166,6 +185,9 @@ _si18n_it["sum.gpu"]="GPU:"
 _si18n_it["sum.microcode"]="Microcodice:"
 _si18n_ja["summary"]="インストールの要約:"
 _si18n_ja["sum.disk"]="ディスク:"
+_si18n_ja["sum.part"]="パーティション:"
+_si18n_ja["part.wipe"]="ディスク全体を消去"
+_si18n_ja["part.dual"]="デュアルブート"
 _si18n_ja["sum.fs"]="FS:"
 _si18n_ja["sum.luks"]="LUKS:"
 _si18n_ja["sum.yes"]="はい"
@@ -259,6 +281,10 @@ collect_options_prompt() {
     lsblk -dplno NAME,SIZE,MODEL | grep -E '^/dev/(sd|nvme|vd)' || die "Nenhum disco encontrado."
     read -r -p "Disco de destino (ex.: /dev/nvme0n1): " DISK
   fi
+  if [[ -z "$INSTALL_MODE" ]]; then
+    read -r -p "Modo (wipe=apagar disco inteiro | dual=instalar ao lado de outro sistema) [wipe]: " INSTALL_MODE
+    INSTALL_MODE="${INSTALL_MODE:-wipe}"
+  fi
   if [[ -z "$FS_TYPE" ]]; then
     read -r -p "Sistema de arquivos (ext4 | btrfs) [ext4]: " FS_TYPE
     FS_TYPE="${FS_TYPE:-ext4}"
@@ -278,6 +304,8 @@ collect_options_prompt() {
 validate_options() {
   [[ "$INSTALL_USER" =~ ^[a-z_][a-z0-9_-]*$ ]] || die "Usuário inválido: $INSTALL_USER"
   [[ -b "$DISK" ]] || die "Nenhum disco válido selecionado: $DISK (use INSTALL_DISK ou escolha no menu)."
+  INSTALL_MODE="${INSTALL_MODE:-wipe}"
+  [[ "$INSTALL_MODE" =~ ^(wipe|dual)$ ]] || die "Modo de instalação inválido: $INSTALL_MODE"
   FS_TYPE="${FS_TYPE:-ext4}"
   [[ "$FS_TYPE" =~ ^(ext4|btrfs)$ ]] || die "Sistema de arquivos inválido: $FS_TYPE"
   USE_LUKS="${USE_LUKS:-0}"
@@ -306,6 +334,7 @@ validate_options() {
 print_summary() {
   info "$(T summary)"
   echo "  $(T sum.disk):      $DISK"
+  if [[ "$INSTALL_MODE" == "dual" ]]; then echo "  $(T sum.part):      $(T part.dual)"; else echo "  $(T sum.part):      $(T part.wipe)"; fi
   echo "  $(T sum.fs):        $FS_TYPE"
   if (( USE_LUKS )); then echo "  $(T sum.luks):      $(T sum.yes)"; else echo "  $(T sum.luks):      $(T sum.no)"; fi
   echo "  $(T sum.user):      $INSTALL_USER"
@@ -396,6 +425,52 @@ partition_disk() {
   done < <(lsblk -lnlo MOUNTPOINT "$DISK" 2>/dev/null | grep -v '^$')
   udevadm settle 2>/dev/null || true
 
+  if [[ "$INSTALL_MODE" == "dual" ]]; then
+    # -------------------------------------------------------------------
+    # DUAL BOOT: preserva o sistema existente (ex.: Windows). Reutiliza a
+    # ESP (partição EFI System FAT32) que já existe e cria a raiz NLinux no
+    # MAIOR espaço livre contínuo do disco. Nada é apagado.
+    # -------------------------------------------------------------------
+    info "Modo dual boot: procurando partição EFI (ESP) existente em $DISK"
+    p_efi="$(lsblk -lnpo NAME,PARTTYPE "$DISK" 2>/dev/null | awk '$2 == "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" {print $1}' | head -n1)"
+    if [[ -z "$p_efi" || ! -b "$p_efi" ]]; then
+      die "Dual boot: não encontrei partição EFI (ESP) em $DISK. Escolha o modo 'wipe' ou um disco com Windows/ESP."
+    fi
+    [[ "$(blkid -s TYPE -o value "$p_efi" 2>/dev/null)" == "vfat" ]] \
+      || die "Dual boot: a partição EFI $p_efi não é FAT32. Não é seguro instalar ao lado."
+
+    info "Reutilizando ESP existente $p_efi (não será formatada)"
+    progress 22 "stage.dual.esp"
+
+    local free_num
+    free_num="$(sgdisk -f "$DISK" 2>/dev/null)"
+    [[ "$free_num" =~ ^[0-9]+$ ]] || die "Dual boot: não foi possível alocar número de partição em $DISK."
+    info "Criando partição raiz NLinux no maior espaço livre de $DISK"
+    if ! sgdisk --largest-new="$free_num" --typecode="$free_num:8304" --change-name="$free_num:archroot" "$DISK" >/dev/null 2>&1; then
+      die "Dual boot: sem espaço livre suficiente em $DISK para a raiz NLinux."
+    fi
+    p_root="$(part_path "$DISK" "$free_num")"
+    progress 26 "stage.dual.create"
+    partprobe "$DISK" >/dev/null 2>&1 || true
+    udevadm trigger --subsystem-match=block 2>/dev/null || true
+    udevadm settle 2>/dev/null || true
+    sleep 1
+
+    local i
+    for i in 1 2 3 4 5 6 7 8 9 10; do
+      if [[ -b "$p_root" ]]; then
+        break
+      fi
+      udevadm settle 2>/dev/null || true
+      sleep 1
+    done
+    [[ -b "$p_root" ]] || die "Kernel não reconheceu a partição nova $p_root (dmesg?)."
+
+    echo "$p_efi" > "$INSTALL_BASE/.part_efi"
+    echo "$p_root" > "$INSTALL_BASE/.part_root"
+    return 0
+  fi
+
   info "Apagando tabela de partições de $DISK"
   sgdisk --zap-all "$DISK" >/dev/null || die "Não foi possível apagar a tabela de $DISK (partição em uso?)."
   sgdisk -o "$DISK" >/dev/null
@@ -473,12 +548,17 @@ if [[ "$FS_TYPE" == "btrfs" ]]; then
     mount "$root_dev" "$MNT"
   fi
 
-  info "Formatando partição EFI (FAT32)"
-  mkfs.fat -F32 -n EFI "$p_efi" >/dev/null
-  sync
-  udevadm settle 2>/dev/null || true
+  if [[ "$INSTALL_MODE" == "dual" ]]; then
+    # ESP preservada (Windows continua intacto): só valida e monta.
+    info "Montando ESP existente $p_efi em /boot (dual boot)"
+  else
+    info "Formatando partição EFI (FAT32)"
+    mkfs.fat -F32 -n EFI "$p_efi" >/dev/null
+    sync
+    udevadm settle 2>/dev/null || true
+  fi
   blkid -s UUID -o value "$p_efi" >/dev/null 2>&1 \
-    || die "mkfs.fat não produziu superbloco legível em $p_efi."
+    || die "Não foi possível ler a partição EFI $p_efi (formato inesperado?)."
   mkdir -p "$MNT/boot"
   mount "$p_efi" "$MNT/boot"
 }
@@ -800,8 +880,8 @@ main() {
   progress 8 "stage.lang_key"
   apply_mirror
   progress 12 "stage.mirror"
-  partition_disk
   progress 20 "stage.disk"
+  partition_disk
   setup_filesystem
   progress 30 "stage.fs"
   if (( OFFLINE )); then

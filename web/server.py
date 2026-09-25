@@ -186,6 +186,47 @@ def drain(proc, logfh=None):
             last_tail = now
 
 
+ESP_TYPE = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
+
+
+def _disk_esp(disk):
+    """Retorna o caminho da ESP (partição EFI System FAT32) existente no disco, ou None."""
+    try:
+        out = subprocess.run(
+            ["lsblk", "-lnpo", "NAME,PARTTYPE", disk],
+            capture_output=True, text=True).stdout
+    except Exception:  # noqa: BLE001
+        return None
+    esp = None
+    for ln in out.splitlines():
+        parts = ln.split()
+        if len(parts) == 2 and parts[1] == ESP_TYPE:
+            esp = parts[0]
+            break
+    if not esp:
+        return None
+    try:
+        typ = subprocess.run(
+            ["blkid", "-s", "TYPE", "-o", "value", esp],
+            capture_output=True, text=True).stdout.strip()
+    except Exception:  # noqa: BLE001
+        typ = ""
+    return esp if typ == "vfat" else None
+
+
+def _disk_dual_ok(disk):
+    """True se o disco tem ESP FAT32 e espaço livre aproveitável (>~5 GiB)."""
+    if not _disk_esp(disk):
+        return False
+    try:
+        first = subprocess.run(["sgdisk", "-F", disk], capture_output=True, text=True).stdout.strip()
+        last = subprocess.run(["sgdisk", "-E", disk], capture_output=True, text=True).stdout.strip()
+        free_bytes = (int(last) - int(first) + 1) * 512
+        return free_bytes > 5 * 1024**3
+    except Exception:  # noqa: BLE001
+        return False
+
+
 def get_disks():
     out = subprocess.run(
         ["lsblk", "-dpno", "NAME,SIZE,MODEL,TYPE"],
@@ -199,7 +240,11 @@ def get_disks():
         model = " ".join(parts[2:-1]) if len(parts) > 3 else ""
         if kind != "disk" or "loop" in name or "zram" in name:
             continue
-        disks.append({"name": name, "size": size, "model": model})
+        disks.append({
+            "name": name, "size": size, "model": model,
+            "esp": _disk_esp(name) is not None,
+            "dual_ok": _disk_dual_ok(name),
+        })
     return disks
 
 

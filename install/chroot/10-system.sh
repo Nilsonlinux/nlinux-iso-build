@@ -119,6 +119,7 @@ default arch.conf
 timeout 4
 console-mode max
 editor no
+auto-entries yes
 EOF
 
 root_uuid="$(findmnt -no UUID /)"
