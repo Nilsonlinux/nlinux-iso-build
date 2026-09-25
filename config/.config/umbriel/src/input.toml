@@ -10,7 +10,7 @@ follows_mouse = true
 follows_mouse_max_scroll = 0.0
 
 [input.keyboard]
-layout = "__KEYBOARD_LAYOUT__"
+layout = "br"
 options = "grp:alt_shift_toggle"
 repeat_delay = 300
 repeat_rate = 30

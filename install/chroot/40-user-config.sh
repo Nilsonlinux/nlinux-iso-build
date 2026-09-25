@@ -53,4 +53,18 @@ if [[ -f /usr/share/applications/nlinux-software.desktop ]]; then
   chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/Desktop" 2>/dev/null || true
 fi
 
+# Loja gravável pelo usuário: o app sincroniza o catálogo e compila bytecode
+# na própria árvore (/opt/nlinux-software). Sem isso o sync falha com
+# "Permission denied" e o __pycache__ não é gravado.
+if [[ -d /opt/nlinux-software ]]; then
+  chown -R "$INSTALL_USER:$INSTALL_USER" /opt/nlinux-software
+  chmod -R u+rwX /opt/nlinux-software
+fi
+
+# Marca os atalhos da Área de Trabalho como confiáveis (senão o GNOME cobra
+# permissão a cada clique e dá impressão de que o app "não abre").
+command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinux-software; do
+  gio set "$user_home/Desktop/$d.desktop" metadata::trusted true 2>/dev/null || true
+done
+
 ok "Configurações do usuário aplicadas."

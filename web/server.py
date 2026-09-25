@@ -215,17 +215,29 @@ def _disk_esp(disk):
 
 
 def _parse_free_bytes(text):
-    """Maior trecho 'Free Space' em bytes a partir da saída de:
-    parted -s <disk> unit B print free"""
+    """Maior trecho livre em bytes, independente do idioma do parted.
+
+    'parted -s <disk> unit B print free' imprime partições com número na
+    primeira coluna e trechos livres sem número:
+        17408B   1048575B   1031168B  Espaço livre  | Free Space
+    Então basta casar linhas sem número cujas três primeiras colunas sejam
+    tamanhos em bytes.
+    """
     best = 0
     for ln in text.splitlines():
-        if "Free Space" not in ln:
-            continue
         cols = ln.split()
-        if len(cols) >= 3 and cols[2].endswith("B"):
+        if len(cols) < 4:
+            continue
+        if cols[0].isdigit():
+            continue
+        if not all(c.endswith("B") for c in cols[:3]):
+            continue
+        try:
             size = int(cols[2][:-1])
-            if size > best:
-                best = size
+        except ValueError:
+            continue
+        if size > best:
+            best = size
     return best
 
 

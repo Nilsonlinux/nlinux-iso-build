@@ -200,6 +200,19 @@ if [[ -f /usr/share/applications/nlinux-software.desktop ]]; then
   chmod +x /home/nlinux/Desktop/nlinux-software.desktop 2>/dev/null || true
 fi
 chmod +x /usr/local/bin/nlinux-software 2>/dev/null || true
+
+# --- Loja gravável: o app sincroniza o catálogo e compila bytecode na própria
+# árvore (/opt/nlinux-software). Dá dono ao usuário do live.
+if [[ -d /opt/nlinux-software ]]; then
+  chown -R nlinux:nlinux /opt/nlinux-software
+  chmod -R u+rwX /opt/nlinux-software
+fi
+
+# --- Marca os atalhos da Área de Trabalho como confiáveis (GNOME pediria
+# permissão a cada clique e poderia "não abrir" o app).
+command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinux-software; do
+  gio set "/home/nlinux/Desktop/$d.desktop" metadata::trusted true 2>/dev/null || true
+done
 chown -R nlinux:nlinux /home/nlinux/Desktop 2>/dev/null || true
 
 # --- nlinux-welcome: inócuo no live (exige /etc/nlinux-installed), presente para

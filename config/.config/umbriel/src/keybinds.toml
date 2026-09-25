@@ -4,7 +4,6 @@
 "Mod+Print" = "spawn:noctalia msg screenshot-fullscreen"
 "Alt+Tab" = "spawn:noctalia msg window-switcher"
 "Mod+T" = "spawn:kitty"
-"Mod+Shift+T" = "spawn:kitty"
 "Mod+Q" = "window-close"
 "Mod+I" = "overview-toggle"
 "Mod+Shift+Space" = "window-move-to-scratchpad"
@@ -51,5 +50,3 @@
 "Mod+Shift+R" = "window-cycle-primary-extent-back"
 "Mod+Alt+R" = "window-cycle-secondary-extent"
 "Mod+Alt+Shift+R" = "window-cycle-secondary-extent-back"
-
-
