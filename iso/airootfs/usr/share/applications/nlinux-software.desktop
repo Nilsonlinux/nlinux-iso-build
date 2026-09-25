@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Loja de Software NLinux
+Name[en]=NLinux Software Store
+Name[pt_BR]=Loja de Software NLinux
+Comment=Instala e gerencia programas do NLinux
+Comment[en]=Install and manage NLinux software
+Comment[pt_BR]=Instala e gerencia programas do NLinux
+Exec=/usr/local/bin/nlinux-software
+Icon=/usr/share/pixmaps/nlinux-software.svg
+Terminal=false
+StartupNotify=true
+Categories=System;Utility;
+Keywords=store;software;apps;loja;programas;nlinux;

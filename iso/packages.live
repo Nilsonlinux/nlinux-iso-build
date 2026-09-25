@@ -9,6 +9,8 @@ btrfs-progs
 parted
 dosfstools
 python
+python-gobject
+webkit2gtk-4.1
 efibootmgr
 
 base-devel

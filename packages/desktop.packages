@@ -43,6 +43,10 @@ swayidle
 xdg-desktop-portal
 xdg-desktop-portal-gtk
 
+# Dependências da Loja de Software NLinux (janela GTK3/WebKit2 em Python)
+python-gobject
+webkit2gtk-4.1
+
 zram-generator
 
 mpv

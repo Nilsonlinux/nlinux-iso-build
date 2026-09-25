@@ -45,4 +45,12 @@ if [[ ! -f "$user_home/.config/user-dirs.dirs" ]]; then
   done
 fi
 
+# Atalho da loja de software na Área de Trabalho do usuário.
+if [[ -f /usr/share/applications/nlinux-software.desktop ]]; then
+  mkdir -p "$user_home/Desktop"
+  cp -a /usr/share/applications/nlinux-software.desktop "$user_home/Desktop/"
+  chmod +x "$user_home/Desktop/nlinux-software.desktop" 2>/dev/null || true
+  chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/Desktop" 2>/dev/null || true
+fi
+
 ok "Configurações do usuário aplicadas."

@@ -789,6 +789,30 @@ run_chroot_setup() {
 }
 
 # ---------------------------------------------------------------------------
+# Loja de software (nlinux-software): copia o app + atalho + ícone para o
+# sistema instalado. No offline o rsync do live já traz /opt/nlinux-software;
+# aqui garante o arquivo igual no modo online (pacstrap) e os demais arquivos
+# de integração (menu, ícone, wrapper) nos dois modos.
+# ---------------------------------------------------------------------------
+stage_software_store() {
+  [[ -d /opt/nlinux-software ]] || { warn "Loja de software ausente no live; ignorando."; return 0; }
+  info "Incluindo a loja de software nlinux-software no sistema instalado"
+  if [[ ! -e "$MNT/opt/nlinux-software/nlinux-software" ]]; then
+    cp -a /opt/nlinux-software "$MNT/opt/nlinux-software"
+  fi
+  rm -rf "$MNT/opt/nlinux-software/src/nlinux/__pycache__" 2>/dev/null || true
+  if [[ -f /usr/share/applications/nlinux-software.desktop ]]; then
+    install -Dm644 /usr/share/applications/nlinux-software.desktop \
+      "$MNT/usr/share/applications/nlinux-software.desktop"
+  fi
+  install -Dm755 /usr/local/bin/nlinux-software "$MNT/usr/local/bin/nlinux-software"
+  if [[ -f /usr/share/pixmaps/nlinux-software.svg ]]; then
+    install -Dm644 /usr/share/pixmaps/nlinux-software.svg \
+      "$MNT/usr/share/pixmaps/nlinux-software.svg"
+  fi
+}
+
+# ---------------------------------------------------------------------------
 # Boot UEFI: instala o systemd-boot, garante fallback /EFI/BOOT e registra a
 # entrada na NVRAM com o rótulo "NLinux" (o bootctl usa "Linux Boot Manager").
 # ---------------------------------------------------------------------------
@@ -894,6 +918,7 @@ main() {
     progress 90 "stage.pac.done"
   fi
   progress 95 "stage.chroot"
+  stage_software_store
   run_chroot_setup
   progress 99 "stage.boot"
   remove_installer_artifacts

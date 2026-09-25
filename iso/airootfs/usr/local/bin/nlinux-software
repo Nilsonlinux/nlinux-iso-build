@@ -1,0 +1,5 @@
+#!/bin/sh
+# Loja de software NLinux.
+# O app real fica em /opt/nlinux-software (embutido na ISO e copiado para o
+# sistema instalado); este wrapper só localiza e executa o launcher do app.
+exec /opt/nlinux-software/nlinux-software "$@"

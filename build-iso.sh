@@ -59,6 +59,22 @@ mkdir -p "$INSTALLER_DST"
 cp -a "$BASE/install.sh" "$BASE/install" "$BASE/config" "$BASE/packages" "$BASE/web" "$INSTALLER_DST/"
 run_root chown -R "$(id -u):$(id -g)" "$PROFILE_DIR"
 
+info "Embutindo a loja de software em /opt/nlinux-software"
+if [[ -d /opt/nlinux-software ]]; then
+  SOFT_DST="$PROFILE_DIR/airootfs/opt/nlinux-software"
+  mkdir -p "$SOFT_DST"
+  cp -a /opt/nlinux-software/. "$SOFT_DST/"
+  rm -rf "$SOFT_DST/src/nlinux/__pycache__"
+  chmod -R a+rX "$SOFT_DST"
+  chmod 0755 "$SOFT_DST/nlinux-software"
+  # Ícone da loja para o atalho (.desktop) do menu e do Desktop.
+  mkdir -p "$PROFILE_DIR/airootfs/usr/share/pixmaps"
+  cp -f "$SOFT_DST/icon.svg" "$PROFILE_DIR/airootfs/usr/share/pixmaps/nlinux-software.svg"
+  run_root chown -R "$(id -u):$(id -g)" "$PROFILE_DIR"
+else
+  info "aviso: /opt/nlinux-software ausente; a loja NÃO será incluída na ISO"
+fi
+
 info "Criando o menu de boot 'NLinux ao vivo' (sem opção separada de instalação; o instalador é só web, no desktop do live)"
 
 transform_systemdboot_entries() {

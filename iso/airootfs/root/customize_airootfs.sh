@@ -191,6 +191,15 @@ if [[ -f /usr/share/applications/nlinux-installer.desktop ]]; then
   cp -a /usr/share/applications/nlinux-installer.desktop /home/nlinux/Desktop/
   chmod +x /home/nlinux/Desktop/nlinux-installer.desktop 2>/dev/null || true
 fi
+
+# --- Loja de software no menu e na Área de Trabalho do live
+log "Instalando atalho 'Loja de Software' (menu + Desktop do live)"
+if [[ -f /usr/share/applications/nlinux-software.desktop ]]; then
+  mkdir -p /home/nlinux/Desktop
+  cp -a /usr/share/applications/nlinux-software.desktop /home/nlinux/Desktop/
+  chmod +x /home/nlinux/Desktop/nlinux-software.desktop 2>/dev/null || true
+fi
+chmod +x /usr/local/bin/nlinux-software 2>/dev/null || true
 chown -R nlinux:nlinux /home/nlinux/Desktop 2>/dev/null || true
 
 # --- nlinux-welcome: inócuo no live (exige /etc/nlinux-installed), presente para
