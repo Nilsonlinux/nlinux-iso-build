@@ -60,10 +60,19 @@ cp -a "$BASE/install.sh" "$BASE/install" "$BASE/config" "$BASE/packages" "$BASE/
 run_root chown -R "$(id -u):$(id -g)" "$PROFILE_DIR"
 
 info "Embutindo a loja de software em /opt/nlinux-software"
-if [[ -d /opt/nlinux-software ]]; then
+# A loja vive no repo (nlinux-software/) e é a fonte usada no build.
+if [[ -d "$BASE/nlinux-software" ]]; then
+  SOFT_SRC="$BASE/nlinux-software"
+elif [[ -d /opt/nlinux-software ]]; then
+  info "nlinux-software/ ausente no repo; usando /opt/nlinux-software"
+  SOFT_SRC=/opt/nlinux-software
+else
+  SOFT_SRC=""
+fi
+if [[ -n "$SOFT_SRC" ]]; then
   SOFT_DST="$PROFILE_DIR/airootfs/opt/nlinux-software"
   mkdir -p "$SOFT_DST"
-  cp -a /opt/nlinux-software/. "$SOFT_DST/"
+  cp -a "$SOFT_SRC/." "$SOFT_DST/"
   rm -rf "$SOFT_DST/src/nlinux/__pycache__"
   chmod -R a+rX "$SOFT_DST"
   chmod 0755 "$SOFT_DST/nlinux-software"
@@ -72,7 +81,7 @@ if [[ -d /opt/nlinux-software ]]; then
   cp -f "$SOFT_DST/icon.svg" "$PROFILE_DIR/airootfs/usr/share/pixmaps/nlinux-software.svg"
   run_root chown -R "$(id -u):$(id -g)" "$PROFILE_DIR"
 else
-  info "aviso: /opt/nlinux-software ausente; a loja NÃO será incluída na ISO"
+  info "aviso: nlinux-software e /opt/nlinux-software ausentes; a loja NÃO será incluída na ISO"
 fi
 
 info "Criando o menu de boot 'NLinux ao vivo' (sem opção separada de instalação; o instalador é só web, no desktop do live)"
