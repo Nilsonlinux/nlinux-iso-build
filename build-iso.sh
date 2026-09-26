@@ -78,7 +78,7 @@ if [[ -n "$SOFT_SRC" ]]; then
   chmod 0755 "$SOFT_DST/nlinux-software"
   # Ícone da loja para o atalho (.desktop) do menu e do Desktop.
   mkdir -p "$PROFILE_DIR/airootfs/usr/share/pixmaps"
-  cp -f "$SOFT_DST/icon.svg" "$PROFILE_DIR/airootfs/usr/share/pixmaps/nlinux-software.svg"
+  cp -f "$SOFT_DST/src/nlinux/icon-store.png" "$PROFILE_DIR/airootfs/usr/share/pixmaps/nlinux-software.png"
   run_root chown -R "$(id -u):$(id -g)" "$PROFILE_DIR"
 else
   info "aviso: nlinux-software e /opt/nlinux-software ausentes; a loja NÃO será incluída na ISO"
