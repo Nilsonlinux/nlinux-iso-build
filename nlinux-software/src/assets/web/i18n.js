@@ -3,7 +3,8 @@
 /* Tabelas de tradução da loja. A língua ativa é definida pelo idioma escolhido
    no instalador (servidor seta <html lang="..."> em /etc/locale.conf). */
 
-const STORE_I18N = {
+// var (não const): precisa aparecer como window.STORE_I18N para o app.js.
+var STORE_I18N = {
   pt: {
     dateLocale: "pt-BR",
     "ui.title": "Loja de Software NLinux",

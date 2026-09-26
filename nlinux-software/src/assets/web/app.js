@@ -7,8 +7,8 @@ const $$ = (sel) => [...document.querySelectorAll(sel)];
 
 /* ============================== i18n ==================================== */
 const UI_CODE = (document.documentElement.lang || "pt").split(/[-_]/)[0].toLowerCase();
-const UI = (window.STORE_I18N && STORE_I18N[UI_CODE]) ||
-  (window.STORE_I18N && STORE_I18N.pt) || {};
+const UI = (typeof STORE_I18N !== "undefined" && STORE_I18N[UI_CODE]) ||
+  (typeof STORE_I18N !== "undefined" && STORE_I18N.pt) || {};
 const DATE_LOCALE = UI.dateLocale || "pt-BR";
 
 function tr(key, ...args) {
