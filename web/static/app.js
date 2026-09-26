@@ -184,6 +184,7 @@ setInterval(() => {
 function diskStep() {
   return {
     label: "web.step.disk",
+    require: "option",
     async render(el) {
       el.innerHTML = `<h2>${t("web.step.disk")}</h2><p class="sub">${t("web.sub.disk")}</p>`;
       const grid = document.createElement("div");
@@ -201,10 +202,15 @@ function diskStep() {
         disks.forEach((d) => {
           const c = document.createElement("div");
           c.className = "card";
-          const freeGiB = d.free && d.free > 0 ? (d.free / (1024 ** 3)).toFixed(1) : null;
+          const freeGiB = d.free > 0 ? d.free / (1024 ** 3) : null;
           const meta = [];
           if (d.esp) meta.push(t("disk.esp"));
-          if (freeGiB) meta.push(`${freeGiB} ${t("disk.free")}`);
+          if (freeGiB !== null && freeGiB >= 0.001) {
+            const txt = freeGiB >= 0.1
+              ? `${freeGiB.toFixed(1)} GiB ${t("disk.free")}`
+              : `${Math.round(d.free / (1024 ** 2))} MiB ${t("disk.free")}`;
+            meta.push(txt);
+          }
           const metaHtml = meta.length ? `<div class="meta">${meta.join(" · ")}</div>` : "";
           c.innerHTML =
             `<div class="check">✓</div>` +
@@ -229,6 +235,7 @@ function diskStep() {
 function modeStep() {
   return {
     label: "web.step.mode",
+    require: "option",
     render(el) {
       el.innerHTML = `<h2>${t("web.step.mode")}</h2><p class="sub">${t("web.sub.mode")}</p>`;
       const warn = document.createElement("div");
@@ -264,6 +271,7 @@ function modeStep() {
 function fsStep() {
   return {
     label: "web.step.fs",
+    require: "option",
     render(el) {
       const options = [
         { name: "ext4", desc: t("fs.ext4d"), value: "ext4", sel: () => state.FS_TYPE === "ext4" },
@@ -280,6 +288,7 @@ function fsStep() {
 function localeStep() {
   return {
     label: "web.step.locale",
+    require: "option",
     render(el) {
       el.innerHTML =
         `<div class="welcome-hero">` +
@@ -289,6 +298,7 @@ function localeStep() {
         `<div class="logo-circle"><img src="/static/logo.png" alt="NLinux"></div>` +
         `</div></div>` +
         `</div>`;
+      // Uma única escolha define idioma, teclado e fuso horário juntos.
       const g = cardGrid(LOCALES, (o) => {
         state.LOCALE = o.locale;
         state.KEYMAP = o.keymap;
@@ -302,32 +312,10 @@ function localeStep() {
   };
 }
 
-function keymapStep() {
-  const options = [
-    { flag: "🇧🇷", name: "br-abnt2", value: "br-abnt2" },
-    { flag: "🇺🇸", name: "us", value: "us" },
-    { flag: "🇵🇹", name: "pt-latin1", value: "pt-latin1" },
-    { flag: "🇬🇧", name: "uk", value: "uk" },
-    { flag: "🇪🇸", name: "es", value: "es" },
-    { flag: "🇫🇷", name: "fr", value: "fr" },
-    { flag: "🇩🇪", name: "de", value: "de" },
-    { flag: "🇮🇹", name: "it", value: "it" },
-    { flag: "🇯🇵", name: "jp", value: "jp" },
-  ];
-  return {
-    label: "web.step.keymap",
-    render(el) {
-      el.innerHTML = `<h2>${t("web.step.keymap")}</h2><p class="sub">${t("web.sub.keymap")}</p>`;
-      const g = cardGrid(options, (o) => (state.KEYMAP = o.value), null, (o) => state.KEYMAP === o.value);
-      el.appendChild(g);
-    },
-    valid: () => !!state.KEYMAP,
-  };
-}
-
 function mirrorStep() {
   return {
     label: "web.step.mirror",
+    require: "option",
     render(el) {
       el.innerHTML = `<h2>${t("web.step.mirror")}</h2><p class="sub">${t("web.sub.mirror")}</p>`;
       const g = cardGrid(MIRRORS, (o) => {
@@ -343,6 +331,7 @@ function mirrorStep() {
 function typeStep() {
   return {
     label: "web.step.type",
+    require: "option",
     render(el) {
       const options = [
         { name: t("type.offline"), desc: t("type.offline.sub"), value: "1", sel: () => state.OFFLINE === "1" },
@@ -359,6 +348,7 @@ function typeStep() {
 function luksStep() {
   return {
     label: "web.step.luks",
+    require: "option",
     render(el) {
       const options = [
         { name: t("web.luks.no"), desc: "", value: "0", sel: () => state.USE_LUKS === "0" },
@@ -406,6 +396,7 @@ function luksStep() {
 function gpuStep() {
   return {
     label: "web.step.gpu",
+    require: "option",
     render(el) {
       el.innerHTML = `<h2>${t("web.step.gpu")}</h2><p class="sub">${t("web.sub.gpu")}</p>`;
       const options = GPUS.map((g) => ({ name: t(g.k), desc: t(g.d), value: g.value }));
@@ -419,6 +410,7 @@ function gpuStep() {
 function userStep() {
   return {
     label: "web.step.user",
+    require: "field",
     render(el) {
       el.innerHTML = `<h2>${t("web.step.user")}</h2>`;
       el.appendChild(
@@ -518,7 +510,6 @@ steps.push(
   diskStep(),
   modeStep(),
   fsStep(),
-  keymapStep(),
   mirrorStep(),
   typeStep(),
   luksStep(),
@@ -692,7 +683,7 @@ const backBtn = $("#btn-back");
 async function next() {
   const step = steps[idx];
   if (!step.valid()) {
-    let msg = t("web.required");
+    let msg = step.require === "field" ? t("web.required.field") : t("web.required.option");
     if (typeof step.reason === "function") {
       const r = step.reason();
       if (r) msg = r;
