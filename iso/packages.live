@@ -13,7 +13,6 @@ python-gobject
 webkit2gtk-4.1
 efibootmgr
 polkit
-polkit-gnome
 
 base-devel
 git

@@ -30,7 +30,6 @@ pamixer
 brightnessctl
 
 polkit
-polkit-gnome
 dbus
 
 cryptsetup
