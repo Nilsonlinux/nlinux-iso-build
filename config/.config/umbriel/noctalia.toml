@@ -12,8 +12,6 @@ backdrop = "#11112dFF"
 [colors.border]
 focused = "#fff59bFF"
 unfocused = "#11112dFF"
-scratchpad_focused = "#9bfeceFF"
-scratchpad_unfocused = "#02e577FF"
 outer = "#070722FF"
 
 [colors.overview]

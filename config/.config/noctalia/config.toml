@@ -1,16 +1,6 @@
 [shell]
 polkit_agent = true
 
-[[bar.default.capsule_group]]
-accordion = false
-accordion_direction = "end"
-enabled = true
-fill = "surface_variant"
-id = "g5"
-members = [ "cpu", "temp", "ram" ]
-opacity = 1.0
-padding = 6.0
-
 [location]
 auto_locate = true
 
