@@ -157,6 +157,20 @@ body {
 .step p.sub { color: var(--muted); margin-bottom: 20px; }
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 14px; }
+.mode-options { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.resize-option {
+  grid-column: 2;
+  width: 100%;
+  min-height: 89px;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+}
+.resize-option[hidden] { display: none; }
+@media (max-width: 600px) {
+  .mode-options { grid-template-columns: 1fr; }
+  .resize-option { grid-column: 1; }
+}
 
 .card {
   background: var(--card);
@@ -247,6 +261,7 @@ body {
   font-weight: 600;
   transition: transform .15s ease, background .2s ease, box-shadow .2s ease;
 }
+.btn[hidden] { display: none; }
 .btn:hover { transform: translateY(-1px); }
 .btn.primary {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
@@ -271,6 +286,7 @@ body {
   opacity: 0; pointer-events: none;
   transition: opacity .25s ease;
 }
+.modal-overlay[hidden] { display: none; }
 .modal-overlay.open { opacity: 1; pointer-events: auto; }
 
 .modal {
@@ -312,6 +328,51 @@ body {
 .modal p { color: var(--muted); line-height: 1.5; margin-bottom: 22px; }
 .modal-actions { display: flex; gap: 12px; justify-content: center; }
 .modal-actions .btn { min-width: 120px; }
+
+.resize-modal {
+  width: min(560px, calc(100vw - 32px));
+  max-height: 92vh;
+  overflow-y: auto;
+  text-align: left;
+}
+.resize-modal h3 { text-align: center; }
+.resize-modal p { margin-bottom: 16px; }
+.resize-modal .resize-label {
+  display: block;
+  margin: 18px 0 8px;
+  color: var(--text);
+  font-weight: 650;
+}
+.resize-modal select {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: var(--text);
+  font: inherit;
+}
+.resize-modal input[type="range"] {
+  width: 100%;
+  accent-color: var(--accent);
+  cursor: pointer;
+}
+.resize-modal .resize-detail {
+  min-height: 2.8em;
+  margin: 12px 0;
+  color: var(--accent);
+  font-weight: 700;
+  text-align: center;
+}
+.resize-modal .resize-note {
+  padding: 12px;
+  border: 1px solid rgba(242, 184, 60, .35);
+  border-radius: 10px;
+  background: rgba(242, 184, 60, .08);
+  color: var(--text);
+  font-size: .9rem;
+}
+.resize-modal .modal-actions { margin-top: 18px; }
 
 @keyframes spin { to { transform: rotate(360deg); } }
 

@@ -45,6 +45,10 @@ OFFLINE="${OFFLINE:-1}"
 DISK="${INSTALL_DISK:-}"
 FS_TYPE="${FS_TYPE:-}"
 INSTALL_MODE="${INSTALL_MODE:-wipe}"
+DUAL_RESIZE_PARTITION="${DUAL_RESIZE_PARTITION:-}"
+DUAL_RESIZE_BYTES="${DUAL_RESIZE_BYTES:-0}"
+DUAL_ROOT_START_SECTOR=""
+DUAL_ROOT_END_SECTOR=""
 USE_LUKS="${USE_LUKS:-}"
 GPU="${GPU:-}"
 MICROCODE="${MICROCODE:-}"
@@ -306,6 +310,14 @@ validate_options() {
   [[ -b "$DISK" ]] || die "Nenhum disco válido selecionado: $DISK (use INSTALL_DISK ou escolha no menu)."
   INSTALL_MODE="${INSTALL_MODE:-wipe}"
   [[ "$INSTALL_MODE" =~ ^(wipe|dual)$ ]] || die "Modo de instalação inválido: $INSTALL_MODE"
+  [[ "$DUAL_RESIZE_BYTES" =~ ^[0-9]+$ ]] || die "Tamanho de redimensionamento inválido."
+  ((${#DUAL_RESIZE_BYTES} <= 18)) || die "Tamanho de redimensionamento fora do limite."
+  if (( DUAL_RESIZE_BYTES > 0 )); then
+    [[ "$INSTALL_MODE" == "dual" && -n "$DUAL_RESIZE_PARTITION" ]] \
+      || die "O redimensionamento NTFS só pode ser usado no modo dual boot."
+  elif [[ -n "$DUAL_RESIZE_PARTITION" ]]; then
+    die "Partição NTFS selecionada sem tamanho de redimensionamento."
+  fi
   FS_TYPE="${FS_TYPE:-ext4}"
   [[ "$FS_TYPE" =~ ^(ext4|btrfs)$ ]] || die "Sistema de arquivos inválido: $FS_TYPE"
   USE_LUKS="${USE_LUKS:-0}"
@@ -411,6 +423,70 @@ preflight() {
 # ---------------------------------------------------------------------------
 # Particionamento
 # ---------------------------------------------------------------------------
+resize_ntfs_for_dual_boot() {
+  (( DUAL_RESIZE_BYTES > 0 )) || return 0
+  command -v ntfsresize >/dev/null 2>&1 \
+    || die "ntfsresize não está disponível; não foi feita nenhuma alteração."
+  [[ -b "$DUAL_RESIZE_PARTITION" ]] \
+    || die "A partição NTFS escolhida não está disponível; não foi feita nenhuma alteração."
+
+  local parent part_number fs_type part_size min_size target_fs_bytes
+  local start_sector old_sectors new_sectors end_sector root_sectors base
+  parent="$(lsblk -ndo PKNAME "$DUAL_RESIZE_PARTITION" 2>/dev/null | head -n1)"
+  [[ "$parent" == /dev/* ]] || parent="/dev/$parent"
+  [[ -n "$parent" && "$(readlink -f "$parent")" == "$(readlink -f "$DISK")" ]] \
+    || die "A partição NTFS escolhida não pertence ao disco selecionado."
+  part_number="$(lsblk -ndo PARTN "$DUAL_RESIZE_PARTITION" 2>/dev/null | head -n1)"
+  [[ "$part_number" =~ ^[0-9]+$ ]] || die "Não foi possível validar a partição NTFS escolhida."
+  fs_type="$(blkid -s TYPE -o value "$DUAL_RESIZE_PARTITION" 2>/dev/null || true)"
+  [[ "$fs_type" == "ntfs" ]] || die "A partição selecionada não contém NTFS."
+  if lsblk -nrpo MOUNTPOINTS "$DUAL_RESIZE_PARTITION" | grep -q '[^[:space:]]'; then
+    die "Desmonte a partição NTFS antes de redimensioná-la."
+  fi
+
+  part_size="$(blockdev --getsize64 "$DUAL_RESIZE_PARTITION")"
+  local info_output
+  info_output="$(LC_ALL=C ntfsresize --info --no-progress-bar "$DUAL_RESIZE_PARTITION" 2>&1)" \
+    || die "O NTFS não passou na verificação de segurança. Execute chkdsk no Windows e tente novamente: $info_output"
+  min_size="$(printf '%s\n' "$info_output" | sed -nE 's/.*You might resize at ([0-9,]+) bytes.*/\1/p' | tr -d ',' | head -n1)"
+  [[ "$min_size" =~ ^[0-9]+$ ]] || die "Não foi possível determinar o menor tamanho NTFS seguro."
+  (( DUAL_RESIZE_BYTES > 0 && DUAL_RESIZE_BYTES <= part_size )) \
+    || die "O tamanho selecionado para liberar espaço é inválido."
+  target_fs_bytes=$((part_size - DUAL_RESIZE_BYTES))
+  (( target_fs_bytes >= min_size + 1024**3 )) \
+    || die "O tamanho deixaria o Windows abaixo do mínimo seguro informado pelo NTFS."
+  (( DUAL_RESIZE_BYTES > 2 * 1024**3 && DUAL_RESIZE_BYTES % 512 == 0 )) \
+    || die "O espaço escolhido para a partição NLinux é insuficiente ou inválido."
+
+  base="${DUAL_RESIZE_PARTITION##*/}"
+  [[ -r "/sys/class/block/$base/start" && -r "/sys/class/block/$base/size" ]] \
+    || die "Não foi possível ler os limites da partição NTFS."
+  start_sector="$(<"/sys/class/block/$base/start")"
+  old_sectors="$(<"/sys/class/block/$base/size")"
+  new_sectors=$(((target_fs_bytes + 1024**2 + 511) / 512))
+  root_sectors=$(((DUAL_RESIZE_BYTES - 2 * 1024**2) / 512))
+  (( new_sectors < old_sectors && root_sectors > 5 * 1024**3 / 512 )) \
+    || die "Os tamanhos escolhidos não deixam espaço contínuo suficiente para o NLinux."
+  info "Testando o redimensionamento NTFS sem alterar a partição."
+  if ! ntfsresize --no-action --size "$target_fs_bytes" --no-progress-bar "$DUAL_RESIZE_PARTITION"; then
+    die "O NTFS não passou no teste de redimensionamento. Execute chkdsk no Windows; nenhuma alteração foi feita."
+  fi
+  info "Reduzindo o sistema de arquivos NTFS em $DUAL_RESIZE_PARTITION; os dados existentes serão preservados."
+  if ! ntfsresize --size "$target_fs_bytes" --force "$DUAL_RESIZE_PARTITION"; then
+    die "O redimensionamento NTFS falhou. A tabela de partições não foi alterada."
+  fi
+
+  end_sector=$((start_sector + new_sectors - 1))
+  if (( new_sectors >= old_sectors )) || ! parted -s "$DISK" unit s resizepart "$part_number" "${end_sector}s"; then
+    die "O sistema de arquivos NTFS foi reduzido, mas a partição não pôde ser ajustada. O Windows continua dentro da partição original."
+  fi
+  DUAL_ROOT_START_SECTOR=$((end_sector + 1))
+  DUAL_ROOT_END_SECTOR=$((DUAL_ROOT_START_SECTOR + root_sectors - 1))
+  partprobe "$DISK" >/dev/null 2>&1 || true
+  udevadm settle 2>/dev/null || true
+  info "Partição NTFS ajustada com segurança. Espaço livre criado para o NLinux."
+}
+
 partition_disk() {
   local p_efi p_root
   p_efi="$(part_path "$DISK" 1)"
@@ -429,9 +505,11 @@ partition_disk() {
     # -------------------------------------------------------------------
     # DUAL BOOT: preserva o sistema existente (ex.: Windows). Reutiliza a
     # ESP (partição EFI System FAT32) que já existe e cria a raiz NLinux no
-    # MAIOR espaço livre contínuo do disco. Nada é apagado.
+    # MAIOR espaço livre contínuo do disco, exceto quando a interface pediu
+    # explicitamente a criação do root no espaço liberado do NTFS.
     # -------------------------------------------------------------------
     info "Modo dual boot: procurando partição EFI (ESP) existente em $DISK"
+    resize_ntfs_for_dual_boot
     p_efi="$(lsblk -lnpo NAME,PARTTYPE "$DISK" 2>/dev/null | awk '$2 == "c12a7328-f81f-11d2-ba4b-00a0c93ec93b" {print $1}' | head -n1)"
     if [[ -z "$p_efi" || ! -b "$p_efi" ]]; then
       die "Dual boot: não encontrei partição EFI (ESP) em $DISK. Escolha o modo 'wipe' ou um disco com Windows/ESP."
@@ -442,11 +520,18 @@ partition_disk() {
     info "Reutilizando ESP existente $p_efi (não será formatada)"
     progress 22 "stage.dual.esp"
 
-    local free_num
-    free_num="$(sgdisk -f "$DISK" 2>/dev/null)"
-    [[ "$free_num" =~ ^[0-9]+$ ]] || die "Dual boot: não foi possível alocar número de partição em $DISK."
-    info "Criando partição raiz NLinux no maior espaço livre de $DISK"
-    if ! sgdisk --largest-new="$free_num" --typecode="$free_num:8304" --change-name="$free_num:archroot" "$DISK" >/dev/null 2>&1; then
+    local free_num=1
+    while (( free_num <= 128 )) && lsblk -nrno PARTN "$DISK" | grep -Fxq "$free_num"; do
+      free_num=$((free_num + 1))
+    done
+    (( free_num <= 128 )) || die "Dual boot: não há número de partição GPT disponível em $DISK."
+    info "Criando partição raiz NLinux em $DISK"
+    if (( DUAL_RESIZE_BYTES > 0 )); then
+      if ! sgdisk --new="$free_num:$DUAL_ROOT_START_SECTOR:$DUAL_ROOT_END_SECTOR" \
+        --typecode="$free_num:8304" --change-name="$free_num:archroot" "$DISK" >/dev/null 2>&1; then
+        die "Não foi possível criar a partição NLinux no espaço NTFS liberado."
+      fi
+    elif ! sgdisk --largest-new="$free_num" --typecode="$free_num:8304" --change-name="$free_num:archroot" "$DISK" >/dev/null 2>&1; then
       die "Dual boot: sem espaço livre suficiente em $DISK para a raiz NLinux."
     fi
     p_root="$(part_path "$DISK" "$free_num")"

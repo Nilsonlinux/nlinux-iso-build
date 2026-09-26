@@ -19,13 +19,14 @@ import json
 import os
 import re
 import select
+import stat
 import subprocess
 import sys
 import threading
 import time
 from collections import deque
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 ROOT = os.path.dirname(os.path.abspath(__file__))
 STATIC = os.path.join(ROOT, "static")
@@ -53,6 +54,8 @@ LANG_FROM_LOCALE = {
     "ja_JP.UTF-8": "ja",
 }
 DEFAULT_LANG = "pt"
+NTFS_RESIZE_RESERVE = 1024**3
+MIB = 1024**2
 
 _ui_lang = DEFAULT_LANG
 
@@ -274,6 +277,78 @@ def _disk_dual_ok(disk):
     return _disk_free_bytes(disk) > 5 * 1024**3
 
 
+def _ntfs_minimum_size(partition):
+    """Ask ntfsresize for the smallest safe filesystem size without modifying it."""
+    result = subprocess.run(
+        ["ntfsresize", "--info", "--no-progress-bar", partition],
+        capture_output=True, text=True, timeout=30,
+        env={**os.environ, "LC_ALL": "C"},
+    )
+    output = result.stdout + "\n" + result.stderr
+    if result.returncode:
+        raise RuntimeError(output.strip() or "ntfsresize não conseguiu verificar a partição")
+    match = re.search(r"you might resize at\s+([\d,]+)\s+bytes", output, re.IGNORECASE)
+    if not match:
+        raise RuntimeError("não foi possível determinar o tamanho mínimo seguro do NTFS")
+    return int(match.group(1).replace(",", ""))
+
+
+def get_ntfs_partitions(disk):
+    """Return directly attached NTFS partitions and their safe shrink limits."""
+    if not isinstance(disk, str) or not disk.startswith("/dev/"):
+        raise ValueError("disco inválido")
+    disk = os.path.realpath(disk)
+    if not stat.S_ISBLK(os.stat(disk).st_mode):
+        raise ValueError("o dispositivo selecionado não é um disco")
+
+    result = subprocess.run(
+        ["lsblk", "--json", "--bytes", "--paths",
+         "--output", "NAME,TYPE,FSTYPE,SIZE,PARTN,PKNAME,PARTLABEL,MOUNTPOINTS", disk],
+        capture_output=True, text=True, check=True, timeout=15,
+    )
+    tree = json.loads(result.stdout).get("blockdevices", [])
+    if len(tree) != 1 or tree[0].get("type") != "disk":
+        raise ValueError("o dispositivo selecionado não é um disco")
+
+    partitions = []
+    for part in tree[0].get("children", []):
+        if part.get("type") != "part" or part.get("fstype", "").lower() != "ntfs":
+            continue
+        name = part.get("name")
+        size = int(part.get("size") or 0)
+        mountpoints = part.get("mountpoints") or []
+        if any(mountpoints):
+            partitions.append({
+                "path": name,
+                "label": part.get("partlabel") or name,
+                "size": size,
+                "resizable": False,
+                "error": "a partição está montada; ela precisa estar desmontada",
+            })
+            continue
+        try:
+            minimum = _ntfs_minimum_size(name)
+        except (KeyError, TypeError, ValueError, RuntimeError, subprocess.SubprocessError) as exc:
+            partitions.append({
+                "path": name,
+                "label": part.get("partlabel") or name,
+                "size": int(part.get("size") or 0),
+                "resizable": False,
+                "error": str(exc),
+            })
+            continue
+        max_shrink = max(0, size - minimum - NTFS_RESIZE_RESERVE)
+        partitions.append({
+            "path": name,
+            "label": part.get("partlabel") or name,
+            "size": size,
+            "minimum": minimum,
+            "max_shrink": max_shrink,
+            "resizable": max_shrink >= 8 * 1024**3 + 2 * MIB,
+        })
+    return partitions
+
+
 def get_disks():
     out = subprocess.run(
         ["lsblk", "-dpno", "NAME,SIZE,MODEL,TYPE"],
@@ -392,6 +467,14 @@ class Handler(BaseHTTPRequestHandler):
             return self._file(os.path.join(ROOT, p.lstrip("/")))
         if p == "/api/disks":
             return self._json({"disks": get_disks()})
+        if p == "/api/ntfs-partitions":
+            disk = parse_qs(urlparse(self.path).query).get("disk", [""])[0]
+            try:
+                partitions = get_ntfs_partitions(disk)
+            except (OSError, ValueError, RuntimeError, subprocess.SubprocessError,
+                    json.JSONDecodeError) as exc:
+                return self._json({"error": str(exc)}, 400)
+            return self._json({"partitions": partitions})
         if p == "/api/i18n":
             return self._i18n()
         if p == "/api/stream":

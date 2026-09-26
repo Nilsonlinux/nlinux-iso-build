@@ -8,6 +8,7 @@ gdisk
 btrfs-progs
 parted
 dosfstools
+ntfs-3g
 python
 python-gobject
 webkit2gtk-4.1

@@ -7,7 +7,7 @@ escolhido no instalador web (lido de /etc/locale.conf no sistema instalado).
 
 Modos:
   padrão        -> exibe uma vez por usuário (marcador ~/.config/nlinux-welcome-v1),
-                   tanto no live quanto no sistema instalado.
+                   no sistema instalado.
   --menu        -> abre sempre (atalho), e marca como visto no final.
 """
 
@@ -383,19 +383,27 @@ def build_ui(lang, release):
 
     gi.require_version("Gtk", "3.0")
     gi.require_version("Gdk", "3.0")
-    from gi.repository import Gdk, GdkPixbuf, Gtk
+    from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
 
     t = T.get(lang, T["pt"])
 
+    wm_class = "nlinux-welcome"
+    GLib.set_prgname(wm_class)
+    try:
+        Gdk.set_program_class(wm_class)
+    except Exception:
+        pass
+
     win = Gtk.Window()
+    win.set_wmclass(wm_class, wm_class)
     win.set_title(t["window.title"])
     win.set_position(Gtk.WindowPosition.CENTER)
-    win.set_default_size(580, 480)
+    win.set_default_size(580, 430)
     win.set_resizable(False)
     try:
         win.set_icon(
             GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                os.path.join(APP_DIR, "logo.png"), 128, 128, True))
+                os.path.join(APP_DIR, "welcome-logo.png"), 128, 128, True))
     except Exception:
         pass
 
@@ -407,35 +415,36 @@ def build_ui(lang, release):
             screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-    root.set_margin_top(24)
-    root.set_margin_bottom(20)
+    root.set_margin_top(14)
+    root.set_margin_bottom(12)
     root.set_margin_start(40)
     root.set_margin_end(40)
     win.add(root)
 
     try:
-        logo = Gtk.Image.new_from_file(os.path.join(APP_DIR, "logo.png"))
+        logo_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
+            os.path.join(APP_DIR, "welcome-logo.png"), 140, 140, True)
+        logo = Gtk.Image.new_from_pixbuf(logo_pixbuf)
     except Exception:
         logo = Gtk.Label()
         logo.set_text("NLinux")
         logo.set_name("hello")
-    logo.set_pixel_size(72)
     root.pack_start(logo, False, False, 0)
 
     hello = Gtk.Label(label=t["hello"])
     hello.get_style_context().add_class("hello")
-    hello.set_margin_top(12)
+    hello.set_margin_top(8)
     root.pack_start(hello, False, False, 0)
 
     msg = Gtk.Label(label=t["msg"])
     msg.get_style_context().add_class("msg")
     msg.set_line_wrap(True)
     msg.set_justify(Gtk.Justification.CENTER)
-    msg.set_margin_top(4)
+    msg.set_margin_top(2)
     root.pack_start(msg, False, False, 0)
 
     board = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-    board.set_margin_top(18)
+    board.set_margin_top(12)
 
     info_card = _card(board, t["card.title"])
     version = release.get("NILINUX_VERSION", "rolling")
@@ -451,14 +460,14 @@ def build_ui(lang, release):
         feat_label = Gtk.Label(label="•  " + feat)
         feat_label.get_style_context().add_class("feature")
         feat_label.set_halign(Gtk.Align.START)
-        feat_label.set_margin_top(4)
+        feat_label.set_margin_top(2)
         feat_card.pack_start(feat_label, False, False, 0)
 
     root.pack_start(board, False, False, 0)
 
     btns = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
     btns.set_homogeneous(True)
-    btns.set_margin_top(16)
+    btns.set_margin_top(12)
 
     def _open(url):
         try:
@@ -476,14 +485,14 @@ def build_ui(lang, release):
 
     close = Gtk.Button(label=t["btn.close"])
     close.get_style_context().add_class("primary")
-    close.set_margin_top(12)
+    close.set_margin_top(8)
     close.set_halign(Gtk.Align.CENTER)
     close.connect("clicked", lambda *_: win.destroy())
     root.pack_start(close, False, False, 0)
 
     footer = Gtk.Label(label=("© NLinux   ·   " + t["footer"]))
     footer.get_style_context().add_class("footer")
-    footer.set_margin_top(16)
+    footer.set_margin_top(10)
     root.pack_start(footer, False, False, 0)
 
     win.connect("destroy", Gtk.main_quit)
@@ -500,8 +509,8 @@ def _card(parent, title):
     inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
     inner.set_margin_start(14)
     inner.set_margin_end(14)
-    inner.set_margin_top(12)
-    inner.set_margin_bottom(12)
+    inner.set_margin_top(8)
+    inner.set_margin_bottom(8)
     card.add(inner)
     ctitle = Gtk.Label(label=title)
     ctitle.get_style_context().add_class("card-title")
@@ -514,7 +523,7 @@ def _card(parent, title):
 def _info_row(label, value):
     from gi.repository import Gtk
     row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
-    row.set_margin_top(5)
+    row.set_margin_top(3)
     l1 = Gtk.Label(label=label)
     l1.get_style_context().add_class("info-label")
     l1.set_halign(Gtk.Align.START)

@@ -12,10 +12,14 @@ WELCOME_DST="/usr/share/nlinux-welcome"
 # --- App GTK (mesma stack da loja: python-gobject + GTK3) + asset ---
 log "Instalando o app de boas-vindas em $WELCOME_DST"
 install -d -m 0755 "$WELCOME_DST"
+install -d -m 0755 /usr/share/applications
+install -d -m 0755 /usr/share/icons/hicolor/256x256/apps
 if [[ -d "$WELCOME_SRC" ]]; then
   install -m 0644 "$WELCOME_SRC/welcome.py" "$WELCOME_DST/welcome.py"
-  install -m 0644 "$WELCOME_SRC/logo.png"   "$WELCOME_DST/logo.png"
+  install -m 0644 "$WELCOME_SRC/welcome-logo.png" "$WELCOME_DST/welcome-logo.png"
   install -m 0644 "$WELCOME_SRC/github.png" "$WELCOME_DST/github.png"
+  install -m 0644 "$WELCOME_SRC/nlinux-welcome.desktop" \
+    /usr/share/applications/nlinux-welcome.desktop
 else
   die "Pasta de assets da boas-vindas ausente: $WELCOME_SRC"
 fi
@@ -35,30 +39,15 @@ if [[ ! -f /etc/nlinux-release ]]; then
   } > /etc/nlinux-release
 fi
 
-# --- Atalho na área de trabalho do usuário (app store-installed) ------
-mkdir -p /usr/share/applications
-cat > /usr/share/applications/nlinux-welcome.desktop <<'EOF'
-[Desktop Entry]
-Type=Application
-Version=1.0
-Name=nlinux-welcome
-GenericName=Boas-vindas do NLinux
-Comment=Janela de boas-vindas e informações da distro
-Comment[en]=NLinux welcome window and distro info
-Comment[es]=Ventana de bienvenida e información de la distro
-Comment[fr]=Fenêtre de bienvenue et infos de la distro
-Comment[de]=NLinux-Willkommensfenster und Distro-Infos
-Comment[it]=Finestra di benvenuto e info sulla distro
-Comment[ja]=NLinux のウェルカムウィンドウとディストロ情報
-Exec=/usr/local/bin/nlinux-welcome --menu
-Icon=nlinux-welcome
-Terminal=false
-Categories=System;Utility;
-StartupNotify=false
-EOF
+# --- Atalho do app no menu e na área de trabalho do usuário ------------
 chmod 0644 /usr/share/applications/nlinux-welcome.desktop
 mkdir -p /usr/share/pixmaps
-install -m 0644 "$WELCOME_DST/logo.png" /usr/share/pixmaps/nlinux-welcome.png
+install -m 0644 "$WELCOME_DST/welcome-logo.png" /usr/share/pixmaps/nlinux-welcome.png
+install -m 0644 "$WELCOME_DST/welcome-logo.png" \
+  /usr/share/icons/hicolor/256x256/apps/nlinux-welcome.png
+if command -v gtk-update-icon-cache >/dev/null 2>&1; then
+  gtk-update-icon-cache -f -t /usr/share/icons/hicolor || true
+fi
 
 # --- Launcher (autostart do Umbriel / atalho) --------------------------
 cat > /usr/local/bin/nlinux-welcome <<'EOF'

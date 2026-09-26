@@ -42,6 +42,9 @@ function t(key) {
 /* ---------- estado ---------- */
 const state = {
   INSTALL_DISK: "",
+  DUAL_RESIZE_PARTITION: "",
+  DUAL_RESIZE_BYTES: 0,
+  DUAL_ROOT_SPACE_BYTES: 0,
   FS_TYPE: "",
   LOCALE: "",
   KEYMAP: "",
@@ -94,6 +97,8 @@ GPUS.forEach((g) => (GPU_NAME[g.value] = g.k));
 let idx = 0;
 const steps = [];
 let DISKS = [];
+const GIB = 1024 ** 3;
+const MIB = 1024 ** 2;
 
 function hideMsg() {
   const m = $("#step-msg");
@@ -220,6 +225,11 @@ function diskStep() {
           c.addEventListener("click", () => {
             grid.querySelectorAll(".card").forEach((x) => x.classList.remove("selected"));
             c.classList.add("selected");
+            if (state.INSTALL_DISK !== d.name) {
+              state.DUAL_RESIZE_PARTITION = "";
+              state.DUAL_RESIZE_BYTES = 0;
+              state.DUAL_ROOT_SPACE_BYTES = 0;
+            }
             state.INSTALL_DISK = d.name;
           });
           grid.appendChild(c);
@@ -232,6 +242,111 @@ function diskStep() {
   };
 }
 
+function closeResizeDialog() {
+  const overlay = $("#resize-modal");
+  overlay.classList.remove("open");
+  setTimeout(() => { overlay.hidden = true; }, 250);
+}
+
+async function openResizeDialog() {
+  const overlay = $("#resize-modal");
+  const detail = $("#resize-detail");
+  const partitionSelect = $("#resize-partition");
+  const slider = $("#resize-range");
+  const save = $("#resize-save");
+  $("#resize-title").textContent = t("web.resize.title");
+  $("#resize-help").textContent = t("web.resize.help");
+  document.querySelector('label[for="resize-partition"]').textContent = t("web.resize.partition");
+  document.querySelector('label[for="resize-range"]').textContent = t("web.resize.capacity");
+  $("#resize-note").textContent = t("web.resize.note");
+  $("#resize-cancel").textContent = t("web.reboot.no");
+  save.textContent = t("web.resize.save");
+  $("#resize-cancel").onclick = closeResizeDialog;
+  overlay.onclick = (event) => {
+    if (event.target === overlay) closeResizeDialog();
+  };
+  detail.textContent = t("web.resize.loading");
+  partitionSelect.replaceChildren();
+  slider.disabled = true;
+  save.disabled = true;
+  overlay.hidden = false;
+  requestAnimationFrame(() => overlay.classList.add("open"));
+
+  let partitions;
+  try {
+    const response = await fetch(`/api/ntfs-partitions?disk=${encodeURIComponent(state.INSTALL_DISK)}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(data.error || t("web.resize.error"));
+    partitions = data.partitions || [];
+  } catch (error) {
+    detail.textContent = `${t("web.resize.error")} ${error.message}`;
+    return;
+  }
+
+  const resizable = partitions.filter((part) => part.resizable && part.max_shrink >= 8 * GIB + 2 * MIB);
+  if (!resizable.length) {
+    const reason = partitions.find((part) => part.error)?.error;
+    detail.textContent = reason
+      ? `${t("web.resize.error")} ${reason}`
+      : partitions.length ? t("web.resize.none") : t("web.resize.no_ntfs");
+    return;
+  }
+
+  resizable.forEach((part) => {
+    const option = document.createElement("option");
+    option.value = part.path;
+    option.textContent = `${part.label} (${(part.size / GIB).toFixed(1)} GiB)`;
+    partitionSelect.appendChild(option);
+  });
+
+  const selected = resizable.find((part) => part.path === state.DUAL_RESIZE_PARTITION) || resizable[0];
+  partitionSelect.value = selected.path;
+  const refresh = () => {
+    const part = resizable.find((item) => item.path === partitionSelect.value);
+    if (!part) return;
+    const minGiB = 8;
+    const maxGiB = Math.floor((part.max_shrink - 2 * MIB) / (GIB / 2)) / 2;
+    if (maxGiB < minGiB) {
+      detail.textContent = t("web.resize.none");
+      slider.disabled = true;
+      save.disabled = true;
+      return;
+    }
+    const defaultGiB = Math.min(maxGiB, Math.max(minGiB, 40));
+    slider.min = String(minGiB);
+    slider.max = String(maxGiB);
+    slider.step = "0.5";
+    slider.value = String(Math.min(maxGiB, Math.max(minGiB,
+      state.DUAL_RESIZE_PARTITION === part.path && state.DUAL_ROOT_SPACE_BYTES
+        ? Math.round(state.DUAL_ROOT_SPACE_BYTES / GIB * 2) / 2
+        : defaultGiB)));
+    slider.disabled = false;
+    save.disabled = false;
+    const updateDetail = () => {
+      const rootGiB = Number(slider.value);
+      const shrinkBytes = Math.round(rootGiB * GIB) + 2 * MIB;
+      const remainingWindows = Math.max(0, part.size - shrinkBytes);
+      detail.textContent = `${t("web.resize.capacity")}: ${rootGiB.toFixed(1)} GiB NLinux · ` +
+        `${t("web.resize.remaining")}: ${(remainingWindows / GIB).toFixed(1)} GiB Windows`;
+    };
+    slider.oninput = updateDetail;
+    updateDetail();
+  };
+  partitionSelect.onchange = refresh;
+  refresh();
+  save.onclick = () => {
+    const part = resizable.find((item) => item.path === partitionSelect.value);
+    if (!part) return;
+    const rootBytes = Math.round(Number(slider.value) * GIB);
+    const shrinkBytes = rootBytes + 2 * MIB;
+    state.DUAL_RESIZE_PARTITION = part.path;
+    state.DUAL_RESIZE_BYTES = shrinkBytes;
+    state.DUAL_ROOT_SPACE_BYTES = rootBytes;
+    closeResizeDialog();
+    render();
+  };
+}
+
 function modeStep() {
   return {
     label: "web.step.mode",
@@ -241,21 +356,47 @@ function modeStep() {
       const warn = document.createElement("div");
       warn.className = "warn-box";
       warn.hidden = true;
+      const resizeButton = document.createElement("button");
+      resizeButton.className = "card resize-option";
+      resizeButton.hidden = true;
+      resizeButton.disabled = true;
+      resizeButton.type = "button";
+      const resizeTitle = document.createElement("div");
+      resizeTitle.className = "title";
+      resizeTitle.textContent = t("web.resize.open");
+      const resizeDescription = document.createElement("div");
+      resizeDescription.className = "desc";
+      resizeDescription.textContent = t("web.resize.card_hint");
+      resizeButton.append(resizeTitle, resizeDescription);
+      resizeButton.addEventListener("click", openResizeDialog);
       const options = [
         { name: t("mode.wipe"), desc: t("mode.wipe.desc"), value: "wipe", sel: () => state.INSTALL_MODE === "wipe" },
         { name: t("mode.dual"), desc: t("mode.dual.desc"), value: "dual", sel: () => state.INSTALL_MODE === "dual" },
       ];
       const refreshWarn = (mode) => {
+        resizeButton.hidden = mode !== "dual";
+        resizeButton.disabled = !state.INSTALL_DISK;
         if (mode !== "dual") { warn.hidden = true; return; }
         const d = DISKS.find((x) => x.name === state.INSTALL_DISK);
-        if (d && !d.dual_ok) {
+        if (d && !d.dual_ok && !state.DUAL_RESIZE_BYTES) {
           warn.hidden = false;
           warn.textContent = d.esp ? t("mode.warn.space") : t("mode.warn.esp");
         } else {
           warn.hidden = true;
         }
       };
-      el.appendChild(cardGrid(options, (o) => { state.INSTALL_MODE = o.value; refreshWarn(o.value); }));
+      const optionGrid = cardGrid(options, (o) => {
+        state.INSTALL_MODE = o.value;
+        if (o.value !== "dual") {
+          state.DUAL_RESIZE_PARTITION = "";
+          state.DUAL_RESIZE_BYTES = 0;
+          state.DUAL_ROOT_SPACE_BYTES = 0;
+        }
+        refreshWarn(o.value);
+      });
+      optionGrid.classList.add("mode-options");
+      optionGrid.appendChild(resizeButton);
+      el.appendChild(optionGrid);
       el.appendChild(warn);
       refreshWarn(state.INSTALL_MODE);
     },
@@ -263,7 +404,8 @@ function modeStep() {
       if (!state.INSTALL_MODE) return false;
       if (state.INSTALL_MODE !== "dual") return true;
       const d = DISKS.find((x) => x.name === state.INSTALL_DISK);
-      return !d || d.dual_ok;
+      if (!d || !d.esp) return false;
+      return d.dual_ok || (state.DUAL_RESIZE_BYTES > 0 && state.DUAL_ROOT_SPACE_BYTES > 5 * GIB);
     },
   };
 }
@@ -483,6 +625,12 @@ function summaryStep() {
         [t("s.hostname"), state.HOSTNAME],
         [t("s.user"), state.INSTALL_USER],
       ];
+      if (state.DUAL_RESIZE_BYTES > 0) {
+        rows.push([
+          t("web.resize.partition"),
+          `${state.DUAL_RESIZE_PARTITION} · ${(state.DUAL_ROOT_SPACE_BYTES / GIB).toFixed(1)} GiB`,
+        ]);
+      }
       el.innerHTML = `<h2>${t("summary")}</h2>`;
       const s = document.createElement("div");
       s.className = "summary";
@@ -499,7 +647,19 @@ function summaryStep() {
       el.appendChild(w);
     },
     valid: () => true,
-    submit() {
+    async submit() {
+      if (state.DUAL_RESIZE_BYTES > 0) {
+        await loadI18n(state.NLLANG || UI_LANG);
+        const confirmed = await askModal({
+          title: t("web.resize.confirm.title"),
+          msg: `${t("web.resize.confirm.message")} ${t("web.resize.partition")}: ` +
+            `${state.DUAL_RESIZE_PARTITION} · ${(state.DUAL_ROOT_SPACE_BYTES / GIB).toFixed(1)} GiB.`,
+          ok: t("web.resize.confirm.ok"),
+          cancel: t("web.reboot.no"),
+          danger: true,
+        });
+        if (!confirmed) return;
+      }
       startInstall();
     },
   };
@@ -634,7 +794,7 @@ async function startInstall() {
       $("#done-msg").textContent = t("web.done.okmsg");
       $("#btn-reboot").textContent = t("web.done.reboot");
       $("#btn-reboot").style.display = "";
-      $("#btn-done").textContent = t("web.done.close");
+      $("#btn-done").textContent = t("web.done.continue");
       $("#done").classList.remove("err");
     } else {
       $("#done-title").textContent = t("web.done.fail");

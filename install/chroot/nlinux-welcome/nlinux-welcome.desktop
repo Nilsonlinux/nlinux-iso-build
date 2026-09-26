@@ -1,0 +1,18 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=nlinux-welcome
+GenericName=Boas-vindas do NLinux
+Comment=Janela de boas-vindas e informações da distro
+Comment[en]=NLinux welcome window and distro info
+Comment[es]=Ventana de bienvenida e información de la distro
+Comment[fr]=Fenêtre de bienvenue et infos de la distro
+Comment[de]=NLinux-Willkommensfenster und Distro-Infos
+Comment[it]=Finestra di benvenuto e info sulla distro
+Comment[ja]=NLinux のウェルカムウィンドウとディストロ情報
+Exec=/usr/local/bin/nlinux-welcome --menu
+Icon=nlinux-welcome
+Terminal=false
+Categories=System;Utility;
+StartupNotify=true
+StartupWMClass=nlinux-welcome

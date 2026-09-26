@@ -100,6 +100,14 @@ O instalador:
 3. **Particionamento**: GPT — `1G` EFI (FAT32, montada em `/boot`) + restante na
    partição raiz (tipo `8309` `cryptroot` com LUKS, ou `8304` `archroot`).
 
+No modo **dual boot**, o instalador preserva a ESP existente e cria a partição
+NLinux em espaço livre. Se não houver espaço livre suficiente, a interface web
+pode reduzir uma partição Windows NTFS com um controle deslizante. A redução só
+é aplicada após confirmação; faça backup e desative BitLocker e Inicialização
+Rápida/hibernação do Windows antes de prosseguir. O Windows pode executar uma
+verificação de disco no primeiro início após o ajuste. Outros sistemas de
+arquivos não são redimensionados.
+
 ### Modo Rápido offline (padrão) vs Completo online
 
 | | **Rápida offline** (padrão) | **Completa online** |
