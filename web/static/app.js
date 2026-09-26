@@ -394,6 +394,12 @@ function luksStep() {
     valid: () =>
       state.USE_LUKS === "0" ||
       (state.USE_LUKS === "1" && state.LUKS_PASS.length > 0 && state.LUKS_PASS === state._luk_conf),
+    reason: () => {
+      if (state.USE_LUKS === "0") return "";
+      if (!state.LUKS_PASS) return t("pass.luks.required");
+      if (state.LUKS_PASS !== state._luk_conf) return t("pass.mismatch");
+      return "";
+    },
   };
 }
 
@@ -457,6 +463,13 @@ function userStep() {
       !!state.INSTALL_USER_PASS &&
       state.INSTALL_USER_PASS === state._uconf &&
       (state.ROOT_SAME !== false || !!state.ROOT_PASS),
+    reason: () => {
+      if (!state.INSTALL_USER) return t("user.required");
+      if (!state.INSTALL_USER_PASS) return t("pass.required");
+      if (state.INSTALL_USER_PASS !== state._uconf) return t("pass.mismatch");
+      if (state.ROOT_SAME === false && !state.ROOT_PASS) return t("pass.root.required");
+      return "";
+    },
   };
 }
 
@@ -679,9 +692,14 @@ const backBtn = $("#btn-back");
 async function next() {
   const step = steps[idx];
   if (!step.valid()) {
+    let msg = t("web.required");
+    if (typeof step.reason === "function") {
+      const r = step.reason();
+      if (r) msg = r;
+    }
     const m = $("#step-msg");
     if (m) {
-      m.textContent = t("web.required");
+      m.textContent = msg;
       m.hidden = false;
     }
     return;
@@ -712,8 +730,45 @@ $("#btn-done").addEventListener("click", () => {
   } catch (e) {}
   window.close();
 });
-$("#btn-reboot").addEventListener("click", () => {
-  if (!confirm(t("web.reboot.confirm"))) return;
+
+// Modal de confirmação estilizado (substitui o confirm() nativo).
+function askModal({ title, msg, ok, cancel, danger = false }) {
+  return new Promise((resolve) => {
+    const m = $("#modal");
+    $("#modal-title").textContent = title;
+    $("#modal-msg").textContent = msg;
+    $("#modal-ok").textContent = ok;
+    $("#modal-ok").classList.toggle("danger", danger);
+    $("#modal-cancel").textContent = cancel;
+    m.hidden = false;
+    m.classList.remove("spinning");
+    requestAnimationFrame(() => m.classList.add("open"));
+    const close = (res) => {
+      m.classList.remove("open");
+      setTimeout(() => { m.hidden = true; resolve(res); }, 250);
+    };
+    $("#modal-cancel").onclick = () => close(false);
+    $("#modal-ok").onclick = () => close(true);
+  });
+}
+
+function spinModal(msg) {
+  const m = $("#modal");
+  $("#modal-title").textContent = "";
+  $("#modal-msg").textContent = msg;
+  m.classList.add("spinning");
+}
+
+$("#btn-reboot").addEventListener("click", async () => {
+  const ok1 = await askModal({
+    title: t("web.reboot.title"),
+    msg: t("web.reboot.confirm"),
+    ok: t("web.done.reboot"),
+    cancel: t("web.reboot.no"),
+    danger: true,
+  });
+  if (!ok1) return;
+  spinModal(t("web.reboot.pending"));
   try {
     fetch("/api/reboot", { method: "POST" });
   } catch (e) {}

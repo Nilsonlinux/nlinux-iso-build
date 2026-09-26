@@ -146,4 +146,27 @@ initrd  /initramfs-linux.img
 options $options
 EOF
 
+log "Agente polkit no autostart (prompts de senha do sistema, ex.: loja)"
+# O polkit-gnome traz o arquivo com OnlyShowIn=GNOME;, que o Umbriel ignora.
+# O nosso próprio entry (sem OnlyShowIn) garante o agente ativo em toda sessão.
+mkdir -p /etc/xdg/autostart
+cat > /etc/xdg/autostart/nlinux-polkit-agent.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Name=Agente de Autenticação (polkit)
+Name[en]=Polkit Authentication Agent
+Name[es]=Agente de autenticación (polkit)
+Name[fr]=Agent d'authentification (polkit)
+Name[de]=Authentifizierungsagent (polkit)
+Name[it]=Agente di autenticazione (polkit)
+Name[ja]=polkit 認証エージェント
+Comment=Solicita a senha para autorizações do sistema (instalações, particionamentos)
+Comment[en]=Prompts for the password on system authorizations
+Exec=/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+Terminal=false
+Hidden=false
+X-Umbriel-Autostart=true
+EOF
+chmod 0644 /etc/xdg/autostart/nlinux-polkit-agent.desktop
+
 ok "Sistema base configurado e bootloader instalado."

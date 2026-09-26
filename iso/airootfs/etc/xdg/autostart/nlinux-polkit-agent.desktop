@@ -1,0 +1,15 @@
+[Desktop Entry]
+Type=Application
+Name=Agente de Autenticação (polkit)
+Name[en]=Polkit Authentication Agent
+Name[es]=Agente de autenticación (polkit)
+Name[fr]=Agent d'authentification (polkit)
+Name[de]=Authentifizierungsagent (polkit)
+Name[it]=Agente di autenticazione (polkit)
+Name[ja]=polkit 認証エージェント
+Comment=Solicita a senha para autorizações do sistema (instalações, particionamentos)
+Comment[en]=Prompts for the password on system authorizations
+Exec=/usr/lib/polkit-gnome/polkit-gnome-authentication-agent-1
+Terminal=false
+Hidden=false
+X-Umbriel-Autostart=true

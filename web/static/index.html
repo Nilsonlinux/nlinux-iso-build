@@ -82,6 +82,27 @@
   </section>
 
 </div>
+
+<!-- MODAL DE CONFIRMAÇÃO -->
+<div id="modal" class="modal-overlay" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal">
+    <div class="modal-icon">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/>
+        <line x1="12" y1="2" x2="12" y2="12"/>
+      </svg>
+    </div>
+    <div class="spinner" hidden></div>
+    <h3 id="modal-title"></h3>
+    <p id="modal-msg"></p>
+    <div class="modal-actions">
+      <button id="modal-cancel" class="btn ghost"></button>
+      <button id="modal-ok" class="btn primary"></button>
+    </div>
+  </div>
+</div>
+
 <script src="/static/app.js"></script>
 </body>
 </html>
