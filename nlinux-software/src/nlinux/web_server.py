@@ -1388,10 +1388,7 @@ def ensure_admin_shortcut() -> None:
         return
 
     icon_src = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "icon-admin.svg")
-    if not os.path.exists(icon_src):
-        icon_src = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "icon.svg")
+        os.path.dirname(os.path.abspath(__file__)), "icon-dist.svg")
     icon_name = "nlinux-software-admin"
     icons_dir = os.path.join(
         os.path.expanduser("~"), ".local", "share", "icons", "hicolor",
