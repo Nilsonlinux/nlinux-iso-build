@@ -151,6 +151,27 @@ if [[ -d /opt/noctalia-installer/config/.local ]]; then
 fi
 chown -R nlinux:nlinux /home/nlinux/.config /home/nlinux/.local 2>/dev/null || true
 
+# Dock no live: fixa também o instalador NLinux. No sistema instalado ele é
+# removido (install.sh), então o pin vive só aqui; o arquivo é carregado por
+# último pelo Noctalia e sobrescreve o "pinned" do config.toml base.
+if [[ -f /home/nlinux/.config/noctalia/config.toml ]]; then
+  cat > /home/nlinux/.config/noctalia/z-live.toml <<'EOF'
+[dock]
+pinned = [
+    "org.telegram.desktop",
+    "whatsapp-linux-desktop",
+    "firefox",
+    "discord",
+    "kitty",
+    "org.gnome.Nautilus",
+    "spotify-launcher",
+    "nlinuxstore",
+    "nlinux-installer",
+]
+EOF
+  chown nlinux:nlinux /home/nlinux/.config/noctalia/z-live.toml
+fi
+
 # --- PipeWire/WirePlumber no live: habilita a session de usuário do 'nlinux'
 # (o umbriel sobe via systemd --user, então basta ativar os sockets/services
 # no default.target da sessão do usuário)

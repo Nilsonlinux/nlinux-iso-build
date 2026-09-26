@@ -48,7 +48,7 @@ const state = {
   ZONEINFO: "",
   INSTALL_MODE: "",
   MIRROR: "",
-  MIRROR_PICKED: false,
+  MIRROR_PICKED: true,
   OFFLINE: "",
   USE_LUKS: "",
   LUKS_PASS: "",
