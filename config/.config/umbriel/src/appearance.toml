@@ -33,8 +33,6 @@ blur_popups = true
 [colors.border]
 focused = "#7AA3FFFF"
 unfocused = "#292933FF"
-scratchpad_focused = "#E5C07BFF"
-scratchpad_unfocused = "#5C4A2AFF"
 outer = "#1A1A1FFF"
 
 [colors.overview]
