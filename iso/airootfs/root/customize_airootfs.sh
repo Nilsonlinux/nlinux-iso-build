@@ -183,10 +183,10 @@ fi
 
 # --- Loja de software no menu e na Área de Trabalho do live
 log "Instalando atalho 'Loja de Software' (menu + Desktop do live)"
-if [[ -f /usr/share/applications/nlinux-software.desktop ]]; then
+if [[ -f /usr/share/applications/nlinuxstore.desktop ]]; then
   mkdir -p /home/nlinux/Desktop
-  cp -a /usr/share/applications/nlinux-software.desktop /home/nlinux/Desktop/
-  chmod +x /home/nlinux/Desktop/nlinux-software.desktop 2>/dev/null || true
+  cp -a /usr/share/applications/nlinuxstore.desktop /home/nlinux/Desktop/
+  chmod +x /home/nlinux/Desktop/nlinuxstore.desktop 2>/dev/null || true
 fi
 chmod +x /usr/local/bin/nlinux-software 2>/dev/null || true
 chmod 0755 /opt/nlinux-software/nlinux-software 2>/dev/null || true
@@ -200,7 +200,7 @@ fi
 
 # --- Marca os atalhos da Área de Trabalho como confiáveis (GNOME pediria
 # permissão a cada clique e poderia "não abrir" o app).
-command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinux-software; do
+command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinuxstore; do
   gio set "/home/nlinux/Desktop/$d.desktop" metadata::trusted true 2>/dev/null || true
 done
 chown -R nlinux:nlinux /home/nlinux/Desktop 2>/dev/null || true

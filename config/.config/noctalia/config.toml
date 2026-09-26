@@ -1,0 +1,21 @@
+[shell]
+polkit_agent = true
+
+[dock]
+enabled = true
+
+launcher_position = "start"
+magnification_scale = 2.0
+pinned = [
+    "org.telegram.desktop",
+    "whatsapp-linux-desktop",
+    "firefox",
+    "discord",
+    "kitty",
+    "org.gnome.Nautilus",
+    "spotify-launcher",
+    "nlinuxstore",
+]
+reserve_space = false
+show_dots = true
+smart_auto_hide = true

@@ -801,9 +801,9 @@ stage_software_store() {
     cp -a /opt/nlinux-software "$MNT/opt/nlinux-software"
   fi
   rm -rf "$MNT/opt/nlinux-software/src/nlinux/__pycache__" 2>/dev/null || true
-  if [[ -f /usr/share/applications/nlinux-software.desktop ]]; then
-    install -Dm644 /usr/share/applications/nlinux-software.desktop \
-      "$MNT/usr/share/applications/nlinux-software.desktop"
+  if [[ -f /usr/share/applications/nlinuxstore.desktop ]]; then
+    install -Dm644 /usr/share/applications/nlinuxstore.desktop \
+      "$MNT/usr/share/applications/nlinuxstore.desktop"
   fi
   install -Dm755 /usr/local/bin/nlinux-software "$MNT/usr/local/bin/nlinux-software"
   chmod 0755 "$MNT/opt/nlinux-software/nlinux-software" 2>/dev/null || true

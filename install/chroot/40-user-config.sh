@@ -46,10 +46,10 @@ if [[ ! -f "$user_home/.config/user-dirs.dirs" ]]; then
 fi
 
 # Atalho da loja de software na Área de Trabalho do usuário.
-if [[ -f /usr/share/applications/nlinux-software.desktop ]]; then
+if [[ -f /usr/share/applications/nlinuxstore.desktop ]]; then
   mkdir -p "$user_home/Desktop"
-  cp -a /usr/share/applications/nlinux-software.desktop "$user_home/Desktop/"
-  chmod +x "$user_home/Desktop/nlinux-software.desktop" 2>/dev/null || true
+  cp -a /usr/share/applications/nlinuxstore.desktop "$user_home/Desktop/"
+  chmod +x "$user_home/Desktop/nlinuxstore.desktop" 2>/dev/null || true
   chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/Desktop" 2>/dev/null || true
 fi
 
@@ -63,7 +63,7 @@ fi
 
 # Marca os atalhos da Área de Trabalho como confiáveis (senão o GNOME cobra
 # permissão a cada clique e dá impressão de que o app "não abre").
-command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinux-software; do
+command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinuxstore; do
   gio set "$user_home/Desktop/$d.desktop" metadata::trusted true 2>/dev/null || true
 done
 
