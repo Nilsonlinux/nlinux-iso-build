@@ -226,9 +226,9 @@ command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinuxstore; do
 done
 chown -R nlinux:nlinux /home/nlinux/Desktop 2>/dev/null || true
 
-# --- nlinux-welcome: inócuo no live (exige /etc/nlinux-installed), presente para
-# o autostart do Umbriel do live não reclamar; só mostra janela no sistema instalado.
-log "Instalando nlinux-welcome (inócuo no live)"
+# --- nlinux-welcome: presente no live e instalado; mostra a janela uma vez por
+# usuário (--menu sempre abre). Usa o mesmo welcome.py do instalador.
+log "Instalando nlinux-welcome"
 WELCOME_SRC="/opt/noctalia-installer/install/chroot/nlinux-welcome"
 WELCOME_DST="/usr/share/nlinux-welcome"
 install -d -m 0755 "$WELCOME_DST"
@@ -250,15 +250,13 @@ install -m 0644 "$WELCOME_DST/logo.png" /usr/share/pixmaps/nlinux-welcome.png 2>
 
 cat > /usr/local/bin/nlinux-welcome <<'EOF'
 #!/bin/bash
-marker="${HOME}/.config/nlinux-welcome-v1"
-[[ -e /etc/nlinux-installed ]] || exit 0
-[[ -e "$marker" ]] && exit 0
+# Boas-vindas NLinux: janela GTK (live e sistema instalado).
+#   --menu   -> abre sempre (atalho do menu), marcando como visto ao final.
+#   padrão   -> abre uma vez por usuário (marcador ~/.config/nlinux-welcome-v1).
 if [[ -f /usr/share/nlinux-welcome/welcome.py ]] && command -v python3 >/dev/null 2>&1; then
-  python3 /usr/share/nlinux-welcome/welcome.py
-else
-  zenity --info --title="Bem-vindo ao NLinux" --text="Bem-vindo ao NLinux!" 2>/dev/null || true
+  exec python3 /usr/share/nlinux-welcome/welcome.py "$@"
 fi
-touch "$marker"
+zenity --info --title="Bem-vindo ao NLinux" --text="Bem-vindo ao NLinux!" 2>/dev/null || true
 EOF
 chmod 0755 /usr/local/bin/nlinux-welcome
 

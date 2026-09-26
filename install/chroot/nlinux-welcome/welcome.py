@@ -6,10 +6,9 @@ Usa a mesma stack da loja (python-gobject + GTK3) e carrega o idioma que foi
 escolhido no instalador web (lido de /etc/locale.conf no sistema instalado).
 
 Modos:
-  padrão        -> exibe só na primeira sessão gráfica (/etc/nlinux-installed
-                   presente e sem o marcador ~/.config/nlinux-welcome-v1).
+  padrão        -> exibe uma vez por usuário (marcador ~/.config/nlinux-welcome-v1),
+                   tanto no live quanto no sistema instalado.
   --menu        -> abre sempre (atalho), e marca como visto no final.
-Em qualquer modo, no live (sem /etc/nlinux-installed) não faz nada.
 """
 
 import os
@@ -20,8 +19,8 @@ from datetime import datetime
 APP_DIR = "/usr/share/nlinux-welcome"
 MARKER = os.path.expanduser("~/.config/nlinux-welcome-v1")
 
-REPO_URL = "https://github.com/Nilsonlinux/nlinux"
-SITE_URL = "https://nlinux.dev"
+REPO_URL = "https://github.com/Nilsonlinux"
+SITE_URL = "https://nilsonlinux.github.io/nlinux.html"
 AUTHOR = "Nilsonlinux"
 
 LANG_ALIASES = {
@@ -54,9 +53,9 @@ T = {
             "Compositor Umbriel + Noctalia",
         ],
         "btn.github": "Ver código no GitHub",
-        "tip.github": "Abrir github.com/Nilsonlinux/nlinux",
+        "tip.github": "Abrir github.com/Nilsonlinux",
         "btn.site": "Acessar o site",
-        "tip.site": "Abrir nlinux.dev",
+        "tip.site": "Abrir nilsonlinux.github.io/nlinux.html",
         "btn.close": "Começar a usar",
         "footer": "Feito com carinho por Nilsonlinux",
         "date_fmt": "%d/%m/%Y",
@@ -79,9 +78,9 @@ T = {
             "Umbriel + Noctalia compositor",
         ],
         "btn.github": "View code on GitHub",
-        "tip.github": "Open github.com/Nilsonlinux/nlinux",
+        "tip.github": "Open github.com/Nilsonlinux",
         "btn.site": "Visit the website",
-        "tip.site": "Open nlinux.dev",
+        "tip.site": "Open nilsonlinux.github.io/nlinux.html",
         "btn.close": "Get started",
         "footer": "Made with love by Nilsonlinux",
         "date_fmt": "%m/%d/%Y",
@@ -104,9 +103,9 @@ T = {
             "Compositor Umbriel + Noctalia",
         ],
         "btn.github": "Ver código en GitHub",
-        "tip.github": "Abrir github.com/Nilsonlinux/nlinux",
+        "tip.github": "Abrir github.com/Nilsonlinux",
         "btn.site": "Visitar el sitio",
-        "tip.site": "Abrir nlinux.dev",
+        "tip.site": "Abrir nilsonlinux.github.io/nlinux.html",
         "btn.close": "Empezar",
         "footer": "Hecho con cariño por Nilsonlinux",
         "date_fmt": "%d/%m/%Y",
@@ -129,9 +128,9 @@ T = {
             "Compositeur Umbriel + Noctalia",
         ],
         "btn.github": "Voir le code sur GitHub",
-        "tip.github": "Ouvrir github.com/Nilsonlinux/nlinux",
+        "tip.github": "Ouvrir github.com/Nilsonlinux",
         "btn.site": "Visiter le site",
-        "tip.site": "Ouvrir nlinux.dev",
+        "tip.site": "Ouvrir nilsonlinux.github.io/nlinux.html",
         "btn.close": "Commencer",
         "footer": "Fait avec amour par Nilsonlinux",
         "date_fmt": "%d/%m/%Y",
@@ -154,9 +153,9 @@ T = {
             "Umbriel + Noctalia-Compositor",
         ],
         "btn.github": "Code auf GitHub ansehen",
-        "tip.github": "github.com/Nilsonlinux/nlinux öffnen",
+        "tip.github": "github.com/Nilsonlinux öffnen",
         "btn.site": "Website besuchen",
-        "tip.site": "nlinux.dev öffnen",
+        "tip.site": "nilsonlinux.github.io/nlinux.html öffnen",
         "btn.close": "Loslegen",
         "footer": "Mit Liebe von Nilsonlinux erstellt",
         "date_fmt": "%d.%m.%Y",
@@ -179,9 +178,9 @@ T = {
             "Compositor Umbriel + Noctalia",
         ],
         "btn.github": "Vedi il codice su GitHub",
-        "tip.github": "Apri github.com/Nilsonlinux/nlinux",
+        "tip.github": "Apri github.com/Nilsonlinux",
         "btn.site": "Visita il sito",
-        "tip.site": "Apri nlinux.dev",
+        "tip.site": "Apri nilsonlinux.github.io/nlinux.html",
         "btn.close": "Inizia",
         "footer": "Creato con amore da Nilsonlinux",
         "date_fmt": "%d/%m/%Y",
@@ -204,9 +203,9 @@ T = {
             "Umbriel と Noctalia コンポジター",
         ],
         "btn.github": "GitHub でコードを見る",
-        "tip.github": "github.com/Nilsonlinux/nlinux を開く",
+        "tip.github": "github.com/Nilsonlinux を開く",
         "btn.site": "ウェブサイトへ",
-        "tip.site": "nlinux.dev を開く",
+        "tip.site": "nilsonlinux.github.io/nlinux.html を開く",
         "btn.close": "はじめる",
         "footer": "Nilsonlinux によって作られた NLinux",
         "date_fmt": "%Y/%m/%d",
@@ -264,27 +263,53 @@ window {
   font-weight: 600;
 }
 
+button {
+  transition: all 150ms ease-in-out;
+}
+
 button.link {
-  background-color: rgba(255, 255, 255, 0.07);
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
+  background-color: transparent;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.10);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   padding: 10px 14px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
 button.link:hover {
-  background-color: rgba(31, 111, 235, 0.35);
-  border-color: rgba(31, 111, 235, 0.8);
+  background-image: linear-gradient(to bottom, rgba(31, 111, 235, 0.60), rgba(31, 111, 235, 0.28));
+  border-color: #7fb0ff;
+  box-shadow: 0 0 0 1px rgba(31, 111, 235, 0.55), 0 4px 16px rgba(31, 111, 235, 0.35);
+}
+
+button.link:active {
+  background-image: linear-gradient(to bottom, rgba(31, 111, 235, 0.75), rgba(31, 111, 235, 0.45));
+  border-color: #9cc2ff;
+  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+button.link label {
+  color: #eaf1ff;
+  font-weight: 600;
 }
 
 button.primary {
-  background-color: #1f6feb;
+  background-image: linear-gradient(to bottom, #3583f6, #1a5fd6);
   border-radius: 10px;
-  border: 1px solid #1f6feb;
+  border: 1px solid rgba(255, 255, 255, 0.18);
   padding: 10px 22px;
+  box-shadow: 0 2px 10px rgba(31, 111, 235, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 button.primary:hover {
-  background-color: #4187f2;
+  background-image: linear-gradient(to bottom, #4b90f8, #2a6fe0);
+  border-color: #9cc2ff;
+  box-shadow: 0 4px 18px rgba(31, 111, 235, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.30);
+}
+
+button.primary:active {
+  background-image: linear-gradient(to bottom, #1556c9, #0f4ab0);
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.40);
 }
 
 button.primary label {
@@ -365,7 +390,7 @@ def build_ui(lang, release):
     win = Gtk.Window()
     win.set_title(t["window.title"])
     win.set_position(Gtk.WindowPosition.CENTER)
-    win.set_default_size(560, 560)
+    win.set_default_size(580, 480)
     win.set_resizable(False)
     try:
         win.set_icon(
@@ -382,8 +407,8 @@ def build_ui(lang, release):
             screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
 
     root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-    root.set_margin_top(34)
-    root.set_margin_bottom(26)
+    root.set_margin_top(24)
+    root.set_margin_bottom(20)
     root.set_margin_start(40)
     root.set_margin_end(40)
     win.add(root)
@@ -394,59 +419,46 @@ def build_ui(lang, release):
         logo = Gtk.Label()
         logo.set_text("NLinux")
         logo.set_name("hello")
-    logo.set_pixel_size(96)
+    logo.set_pixel_size(72)
     root.pack_start(logo, False, False, 0)
 
     hello = Gtk.Label(label=t["hello"])
     hello.get_style_context().add_class("hello")
-    hello.set_margin_top(16)
+    hello.set_margin_top(12)
     root.pack_start(hello, False, False, 0)
 
     msg = Gtk.Label(label=t["msg"])
     msg.get_style_context().add_class("msg")
     msg.set_line_wrap(True)
     msg.set_justify(Gtk.Justification.CENTER)
-    msg.set_margin_top(6)
+    msg.set_margin_top(4)
     root.pack_start(msg, False, False, 0)
 
-    card = Gtk.Frame()
-    card.set_name("card")
-    card.set_shadow_type(Gtk.ShadowType.NONE)
-    card.set_margin_top(22)
-    inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-    inner.set_margin_start(18)
-    inner.set_margin_end(18)
-    inner.set_margin_top(16)
-    inner.set_margin_bottom(14)
-    card.add(inner)
+    board = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
+    board.set_margin_top(18)
 
-    ctitle = Gtk.Label(label=t["card.title"])
-    ctitle.get_style_context().add_class("card-title")
-    ctitle.set_halign(Gtk.Align.START)
-    inner.pack_start(ctitle, False, False, 0)
-
+    info_card = _card(board, t["card.title"])
     version = release.get("NILINUX_VERSION", "rolling")
-    inner.pack_start(_info_row(t["label.name"], "NLinux"), False, False, 6)
-    inner.pack_start(_info_row(t["label.version"], version), False, False, 6)
-    inner.pack_start(_info_row(t["label.update"],
-                               format_built(release.get("NILINUX_BUILT"), lang)),
-                     False, False, 6)
-    inner.pack_start(_info_row(t["label.author"], AUTHOR), False, False, 6)
+    info_card.pack_start(_info_row(t["label.name"], "NLinux"), False, False, 5)
+    info_card.pack_start(_info_row(t["label.version"], version), False, False, 5)
+    info_card.pack_start(_info_row(t["label.update"],
+                                   format_built(release.get("NILINUX_BUILT"), lang)),
+                         False, False, 5)
+    info_card.pack_start(_info_row(t["label.author"], AUTHOR), False, False, 5)
 
-    features = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=4)
-    features.set_margin_top(12)
+    feat_card = _card(board, t["features.title"])
     for feat in t["features"]:
         feat_label = Gtk.Label(label="•  " + feat)
         feat_label.get_style_context().add_class("feature")
         feat_label.set_halign(Gtk.Align.START)
-        features.pack_start(feat_label, False, False, 0)
-    inner.pack_start(features, False, False, 0)
+        feat_label.set_margin_top(4)
+        feat_card.pack_start(feat_label, False, False, 0)
 
-    root.pack_start(card, False, False, 0)
+    root.pack_start(board, False, False, 0)
 
     btns = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
     btns.set_homogeneous(True)
-    btns.set_margin_top(24)
+    btns.set_margin_top(16)
 
     def _open(url):
         try:
@@ -471,7 +483,7 @@ def build_ui(lang, release):
 
     footer = Gtk.Label(label=("© NLinux   ·   " + t["footer"]))
     footer.get_style_context().add_class("footer")
-    footer.set_margin_top(22)
+    footer.set_margin_top(16)
     root.pack_start(footer, False, False, 0)
 
     win.connect("destroy", Gtk.main_quit)
@@ -479,10 +491,30 @@ def build_ui(lang, release):
     Gtk.main()
 
 
+def _card(parent, title):
+    from gi.repository import Gtk
+    card = Gtk.Frame()
+    card.set_name("card")
+    card.set_shadow_type(Gtk.ShadowType.NONE)
+    card.set_hexpand(True)
+    inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
+    inner.set_margin_start(14)
+    inner.set_margin_end(14)
+    inner.set_margin_top(12)
+    inner.set_margin_bottom(12)
+    card.add(inner)
+    ctitle = Gtk.Label(label=title)
+    ctitle.get_style_context().add_class("card-title")
+    ctitle.set_halign(Gtk.Align.START)
+    inner.pack_start(ctitle, False, False, 0)
+    parent.pack_start(card, True, True, 0)
+    return inner
+
+
 def _info_row(label, value):
     from gi.repository import Gtk
     row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
-    row.set_margin_top(10)
+    row.set_margin_top(5)
     l1 = Gtk.Label(label=label)
     l1.get_style_context().add_class("info-label")
     l1.set_halign(Gtk.Align.START)
@@ -523,8 +555,6 @@ def _link_button(text, tooltip, on_click, github=False):
 
 
 def main():
-    if not os.path.exists("/etc/nlinux-installed"):
-        return 0
     once = "--menu" not in sys.argv
     if once and os.path.exists(MARKER):
         return 0

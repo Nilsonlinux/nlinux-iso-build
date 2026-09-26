@@ -63,18 +63,13 @@ install -m 0644 "$WELCOME_DST/logo.png" /usr/share/pixmaps/nlinux-welcome.png
 # --- Launcher (autostart do Umbriel / atalho) --------------------------
 cat > /usr/local/bin/nlinux-welcome <<'EOF'
 #!/bin/bash
-# Boas-vindas NLinux: janela GTK no primeiro login do sistema instalado.
-# No live (sem /etc/nlinux-installed) sai em silêncio — o autostart do
-# Umbriel o chama também no live, de forma inócua.
-marker="${HOME}/.config/nlinux-welcome-v1"
-[[ -e /etc/nlinux-installed ]] || exit 0
-[[ -e "$marker" ]] && exit 0
+# Boas-vindas NLinux: janela GTK (live e sistema instalado).
+#   --menu   -> abre sempre (atalho do menu), marcando como visto ao final.
+#   padrão   -> abre uma vez por usuário (marcador ~/.config/nlinux-welcome-v1).
 if [[ -f /usr/share/nlinux-welcome/welcome.py ]] && command -v python3 >/dev/null 2>&1; then
-  python3 /usr/share/nlinux-welcome/welcome.py
-else
-  zenity --info --title="Bem-vindo ao NLinux" --text="Bem-vindo ao NLinux!" 2>/dev/null || true
+  exec python3 /usr/share/nlinux-welcome/welcome.py "$@"
 fi
-touch "$marker"
+zenity --info --title="Bem-vindo ao NLinux" --text="Bem-vindo ao NLinux!" 2>/dev/null || true
 EOF
 chmod 0755 /usr/local/bin/nlinux-welcome
 
