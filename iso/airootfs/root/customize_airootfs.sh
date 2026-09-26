@@ -229,25 +229,58 @@ chown -R nlinux:nlinux /home/nlinux/Desktop 2>/dev/null || true
 # --- nlinux-welcome: inócuo no live (exige /etc/nlinux-installed), presente para
 # o autostart do Umbriel do live não reclamar; só mostra janela no sistema instalado.
 log "Instalando nlinux-welcome (inócuo no live)"
+WELCOME_SRC="/opt/noctalia-installer/install/chroot/nlinux-welcome"
+WELCOME_DST="/usr/share/nlinux-welcome"
+install -d -m 0755 "$WELCOME_DST"
+if [[ -d "$WELCOME_SRC" ]]; then
+  install -m 0644 "$WELCOME_SRC/welcome.py" "$WELCOME_DST/welcome.py"
+  install -m 0644 "$WELCOME_SRC/logo.png"   "$WELCOME_DST/logo.png"
+  install -m 0644 "$WELCOME_SRC/github.png" "$WELCOME_DST/github.png"
+fi
+mkdir -p /usr/share/pixmaps
+install -m 0644 "$WELCOME_DST/logo.png" /usr/share/pixmaps/nlinux-welcome.png 2>/dev/null || true
+
+# Identidade da distro gerada no build (persiste no sistema instalado via
+# cópia offline). Usa a mesma numeração do profiledef (Y.M.D da ISO).
+{
+  echo 'NILINUX_NAME="NLinux"'
+  echo "NILINUX_VERSION=\"$(date +%Y.%m.%d)\""
+  echo "NILINUX_BUILT=\"$(date -Is)\""
+} > /etc/nlinux-release
+
 cat > /usr/local/bin/nlinux-welcome <<'EOF'
 #!/bin/bash
 marker="${HOME}/.config/nlinux-welcome-v1"
 [[ -e /etc/nlinux-installed ]] || exit 0
 [[ -e "$marker" ]] && exit 0
-zenity --info \
-  --title="Bem-vindo ao NLinux" \
-  --text="Seja bem-vindo ao seu novo sistema NLinux!
-
-Instalação concluída com sucesso.
-
-  * App Center para instalar programas
-  * Terminais:  kitty  (Mod+T / Mod+Shift+T)
-  * Shell padrão: fish
-  * Compositor Umbriel + Noctalia
-" \
-  --width=460 --height=260 2>/dev/null
+if [[ -f /usr/share/nlinux-welcome/welcome.py ]] && command -v python3 >/dev/null 2>&1; then
+  python3 /usr/share/nlinux-welcome/welcome.py
+else
+  zenity --info --title="Bem-vindo ao NLinux" --text="Bem-vindo ao NLinux!" 2>/dev/null || true
+fi
 touch "$marker"
 EOF
 chmod 0755 /usr/local/bin/nlinux-welcome
+
+cat > /usr/share/applications/nlinux-welcome.desktop <<'EOF'
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=nlinux-welcome
+GenericName=Boas-vindas do NLinux
+Comment=Janela de boas-vindas e informações da distro
+Comment[en]=NLinux welcome window and distro info
+Comment[es]=Ventana de bienvenida e información de la distro
+Comment[fr]=Fenêtre de bienvenue et infos de la distro
+Comment[de]=NLinux-Willkommensfenster und Distro-Infos
+Comment[it]=Finestra di benvenuto e info sulla distro
+Comment[ja]=NLinux のウェルカムウィンドウとディストロ情報
+Exec=/usr/local/bin/nlinux-welcome --menu
+Icon=nlinux-welcome
+Terminal=false
+Categories=System;Utility;
+StartupNotify=false
+EOF
+chmod 0644 /usr/share/applications/nlinux-welcome.desktop
 
 log "==> Live system configurado. Desktop disponível via greetd (usuário nlinux)."

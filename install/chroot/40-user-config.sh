@@ -53,6 +53,14 @@ if [[ -f /usr/share/applications/nlinuxstore.desktop ]]; then
   chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/Desktop" 2>/dev/null || true
 fi
 
+# Atalho de boas-vindas (janela da distro) na Área de Trabalho do usuário.
+if [[ -f /usr/share/applications/nlinux-welcome.desktop ]]; then
+  mkdir -p "$user_home/Desktop"
+  cp -a /usr/share/applications/nlinux-welcome.desktop "$user_home/Desktop/"
+  chmod +x "$user_home/Desktop/nlinux-welcome.desktop" 2>/dev/null || true
+  chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/Desktop" 2>/dev/null || true
+fi
+
 # Loja gravável pelo usuário: o app sincroniza o catálogo e compila bytecode
 # na própria árvore (/opt/nlinux-software). Sem isso o sync falha com
 # "Permission denied" e o __pycache__ não é gravado.
@@ -63,7 +71,7 @@ fi
 
 # Marca os atalhos da Área de Trabalho como confiáveis (senão o GNOME cobra
 # permissão a cada clique e dá impressão de que o app "não abre").
-command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinuxstore; do
+command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinuxstore nlinux-welcome; do
   gio set "$user_home/Desktop/$d.desktop" metadata::trusted true 2>/dev/null || true
 done
 

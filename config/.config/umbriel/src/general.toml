@@ -1,6 +1,7 @@
 [general]
 autostart = [
     "noctalia",
+    "nlinux-welcome",
     "WhatsApp Desktop",
     "org.telegram.desktop",
 ]
