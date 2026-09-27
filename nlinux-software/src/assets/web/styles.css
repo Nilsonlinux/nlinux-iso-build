@@ -142,6 +142,7 @@ img { display: block; }
 }
 .icon-btn:hover { border-color: var(--accent-strong); color: var(--accent-strong); }
 .icon-btn:active { transform: translateY(1px); }
+#close-window:hover { border-color: var(--danger, #e5534b); color: var(--danger, #e5534b); }
 
 /* ============================= Categorias ================================= */
 .cats {

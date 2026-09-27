@@ -171,6 +171,13 @@ def pacman_installed() -> set:
         return set()
 
 
+PACMAN_PACKAGE_RE = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9@._+-]*$")
+
+
+def is_pacman_package(value) -> bool:
+    return isinstance(value, str) and bool(PACMAN_PACKAGE_RE.fullmatch(value))
+
+
 class InstallJob:
     def __init__(self, job_id: str, packages: list, source: str = "arch",
                  mode: str = "install") -> None:
@@ -541,6 +548,9 @@ class BoutiqueHandler(BaseHTTPRequestHandler):
         if not isinstance(packages, list) or not packages:
             self._send_json({"error": "no packages"}, 400)
             return
+        if any(not is_pacman_package(package) for package in packages):
+            self._send_json({"error": "invalid package name"}, 400)
+            return
 
         source = body.get("source", "arch")
         mode = body.get("action", "install")
@@ -579,10 +589,17 @@ def build_payload() -> dict:
             if "pacman" not in methods:
                 continue
             details = package.get("pacman", {}).get("default", {}) or {}
-            install_packages = list(details.get("install-packages") or [])
+            install_packages = [
+                item for item in (details.get("install-packages") or [])
+                if is_pacman_package(item)
+            ]
             main_package = details.get("main-package")
-            if main_package and main_package not in install_packages:
+            if is_pacman_package(main_package) and main_package not in install_packages:
                 install_packages.insert(0, main_package)
+            primary_package = (
+                main_package if is_pacman_package(main_package)
+                else next(iter(install_packages), None)
+            )
             source = details.get("source", "arch")
             products.append(
                 {
@@ -603,7 +620,7 @@ def build_payload() -> dict:
                     "website": (package.get("urls") or {}).get("info"),
                     "launch": package.get("launch-cmd"),
                     "installed": bool(
-                        main_package and main_package in installed
+                        primary_package and primary_package in installed
                     ),
                 }
             )

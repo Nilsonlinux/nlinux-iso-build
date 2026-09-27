@@ -7348,13 +7348,54 @@
       "proprietary": false,
       "alternate-to": null,
       "listed": true
+    },
+    "btop": {
+      "name": "btop",
+      "summary": "https://github.com/aristocratos/btop",
+      "description": "https://github.com/aristocratos/btop",
+      "icon": "assets/btop.webp",
+      "screenshots": [
+        "assets/btop-1.png"
+      ],
+      "developer-name": "Caleb Maclennan, Jaroslav Lichtblau",
+      "developer-url": "https://github.com/aristocratos/btop",
+      "urls": {
+        "info": "https://github.com/aristocratos/btop",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "btop",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "btop",
+          "install-packages": [
+            "btop"
+          ],
+          "remove-packages": [
+            "btop"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
     }
   },
   "stats": {
     "version": 7,
-    "revision": 107,
-    "compiled": 1790430881,
-    "apps": 166,
+    "revision": 110,
+    "compiled": 1790469395,
+    "apps": 167,
     "categories": 12
   },
   "distro": {
