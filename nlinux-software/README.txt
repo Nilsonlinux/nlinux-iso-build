@@ -1,4 +1,4 @@
-NLinux Software v111 - loja de aplicativos (distribuicao)
+NLinux Software v112 - loja de aplicativos (distribuicao)
 Sem opcao de administracao.
 
 Dependencias (veja DEPENDENCIES.txt):
