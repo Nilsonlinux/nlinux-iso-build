@@ -26,7 +26,7 @@ Resultado instalado / ao vivo:
 ## Estrutura do projeto
 
 ```
-build-iso.sh                     gera a ISO (precisa de sudo; não rode 2 builds ao mesmo tempo)
+build-iso.sh                     gera a ISO (precisa de sudo; limpa mounts de builds interrompidas)
 make-splash.sh                   gera splash.png a partir de NLinux.jpg (menu de boot BIOS)
 install.sh                       instalador principal (web-installed; GUI_DRIVEN=1 do servidor web)
 install/translations.py           tabela de traduções (7 idiomas) usada pelo instalador web
@@ -188,8 +188,9 @@ O que ele faz:
    **syslinux** (BIOS) — títulos, items e a splash NLinux;
 7. Roda `mkarchiso -v` → ISO em `iso/out/nlinux-<data>-x86_64.iso`.
 
-> **Não rode `build-iso.sh` enquanto outro build está ativo** — ele apaga
-> `iso/work/` no início e quebraria o build em andamento.
+> **Não rode `build-iso.sh` enquanto outro build está ativo.** Antes de iniciar,
+> o script desmonta sistemas de arquivos temporários deixados em `iso/work/`
+> por builds interrompidas e remove essa pasta com segurança.
 
 O build compila os pacotes AUR (**`umbriel-git`, `noctalia-greeter`,
 `xwayland-satellite-git`, `whatsapp-linux-desktop-bin`**) dentro do chroot do

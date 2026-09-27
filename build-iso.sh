@@ -9,6 +9,7 @@ RELENG="/usr/share/archiso/configs/releng"
 PROFILE_DIR="$BASE/iso/profile"
 WORK_DIR="$BASE/iso/work"
 OUT_DIR="$BASE/iso/out"
+CLEANUP_ATTEMPTED=0
 
 die() { echo -e "\e[31m[erro]\e[0m $*" >&2; exit 1; }
 info() { echo -e "\e[36m[iso]\e[0m $*"; }
@@ -21,6 +22,47 @@ run_root() {
   fi
 }
 
+cleanup_work_dir() {
+  [[ -d "$WORK_DIR" ]] || return 0
+
+  local targets target i
+  local -a mounts=()
+  targets="$(run_root findmnt --submounts --noheadings --raw --output TARGET --target "$WORK_DIR")" || return 1
+  while IFS= read -r target; do
+    if [[ "$target" == "$WORK_DIR"/* ]]; then
+      mounts+=("$target")
+    fi
+  done <<< "$targets"
+
+  if (( ${#mounts[@]} > 0 )); then
+    info "Desmontando sistemas de arquivos temporários da build"
+    for ((i = ${#mounts[@]} - 1; i >= 0; i--)); do
+      if ! run_root umount -- "${mounts[i]}"; then
+        info "Mount ocupado; destacando montagem residual: ${mounts[i]}"
+        # Workspace scanners may hold handles into an abandoned chroot's /proc.
+        run_root umount --lazy -- "${mounts[i]}" || return 1
+      fi
+    done
+  fi
+
+  run_root rm -rf -- "$WORK_DIR"
+}
+
+cleanup_on_exit() {
+  local status=$?
+  trap - EXIT
+  if (( CLEANUP_ATTEMPTED )); then
+    exit "$status"
+  fi
+  CLEANUP_ATTEMPTED=1
+  if ! cleanup_work_dir; then
+    echo -e "\e[31m[erro]\e[0m Não foi possível desmontar ou remover $WORK_DIR." >&2
+    (( status != 0 )) || status=1
+  fi
+  exit "$status"
+}
+trap cleanup_on_exit EXIT
+
 info "Verificando o pacote archiso..."
 if ! command -v mkarchiso >/dev/null 2>&1 || [ ! -d "$RELENG" ]; then
   info "Instalando archiso (será solicitada a senha do sudo)..."
@@ -31,7 +73,11 @@ command -v mkarchiso >/dev/null 2>&1 || die "mkarchiso não encontrado após ins
 [ -d "$RELENG" ] || die "Perfil releng não encontrado em $RELENG."
 
 info "Montando perfil de build em $PROFILE_DIR"
-run_root rm -rf "$PROFILE_DIR" "$WORK_DIR"
+if ! cleanup_work_dir; then
+  CLEANUP_ATTEMPTED=1
+  die "Não foi possível limpar a pasta de trabalho anterior: $WORK_DIR"
+fi
+run_root rm -rf -- "$PROFILE_DIR"
 mkdir -p "$PROFILE_DIR"
 cp -a "$RELENG/." "$PROFILE_DIR/"
 
@@ -173,7 +219,11 @@ mkdir -p "$OUT_DIR"
 info "Gerando ISO (pode levar vários minutos e baixar ~1-2GB)..."
 run_root mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
 
-run_root rm -rf "$WORK_DIR"
+if ! cleanup_work_dir; then
+  CLEANUP_ATTEMPTED=1
+  die "ISO criada, mas não foi possível desmontar/remover $WORK_DIR."
+fi
+CLEANUP_ATTEMPTED=1
 run_root chown -R "$(id -u):$(id -g)" "$OUT_DIR" 2>/dev/null || true
 
 info "ISO gerada com sucesso:"
