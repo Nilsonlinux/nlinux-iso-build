@@ -875,8 +875,15 @@ backBtn.addEventListener("click", async () => {
     render();
   }
 });
-$("#btn-done").addEventListener("click", () => {
-  if (!confirm(t("tui.cancel"))) return;
+$("#btn-done").addEventListener("click", async () => {
+  const confirmed = await askModal({
+    title: t("web.done.close"),
+    msg: t("tui.cancel"),
+    ok: t("web.done.close"),
+    cancel: t("web.reboot.no"),
+    danger: true,
+  });
+  if (!confirmed) return;
   try {
     fetch("/api/quit", { method: "POST" });
   } catch (e) {}

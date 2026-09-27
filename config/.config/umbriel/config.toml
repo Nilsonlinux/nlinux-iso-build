@@ -7,5 +7,5 @@ files = [
   "src/rules.toml",
   "src/workspaces.toml",
   "src/monolith.toml",
-  "noctalia.toml",
+  "theme-colors.toml",
 ]

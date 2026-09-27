@@ -819,10 +819,14 @@ apply_mirror() {
       cat "$mlist"
     } > "${mlist}.tmp" && mv "${mlist}.tmp" "$mlist"
   fi
-  if ! grep -q '^DisableDownloadTimeout' /etc/pacman.conf; then
-    echo 'DisableDownloadTimeout' >> /etc/pacman.conf
-    info "Desabilitando timeout de download do pacman (evita 'Operation too slow')."
+  if ! grep -q '^[[:space:]]*\[options\][[:space:]]*$' /etc/pacman.conf; then
+    die "A seção [options] não foi encontrada em /etc/pacman.conf."
   fi
+  sed -i \
+    -e '/^[[:space:]]*DisableDownloadTimeout[[:space:]]*$/d' \
+    -e '/^[[:space:]]*\[options\][[:space:]]*$/a DisableDownloadTimeout' \
+    /etc/pacman.conf
+  info "Desabilitando timeout de baixa velocidade do pacman (evita 'Operation too slow')."
 }
 
 run_chroot_setup() {

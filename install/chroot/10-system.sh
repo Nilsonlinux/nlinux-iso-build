@@ -83,8 +83,24 @@ if [[ "$USE_LUKS" == "1" ]]; then
 fi
 sed -i "s|^HOOKS=(.*)|HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block ${encrypt_hook}filesystems fsck)|" /etc/mkinitcpio.conf
 if ! mkinitcpio -P; then
-  log "ERRO: mkinitcpio -P falhou (veja o log do instalador)."
-  exit 1
+  warn "mkinitcpio falhou com autodetect; tentando gerar initramfs com todos os módulos."
+  fallback_config="$(mktemp /tmp/nlinux-mkinitcpio.XXXXXX)"
+  if ! sed -E '/^HOOKS=/s/(^|[[:space:]])autodetect([[:space:])]|$)/\1\2/g' \
+    /etc/mkinitcpio.conf > "$fallback_config"; then
+    rm -f "$fallback_config"
+    die "Não foi possível preparar a configuração alternativa do mkinitcpio."
+  fi
+
+  if mkinitcpio -k /boot/vmlinuz-linux -c "$fallback_config" \
+      -g /boot/initramfs-linux.img &&
+    mkinitcpio -k /boot/vmlinuz-linux -c "$fallback_config" \
+      -g /boot/initramfs-linux-fallback.img -S autodetect; then
+    rm -f "$fallback_config"
+    warn "Initramfs gerado sem autodetect; a configuração original foi mantida."
+  else
+    rm -f "$fallback_config"
+    die "mkinitcpio falhou também sem autodetect; consulte o log do instalador."
+  fi
 fi
 
 log "Swap via zram"

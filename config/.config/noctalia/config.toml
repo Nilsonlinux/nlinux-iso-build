@@ -24,4 +24,4 @@ show_dots = true
 smart_auto_hide = true
 
 [theme.templates]
-builtin_ids = [ "gtk3", "gtk4", "kitty", "starship", "umbriel" ]
+builtin_ids = [ "gtk3", "gtk4", "kitty", "starship" ]
