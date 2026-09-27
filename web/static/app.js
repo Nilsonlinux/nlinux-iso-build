@@ -882,6 +882,7 @@ $("#btn-done").addEventListener("click", async () => {
     ok: t("web.done.close"),
     cancel: t("web.reboot.no"),
     danger: true,
+    icon: "close",
   });
   if (!confirmed) return;
   try {
@@ -891,9 +892,23 @@ $("#btn-done").addEventListener("click", async () => {
 });
 
 // Modal de confirmação estilizado (substitui o confirm() nativo).
-function askModal({ title, msg, ok, cancel, danger = false }) {
+function askModal({ title, msg, ok, cancel, danger = false, icon = "restart" }) {
   return new Promise((resolve) => {
     const m = $("#modal");
+    const iconPaths = icon === "close"
+      ? ["M18 6 6 18M6 6l12 12"]
+      : [
+          "M21 2v6h-6",
+          "M3 12a9 9 0 0 1 15.36-6.36L21 8",
+          "M3 22v-6h6",
+          "M21 12a9 9 0 0 1-15.36 6.36L3 16",
+        ];
+    const iconSvg = m.querySelector(".modal-icon svg");
+    iconSvg.replaceChildren(...iconPaths.map((d) => {
+      const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+      path.setAttribute("d", d);
+      return path;
+    }));
     $("#modal-title").textContent = title;
     $("#modal-msg").textContent = msg;
     $("#modal-ok").textContent = ok;
