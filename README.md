@@ -197,6 +197,11 @@ live via `yay` (veja `customize_airootfs.sh`). Por isso a geração é **lenta**
 (cargo/Rust, testes inclusos) e precisa de **internet + AUR**; a ISO sai com
 ~2 GB+.
 
+Os builds AUR usam `install/chroot/makepkg-no-debug.conf`, que mantém as
+opções padrão do `makepkg`, mas desativa a geração de pacotes de depuração.
+Isso evita avisos do `gdb-add-index` em binários pré-compilados do WhatsApp,
+que não contêm símbolos de depuração; os pacotes instalados continuam normais.
+
 Grave e boote:
 
 ```bash

@@ -59,7 +59,8 @@ log "Instalando yay (yay-bin) via makepkg"
 runuser -u builder -- bash -c '
   git clone --depth 1 https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
   cd /tmp/yay-bin
-  makepkg -si --noconfirm --nocheck
+  makepkg --config /opt/noctalia-installer/install/chroot/makepkg-no-debug.conf \
+    -si --noconfirm --nocheck
 '
 
 log "Instalando pacotes AUR — etapa 1 (dependências: greeter, portal, xwayland)"
@@ -72,7 +73,7 @@ runuser -u builder -- bash -c '
   export GOCACHE=/tmp/gocache CARGO_HOME=/tmp/cargo
   yay -S --noconfirm --needed \
     --answerdiff None --answerclean None --answeredit None --answerupgrade None \
-    --mflags "--nocheck" \
+    --mflags "--nocheck --config /opt/noctalia-installer/install/chroot/makepkg-no-debug.conf" \
     noctalia-greeter xdg-desktop-portal-umbriel-git xwayland-satellite-git
 '
 
@@ -81,7 +82,7 @@ runuser -u builder -- bash -c '
   export GOCACHE=/tmp/gocache CARGO_HOME=/tmp/cargo
   yay -S --noconfirm --needed \
     --answerdiff None --answerclean None --answeredit None --answerupgrade None \
-    --mflags "--nocheck" \
+    --mflags "--nocheck --config /opt/noctalia-installer/install/chroot/makepkg-no-debug.conf" \
     umbriel-git whatsapp-linux-desktop-bin
 '
 

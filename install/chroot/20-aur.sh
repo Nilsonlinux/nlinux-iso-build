@@ -19,14 +19,16 @@ log "Instalando yay (yay-bin) via makepkg"
 as_user builder bash -c '
   git clone --depth 1 https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
   cd /tmp/yay-bin
-  makepkg -si --noconfirm
+  makepkg --config "$SHARE_DIR/chroot/makepkg-no-debug.conf" -si --noconfirm
 ' >/dev/null
 
 aur_pkgs="$(grep -vE '^\s*(#|$)' "$SHARE_DIR/packages/aur.packages")"
 log "Instalando pacotes AUR: $aur_pkgs"
 as_user builder bash -c "
   export GOCACHE=/tmp/gocache CARGO_HOME=/tmp/cargo
-  yay -S --noconfirm --needed $aur_pkgs
+  yay -S --noconfirm --needed \
+    --mflags \"--config $SHARE_DIR/chroot/makepkg-no-debug.conf\" \
+    $aur_pkgs
 " >/dev/null
 
 log "Removendo usuário temporário builder"
