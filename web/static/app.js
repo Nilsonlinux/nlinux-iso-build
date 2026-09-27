@@ -141,6 +141,7 @@ function h(fields) {
     lab.textContent = t(f.label);
     const inp = document.createElement("input");
     inp.type = f.type || "text";
+    if (inp.type === "password") inp.autocomplete = "new-password";
     inp.value = f.value || "";
     if (f.placeholder) inp.placeholder = t(f.placeholder);
     inp.addEventListener("input", () => {

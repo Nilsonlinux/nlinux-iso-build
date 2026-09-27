@@ -103,6 +103,30 @@ PACKAGE_DEPS = [
 ]
 PACKAGE_DEPS_OPTIONAL = ("paru", "yay", "curl")
 
+
+def sync_package_databases() -> None:
+    """Refresh pacman's package databases before opening the software store."""
+    command = ["/usr/bin/pacman", "-Sy", "--noconfirm"]
+    if os.geteuid() != 0:
+        pkexec = shutil.which("pkexec")
+        if not pkexec:
+            raise RuntimeError(
+                "pkexec não está instalado; não foi possível atualizar os bancos do pacman."
+            )
+        command.insert(0, pkexec)
+
+    try:
+        result = subprocess.run(command, capture_output=True, text=True, check=False)
+    except OSError as exc:
+        raise RuntimeError(f"Não foi possível executar pacman -Sy: {exc}") from exc
+    if result.returncode != 0:
+        details = "\n".join(
+            output.strip() for output in (result.stderr, result.stdout) if output.strip()
+        )
+        message = details or f"pacman terminou com o código {result.returncode}."
+        raise RuntimeError(f"Falha ao atualizar os bancos do pacman:\n{message}")
+
+
 # Catálogo remoto (JSON raw do GitHub). APENAS a versão de distribuição sincroniza
 # (a de curadoria é a fonte e não deve ser sobrescrita — ver start_remote_refresh).
 # Ajuste a URL para o seu repositório após publicar o catálogo no GitHub.

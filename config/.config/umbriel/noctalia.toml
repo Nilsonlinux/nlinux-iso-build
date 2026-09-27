@@ -6,15 +6,14 @@ accent_primary = "#fff59bFF"
 accent_secondary = "#a9aefeFF"
 warning = "#9bfeceFF"
 error = "#fd4663FF"
-insert_hint = "#9bfece80"
-backdrop = "#11112dFF"
 
-[colors.border]
-focused = "#fff59bFF"
-unfocused = "#11112dFF"
-outer = "#070722FF"
+[appearance]
+border_focused = "#fff59bFF"
+border_unfocused = "#11112dFF"
+outer_border_color = "#070722FF"
+insert_hint_color = "#9bfece80"
+backdrop_color = "#11112dFF"
 
-[colors.overview]
+[overview]
 background_tint = "#07072288"
-badge = "#fff59bFF"
 workspace_background = "#070722FF"
