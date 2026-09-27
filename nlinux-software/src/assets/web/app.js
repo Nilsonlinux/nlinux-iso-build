@@ -452,7 +452,7 @@ function updateInstallButtons(product, progress, mode, running = true) {
   const verb = (mode === "remove" ? tr("status.uninstalling") : tr("status.installing"))
     .replace(/…$/, "").trim();
   const label = running
-    ? `${verb} ~${progress}%`
+    ? Number.isFinite(progress) ? `${verb} ~${progress}%` : `${verb}…`
     : product.installed ? tr("ui.reinstall") : tr("ui.install");
   $$("[data-action=install]")
     .filter((button) => button.dataset.key === product.key)
@@ -499,7 +499,7 @@ async function startInstall(product, btn, mode = "install") {
   setBusy(true);
   const card = btn.closest(".card");
   if (card) card.classList.add("installing-card");
-  updateInstallButtons(product, 1, mode);
+  updateInstallButtons(product, null, mode);
 
   statusCard(`${gerund} ${product.name}…`, tr("status.waiting"), "");
 
@@ -512,12 +512,12 @@ async function startInstall(product, btn, mode = "install") {
     });
   } catch (e) {
     finishInstall(false, product, btn, card, mode);
-    updateInstallButtons(product, 1, mode, false);
+    updateInstallButtons(product, null, mode, false);
     toast(removing ? tr("toast.startFailUninstall") : tr("toast.startFailInstall"), "err");
     return;
   }
 
-  let currentProgress = 1;
+  let currentProgress = null;
   (async function poll() {
     const st = await api("/api/status?id=" + job.id).catch(() => null);
     if (!st) {
@@ -527,8 +527,8 @@ async function startInstall(product, btn, mode = "install") {
     }
     else if (st.state === "pending") {
       currentProgress = Number.isFinite(st.progress)
-        ? Math.max(currentProgress, Math.min(99, st.progress))
-        : currentProgress;
+        ? Math.max(currentProgress ?? 0, Math.min(99, st.progress))
+        : null;
       const waiting = st.lines.length <= 1;
       const last = waiting
         ? tr("status.waiting")

@@ -195,8 +195,11 @@ class InstallJob:
         self.lines = []
         self.done = False
         self.success = False
-        self.progress = 1
+        self.progress = None
         self._progress_phase = "starting"
+        self._step_group = 0
+        self._step_current = 0
+        self._step_total = 0
 
     def _record_output(self, raw_line: str) -> None:
         line = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", raw_line).strip()
@@ -209,16 +212,16 @@ class InstallJob:
         text = line.lower()
         if "synchronizing package databases" in text:
             self._progress_phase = "database"
-            self.progress = max(self.progress, 2)
+            self._set_progress(2)
         elif "resolving dependencies" in text:
             self._progress_phase = "dependencies"
-            self.progress = max(self.progress, 8)
+            self._set_progress(8)
         elif "looking for conflicting packages" in text:
             self._progress_phase = "dependencies"
-            self.progress = max(self.progress, 12)
+            self._set_progress(12)
         elif "retrieving packages" in text or "downloading" in text:
             self._progress_phase = "download"
-            self.progress = max(self.progress, 15)
+            self._set_progress(15)
 
         phases = (
             ("checking keys in keyring", 55),
@@ -232,7 +235,7 @@ class InstallJob:
                 self._progress_phase = "transaction"
                 pct_match = re.search(r"(\d{1,3})%", text)
                 pct = min(int(pct_match.group(1)), 100) if pct_match else 0
-                self.progress = max(self.progress, start + int(5 * pct / 100))
+                self._set_progress(start + int(5 * pct / 100))
                 return
 
         match = re.search(
@@ -240,13 +243,37 @@ class InstallJob:
             text,
         )
         if match:
-            current, total = int(match.group(1)), int(match.group(2))
+            self._update_counted_step(match, transaction=True)
+            return
+
+        # pacman localizes its phase labels, but the (current/total) counters
+        # and percentages in its progress display are language-independent.
+        count_match = re.search(r"\(\s*(\d+)\s*/\s*(\d+)\s*\)", text)
+        if count_match and (
+            ".pkg.tar." in text or re.search(r"\btotal\s*\(", text)
+        ):
+            current, total = int(count_match.group(1)), int(count_match.group(2))
             if total > 0:
-                self._progress_phase = "transaction"
                 pct_match = re.search(r"(\d{1,3})%", text)
-                within_step = min(int(pct_match.group(1)), 100) / 100 if pct_match else 0
-                fraction = min((current - 1 + within_step) / total, 1)
-                self.progress = max(self.progress, 80 + int(18 * fraction))
+                fraction = (
+                    (current - 1 + min(int(pct_match.group(1)), 100) / 100) / total
+                    if pct_match else current / total
+                )
+                database_download = (
+                    self._progress_phase == "database" and ".pkg.tar." not in text
+                )
+                self._progress_phase = "database" if database_download else "download"
+                start, span = (2, 6) if database_download else (15, 40)
+                self._set_progress(start + int(span * min(fraction, 1)))
+            return
+        if count_match:
+            package_change = re.search(
+                r"\b(instalando|actualizando|reinstalando|removiendo|"
+                r"installiere|aktualisiere|entferne|installazione|"
+                r"aggiornamento|rimozione)\b",
+                text,
+            )
+            self._update_counted_step(count_match, transaction=bool(package_change))
             return
 
         aur_stages = (
@@ -262,18 +289,57 @@ class InstallJob:
         )
         for label, estimate in aur_stages:
             if label in text:
-                self.progress = max(self.progress, estimate)
+                self._set_progress(estimate)
                 return
 
-        if self._progress_phase in ("download", "database"):
+        if ".pkg.tar." in text or self._progress_phase in ("download", "database"):
             pct_match = re.search(r"(\d{1,3})%", text)
             if pct_match:
                 pct = min(int(pct_match.group(1)), 100)
-                if self._progress_phase == "database":
+                database_download = (
+                    self._progress_phase == "database" and ".pkg.tar." not in text
+                )
+                if not database_download:
+                    self._progress_phase = "download"
+                if database_download:
                     estimate = 2 + int(6 * pct / 100)
                 else:
                     estimate = 15 + int(40 * pct / 100)
-                self.progress = max(self.progress, estimate)
+                self._set_progress(estimate)
+
+    def _set_progress(self, progress: int) -> None:
+        self.progress = max(self.progress or 0, min(99, progress))
+
+    def _update_counted_step(self, match, transaction: bool = False) -> None:
+        current, total = int(match.group(1)), int(match.group(2))
+        if total <= 0:
+            return
+        if transaction:
+            self._step_group = max(self._step_group, 5)
+        if current == 1 and (
+            self._step_total == 0 or self._step_current >= self._step_total
+        ):
+            self._step_group += 1
+        self._step_current = current
+        self._step_total = total
+
+        pct_match = re.search(r"(\d{1,3})%", match.string)
+        within_step = (
+            min(int(pct_match.group(1)), 100) / 100
+            if pct_match else current / total
+        )
+        if self._step_group <= 5:
+            self._progress_phase = "transaction-check"
+            estimate = 55 + (self._step_group - 1) * 5 + int(4 * within_step)
+        else:
+            self._progress_phase = "transaction"
+            fraction = min(
+                (current - 1 + within_step) / total if pct_match
+                else within_step,
+                1,
+            )
+            estimate = 80 + int(19 * fraction)
+        self._set_progress(estimate)
 
     def _aur_script(self) -> tuple[str, str, str]:
         """Instala pacotes AUR via paru OU yay (o que existir) como usuario,
