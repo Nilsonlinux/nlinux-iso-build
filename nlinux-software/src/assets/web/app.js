@@ -1,7 +1,7 @@
 "use strict";
 
 /* ============================== Estado ================================== */
-const state = { data: null, cat: "all", q: "", busy: false };
+const state = { data: null, cat: "all", q: "", installedOnly: false, busy: false };
 const $ = (sel) => document.querySelector(sel);
 const $$ = (sel) => [...document.querySelectorAll(sel)];
 
@@ -237,7 +237,11 @@ function openStoreInfo() {
 function renderCats(cats) {
   const nav = $("#cats");
   const list = [{ id: "all", count: state.data.total }, ...cats];
-  nav.innerHTML = list.map((c, i) => {
+  const installedCount = state.data.products.filter((p) => p.installed).length;
+  const installedFilter = `<button class="cat cat-installed tip${state.installedOnly ? " active" : ""}" data-installed-filter aria-pressed="${state.installedOnly}" data-tip="${esc(tr("filter.installed"))}">
+    <i class="ti ti-circle-check"></i><span>${tr("filter.installed")}</span><b id="installed-filter-count">${installedCount}</b>
+  </button>`;
+  nav.innerHTML = installedFilter + list.map((c, i) => {
     const label = UI["cat." + c.id] || c.id;
     return `<button class="cat tip ${c.id === "all" ? "active" : ""}" data-cat="${c.id}" data-tip="${esc(
       label.toLowerCase()
@@ -246,10 +250,16 @@ function renderCats(cats) {
       <span>${label}</span><b>${c.count}</b>
     </button>`;
   }).join("");
-  nav.querySelectorAll(".cat").forEach((b) =>
+  nav.querySelector("[data-installed-filter]").addEventListener("click", (ev) => {
+    state.installedOnly = !state.installedOnly;
+    ev.currentTarget.classList.toggle("active", state.installedOnly);
+    ev.currentTarget.setAttribute("aria-pressed", String(state.installedOnly));
+    render(true);
+  });
+  nav.querySelectorAll("[data-cat]").forEach((b) =>
     b.addEventListener("click", () => {
       state.cat = b.dataset.cat;
-      nav.querySelectorAll(".cat").forEach((x) => x.classList.toggle("active", x === b));
+      nav.querySelectorAll("[data-cat]").forEach((x) => x.classList.toggle("active", x === b));
       render(true);
     })
   );
@@ -267,6 +277,7 @@ function visibleProducts() {
   const re = qs ? new RegExp(qs, "i") : null;
   return state.data.products.filter((p) => {
     if (state.cat !== "all" && p.category !== state.cat) return false;
+    if (state.installedOnly && !p.installed) return false;
     if (!re) return true;
     return re.test(p.name) || re.test(p.summary) || re.test(p.description) ||
            re.test(p.developer || "") || re.test(p.category);
@@ -342,6 +353,8 @@ function cardHtml(p, i) {
 function render(animate = true) {
   const grid = $("#grid");
   const products = visibleProducts();
+  $("#installed-filter-count").textContent =
+    state.data.products.filter((p) => p.installed).length;
   $("#results-count").textContent = tr("results.count", products.length, state.data.total);
   $("#empty").hidden = products.length > 0;
 
