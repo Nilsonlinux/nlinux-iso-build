@@ -49,6 +49,16 @@
       <h2 class="install-title">Instalando NLinux</h2>
       <div class="ring-wrap">
         <svg class="ring" viewBox="0 0 200 200">
+          <defs>
+            <linearGradient id="ring-gradient" gradientUnits="userSpaceOnUse" x1="12" y1="100" x2="188" y2="100">
+              <stop offset="0" stop-color="#0d5ad6"/>
+              <stop offset=".42" stop-color="#17a2d3"/>
+              <stop offset=".5" stop-color="#b7f2ff"/>
+              <stop offset=".58" stop-color="#17a2d3"/>
+              <stop offset="1" stop-color="#0d5ad6"/>
+              <animateTransform attributeName="gradientTransform" type="rotate" from="0 100 100" to="360 100 100" dur="3s" repeatCount="indefinite"/>
+            </linearGradient>
+          </defs>
           <circle class="ring-bg" cx="100" cy="100" r="88"/>
           <circle id="ring-fg" class="ring-fg" cx="100" cy="100" r="88"/>
         </svg>

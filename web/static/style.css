@@ -397,11 +397,11 @@ body {
 }
 .ring-bg { stroke: var(--card-hover); }
 .ring-fg {
-  stroke: var(--accent);
+  stroke: url("#ring-gradient");
   stroke-dasharray: 553; /* 2*pi*88 */
   stroke-dashoffset: 553;
   transition: stroke-dashoffset .3s cubic-bezier(.4, 0, .2, 1);
-  filter: drop-shadow(0 0 6px rgba(23, 162, 211, .55));
+  filter: drop-shadow(0 0 6px rgba(23, 162, 211, .6));
 }
 .ring-center {
   position: absolute; inset: 0;
@@ -505,10 +505,6 @@ body {
   0% { transform: scale(.6); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
-@keyframes ringGlow {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(23, 162, 211, .45)); }
-  50% { filter: drop-shadow(0 0 18px rgba(23, 162, 211, .95)); }
-}
 @keyframes slideUp {
   0% { transform: translateY(14px); opacity: 0; }
   100% { transform: translateY(0); opacity: 1; }
@@ -516,6 +512,10 @@ body {
 @keyframes shaking { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
 @keyframes stagePulse { 0%,100%{transform:translateX(0)} 50%{transform:translateX(3px)} }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  #ring-gradient animateTransform { display: none; }
+}
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-thumb { background: var(--card-hover); border-radius: 6px; }
