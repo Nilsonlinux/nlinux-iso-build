@@ -188,9 +188,10 @@ O que ele faz:
    **syslinux** (BIOS) — títulos, items e a splash NLinux;
 7. Roda `mkarchiso -v` → ISO em `iso/out/nlinux-<data>-x86_64.iso`.
 
-> **Não rode `build-iso.sh` enquanto outro build está ativo.** Antes de iniciar,
-> o script desmonta sistemas de arquivos temporários deixados em `iso/work/`
-> por builds interrompidas e remove essa pasta com segurança.
+> **Não rode `build-iso.sh` enquanto outro build está ativo.** A compilação roda
+> em um namespace de mounts privado, evitando que ferramentas do host varram
+> pseudo-filesystems temporários do chroot. Antes de iniciar, o script também
+> desmonta mounts deixados em `iso/work/` por builds interrompidas.
 
 O build compila os pacotes AUR (**`umbriel-git`, `noctalia-greeter`,
 `xwayland-satellite-git`, `whatsapp-linux-desktop-bin`**) dentro do chroot do

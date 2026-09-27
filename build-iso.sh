@@ -217,7 +217,8 @@ transform_syslinux_entries
 
 mkdir -p "$OUT_DIR"
 info "Gerando ISO (pode levar vários minutos e baixar ~1-2GB)..."
-run_root mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
+run_root unshare --mount --propagation private -- \
+  mkarchiso -v -w "$WORK_DIR" -o "$OUT_DIR" "$PROFILE_DIR"
 
 if ! cleanup_work_dir; then
   CLEANUP_ATTEMPTED=1
