@@ -839,10 +839,26 @@ run_chroot_setup() {
 
   genfstab -U "$MNT" > "$MNT/etc/fstab"
   # O rsync copiou /etc/resolv.conf do live (que é um symlink para
-  # /run/systemd/...). Copiar por cima dá "same file" (cp) e aborta o script;
-  # remove antes e copia o symlink em si (cp -a não segue o link).
+  # /run/systemd/...). Preservar esse symlink deixa o sistema instalado sem DNS
+  # quando systemd-resolved não está ativo. Prefere os servidores upstream do
+  # resolved; o NetworkManager passa a manter o arquivo regular após o primeiro boot.
   rm -f "$MNT/etc/resolv.conf"
-  [[ -e /etc/resolv.conf ]] && cp -a /etc/resolv.conf "$MNT/etc/resolv.conf"
+  local resolver_source="" candidate
+  for candidate in /run/systemd/resolve/resolv.conf /etc/resolv.conf; do
+    if [[ -r "$candidate" ]] &&
+      grep -qE '^[[:space:]]*nameserver[[:space:]]+' "$candidate" &&
+      ! grep -qE '^[[:space:]]*nameserver[[:space:]]+(127\.|::1([[:space:]]|$))' "$candidate"; then
+      resolver_source="$candidate"
+      break
+    fi
+  done
+  if [[ -n "$resolver_source" ]]; then
+    cp -L "$resolver_source" "$MNT/etc/resolv.conf"
+  else
+    printf '# NLinux: o NetworkManager configurará o DNS após a primeira conexão.\n' \
+      > "$MNT/etc/resolv.conf"
+  fi
+  chmod 0644 "$MNT/etc/resolv.conf"
   # Chroot herda espelho + pacman.conf escolhidos no ambiente live.
   [[ -f /etc/pacman.d/mirrorlist ]] && cp /etc/pacman.d/mirrorlist "$MNT/etc/pacman.d/mirrorlist"
   cp -a /etc/pacman.conf "$MNT/etc/pacman.conf"

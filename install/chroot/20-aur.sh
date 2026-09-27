@@ -22,14 +22,32 @@ as_user builder bash -c '
   makepkg --config "$SHARE_DIR/chroot/makepkg-no-debug.conf" -si --noconfirm
 ' >/dev/null
 
-aur_pkgs="$(grep -vE '^\s*(#|$)' "$SHARE_DIR/packages/aur.packages")"
-log "Instalando pacotes AUR: $aur_pkgs"
-as_user builder bash -c "
+aur_package_file="$SHARE_DIR/packages/aur.packages"
+[[ -r "$aur_package_file" ]] || die "Lista de pacotes AUR indisponível: $aur_package_file"
+aur_initial_pkgs=()
+aur_dependent_pkgs=()
+while IFS= read -r pkg; do
+  case "$pkg" in
+    umbriel-git|whatsapp-linux-desktop-bin) aur_dependent_pkgs+=("$pkg") ;;
+    *) aur_initial_pkgs+=("$pkg") ;;
+  esac
+done < <(awk 'NF && $1 !~ /^#/ { print $1 }' "$aur_package_file")
+((${#aur_initial_pkgs[@]} > 0)) || die "A lista inicial de pacotes AUR está vazia."
+((${#aur_dependent_pkgs[@]} > 0)) || die "A lista dependente de pacotes AUR está vazia."
+
+install_aur_packages() {
+  as_user builder bash -c '
   export GOCACHE=/tmp/gocache CARGO_HOME=/tmp/cargo
   yay -S --noconfirm --needed \
-    --mflags \"--config $SHARE_DIR/chroot/makepkg-no-debug.conf\" \
-    $aur_pkgs
-" >/dev/null
+    --mflags "--config $SHARE_DIR/chroot/makepkg-no-debug.conf" \
+    "$@"
+' _ "$@" >/dev/null
+}
+
+log "Instalando pacotes AUR iniciais: ${aur_initial_pkgs[*]}"
+install_aur_packages "${aur_initial_pkgs[@]}"
+log "Instalando pacotes AUR dependentes: ${aur_dependent_pkgs[*]}"
+install_aur_packages "${aur_dependent_pkgs[@]}"
 
 log "Removendo usuário temporário builder"
 userdel -r builder 2>/dev/null || true
