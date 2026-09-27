@@ -1,14 +1,20 @@
 import base64
+import errno
+import fcntl
 import hashlib
 import json
 import locale as l18n
 import os
+import pwd
 import re
+import pty
 import shlex
 import shutil
+import struct
 import subprocess
 import threading
 import time
+import termios
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from uuid import uuid4
@@ -103,30 +109,6 @@ PACKAGE_DEPS = [
 ]
 PACKAGE_DEPS_OPTIONAL = ("paru", "yay", "curl")
 
-
-def sync_package_databases() -> None:
-    """Refresh pacman's package databases before opening the software store."""
-    command = ["/usr/bin/pacman", "-Sy", "--noconfirm"]
-    if os.geteuid() != 0:
-        pkexec = shutil.which("pkexec")
-        if not pkexec:
-            raise RuntimeError(
-                "pkexec não está instalado; não foi possível atualizar os bancos do pacman."
-            )
-        command.insert(0, pkexec)
-
-    try:
-        result = subprocess.run(command, capture_output=True, text=True, check=False)
-    except OSError as exc:
-        raise RuntimeError(f"Não foi possível executar pacman -Sy: {exc}") from exc
-    if result.returncode != 0:
-        details = "\n".join(
-            output.strip() for output in (result.stderr, result.stdout) if output.strip()
-        )
-        message = details or f"pacman terminou com o código {result.returncode}."
-        raise RuntimeError(f"Falha ao atualizar os bancos do pacman:\n{message}")
-
-
 # Catálogo remoto (JSON raw do GitHub). APENAS a versão de distribuição sincroniza
 # (a de curadoria é a fonte e não deve ser sobrescrita — ver start_remote_refresh).
 # Ajuste a URL para o seu repositório após publicar o catálogo no GitHub.
@@ -213,11 +195,91 @@ class InstallJob:
         self.lines = []
         self.done = False
         self.success = False
+        self.progress = 1
+        self._progress_phase = "starting"
 
-    def _aur_script_by_pkg(packages) -> None:
+    def _record_output(self, raw_line: str) -> None:
+        line = re.sub(r"\x1b\[[0-9;]*[A-Za-z]", "", raw_line).strip()
+        if not line:
+            return
+        self.lines.append(line)
+        self._update_progress(line)
+
+    def _update_progress(self, line: str) -> None:
+        text = line.lower()
+        if "synchronizing package databases" in text:
+            self._progress_phase = "database"
+            self.progress = max(self.progress, 2)
+        elif "resolving dependencies" in text:
+            self._progress_phase = "dependencies"
+            self.progress = max(self.progress, 8)
+        elif "looking for conflicting packages" in text:
+            self._progress_phase = "dependencies"
+            self.progress = max(self.progress, 12)
+        elif "retrieving packages" in text or "downloading" in text:
+            self._progress_phase = "download"
+            self.progress = max(self.progress, 15)
+
+        phases = (
+            ("checking keys in keyring", 55),
+            ("checking package integrity", 61),
+            ("loading package files", 67),
+            ("checking for file conflicts", 73),
+            ("checking available disk space", 79),
+        )
+        for label, start in phases:
+            if label in text:
+                self._progress_phase = "transaction"
+                pct_match = re.search(r"(\d{1,3})%", text)
+                pct = min(int(pct_match.group(1)), 100) if pct_match else 0
+                self.progress = max(self.progress, start + int(5 * pct / 100))
+                return
+
+        match = re.search(
+            r"\(\s*(\d+)\s*/\s*(\d+)\s*\)\s*(installing|upgrading|reinstalling|removing)\b",
+            text,
+        )
+        if match:
+            current, total = int(match.group(1)), int(match.group(2))
+            if total > 0:
+                self._progress_phase = "transaction"
+                pct_match = re.search(r"(\d{1,3})%", text)
+                within_step = min(int(pct_match.group(1)), 100) / 100 if pct_match else 0
+                fraction = min((current - 1 + within_step) / total, 1)
+                self.progress = max(self.progress, 80 + int(18 * fraction))
+            return
+
+        aur_stages = (
+            ("making package:", 5),
+            ("retrieving sources", 10),
+            ("validating source files", 18),
+            ("extracting sources", 25),
+            ("starting prepare()", 30),
+            ("starting build()", 35),
+            ("starting check()", 65),
+            ("starting package()", 70),
+            ("finished making:", 75),
+        )
+        for label, estimate in aur_stages:
+            if label in text:
+                self.progress = max(self.progress, estimate)
+                return
+
+        if self._progress_phase in ("download", "database"):
+            pct_match = re.search(r"(\d{1,3})%", text)
+            if pct_match:
+                pct = min(int(pct_match.group(1)), 100)
+                if self._progress_phase == "database":
+                    estimate = 2 + int(6 * pct / 100)
+                else:
+                    estimate = 15 + int(40 * pct / 100)
+                self.progress = max(self.progress, estimate)
+
+    def _aur_script(self) -> tuple[str, str, str]:
         """Instala pacotes AUR via paru OU yay (o que existir) como usuario,
         com NOPASSWD temporario apenas para o passo final de instalacao."""
-        inner_path = f"/tmp/boutique-aur-{self.id}.sh"
+        username = pwd.getpwuid(os.getuid()).pw_name
+        inner_path = f"/tmp/boutique-aur-{self.id}-packages.sh"
         with open(inner_path, "w", encoding="utf-8") as fh:
             fh.write("#!/bin/bash\n")
             fh.write("AUR_HELPER=\"$(command -v paru || command -v yay)\"\n")
@@ -230,15 +292,18 @@ class InstallJob:
             "set +e",
             "umask 077",
             "limite='/etc/sudoers.d/zz-boutique'",
-            "printf '%s\\n' 'nilsonlinux ALL=(ALL) NOPASSWD: /usr/bin/pacman' > \"$limite\"",
+            "printf '%s\\n' "
+            + shlex.quote(f"{username} ALL=(ALL) NOPASSWD: /usr/bin/pacman")
+            + " > \"$limite\"",
             "chmod 0440 \"$limite\"",
             "visudo -cf \"$limite\" >/dev/null 2>&1",
             f"cleanup() {{ rm -f \"$limite\" \"{inner_path}\"; }}",
             "trap cleanup EXIT INT TERM",
-            f"su - -s /bin/bash nilsonlinux -c 'bash {inner_path}'",
+            "pacman -Sy --noconfirm || exit $?",
+            f"su - -s /bin/bash {shlex.quote(username)} -c 'bash {inner_path}'",
             "exit $?",
         ])
-        path = f"/tmp/boutique-aur-{self.id}.sh"
+        path = f"/tmp/boutique-aur-{self.id}-root.sh"
         with open(path, "w", encoding="utf-8") as fh:
             fh.write(script)
         return path, script, inner_path
@@ -259,15 +324,52 @@ class InstallJob:
                     artifacts = [script_path, inner_path]
                     cmd = ["pkexec", "bash", script_path]
                 else:
-                    cmd = ["pkexec", "pacman", "-S", "--noconfirm", "--needed"] + self.packages
-                process = subprocess.Popen(
-                    cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
-                )
-                if process.stdout is not None:
-                    for line in iter(process.stdout.readline, ""):
-                        line = line.rstrip()
-                        if line:
-                            self.lines.append(line)
+                    cmd = (
+                        ["pkexec", "pacman", "-Sy", "--noconfirm", "--needed"]
+                        + self.packages
+                    )
+                master_fd, slave_fd = pty.openpty()
+                try:
+                    fcntl.ioctl(
+                        slave_fd,
+                        termios.TIOCSWINSZ,
+                        struct.pack("HHHH", 24, 80, 0, 0),
+                    )
+                    try:
+                        process = subprocess.Popen(
+                            cmd,
+                            stdin=subprocess.DEVNULL,
+                            stdout=slave_fd,
+                            stderr=slave_fd,
+                            close_fds=True,
+                        )
+                    finally:
+                        os.close(slave_fd)
+                    pending = ""
+                    while True:
+                        try:
+                            chunk = os.read(master_fd, 4096)
+                        except OSError as exc:
+                            if exc.errno == errno.EIO:
+                                break
+                            raise
+                        if not chunk:
+                            break
+                        pending += chunk.decode("utf-8", "replace")
+                        while True:
+                            delimiter = min(
+                                (position for position in (
+                                    pending.find("\n"), pending.find("\r")
+                                ) if position >= 0),
+                                default=-1,
+                            )
+                            if delimiter < 0:
+                                break
+                            self._record_output(pending[:delimiter])
+                            pending = pending[delimiter + 1:]
+                    self._record_output(pending)
+                finally:
+                    os.close(master_fd)
                 self.success = process.wait() == 0
             except Exception as e:
                 self.success = False
@@ -280,6 +382,7 @@ class InstallJob:
                         pass
             self.state = "success" if self.success else "failed"
             if self.success:
+                self.progress = 100
                 self.lines.append(f"{'Removido' if removing else 'Instalado'}: {names}")
             else:
                 self.lines.append(
@@ -296,6 +399,7 @@ class InstallJob:
             "state": self.state,
             "done": self.done,
             "success": self.success,
+            "progress": self.progress,
             "lines": self.lines[-12:],
         }
 

@@ -431,13 +431,38 @@ function lbStep(d) {
 }
 
 /* ============================== Instalação =============================== */
-function statusCard(title, line, mode) {
+function statusCard(title, line, mode, progress = null) {
   const sc = $("#install-status");
   sc.hidden = false;
   sc.classList.toggle("done", mode === "done");
   sc.classList.toggle("error", mode === "error");
   $("#status-title").textContent = title;
   $("#status-line").textContent = line || "";
+  const bar = $("#status-bar");
+  if (progress === null) {
+    bar.style.removeProperty("width");
+    bar.style.removeProperty("animation");
+  } else {
+    bar.style.width = `${Math.max(0, Math.min(100, progress))}%`;
+    bar.style.animation = "none";
+  }
+}
+
+function updateInstallButtons(product, progress, mode, running = true) {
+  const verb = (mode === "remove" ? tr("status.uninstalling") : tr("status.installing"))
+    .replace(/…$/, "").trim();
+  const label = running
+    ? `${verb} ~${progress}%`
+    : product.installed ? tr("ui.reinstall") : tr("ui.install");
+  $$("[data-action=install]")
+    .filter((button) => button.dataset.key === product.key)
+    .forEach((button) => {
+      const icon = document.createElement("i");
+      icon.className = "ti ti-download";
+      button.replaceChildren(icon, document.createTextNode(` ${label}`));
+      button.classList.toggle("is-running", running);
+      button.setAttribute("aria-label", label);
+    });
 }
 
 function setBusy(busy) {
@@ -474,7 +499,7 @@ async function startInstall(product, btn, mode = "install") {
   setBusy(true);
   const card = btn.closest(".card");
   if (card) card.classList.add("installing-card");
-  btn.classList.add("is-running");
+  updateInstallButtons(product, 1, mode);
 
   statusCard(`${gerund} ${product.name}…`, tr("status.waiting"), "");
 
@@ -487,23 +512,34 @@ async function startInstall(product, btn, mode = "install") {
     });
   } catch (e) {
     finishInstall(false, product, btn, card, mode);
+    updateInstallButtons(product, 1, mode, false);
     toast(removing ? tr("toast.startFailUninstall") : tr("toast.startFailInstall"), "err");
     return;
   }
 
+  let currentProgress = 1;
   (async function poll() {
     const st = await api("/api/status?id=" + job.id).catch(() => null);
-    if (!st) { statusCard(`${gerund} ${product.name}…`, tr("status.checking"), ""); }
+    if (!st) {
+      updateInstallButtons(product, currentProgress, mode);
+      statusCard(`${gerund} ${product.name}…`, tr("status.checking"), "", currentProgress);
+      setTimeout(poll, 1400);
+    }
     else if (st.state === "pending") {
+      currentProgress = Number.isFinite(st.progress)
+        ? Math.max(currentProgress, Math.min(99, st.progress))
+        : currentProgress;
       const waiting = st.lines.length <= 1;
       const last = waiting
         ? tr("status.waiting")
         : st.lines[st.lines.length - 1];
-      statusCard(`${gerund} ${product.name}…`, last, "");
+      updateInstallButtons(product, currentProgress, mode);
+      statusCard(`${gerund} ${product.name}…`, last, "", currentProgress);
       setTimeout(poll, 1400);
     } else {
       const ok = st.done && st.success;
       finishInstall(ok, product, btn, card, mode);
+      updateInstallButtons(product, 100, mode, false);
       if (ok) {
         const last = st.lines[st.lines.length - 1] || "";
         statusCard(removing

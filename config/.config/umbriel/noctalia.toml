@@ -10,6 +10,8 @@ error = "#fd4663FF"
 [appearance]
 border_focused = "#fff59bFF"
 border_unfocused = "#11112dFF"
+scratchpad_border_focused = "#9bfeceFF"
+scratchpad_border_unfocused = "#02e577FF"
 outer_border_color = "#070722FF"
 insert_hint_color = "#9bfece80"
 backdrop_color = "#11112dFF"

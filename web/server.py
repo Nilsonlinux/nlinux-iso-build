@@ -529,7 +529,7 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"ok": True})
         if path == "/api/quit":
             threading.Thread(
-                target=os.system, args=("pkill -f 'firefox --kiosk' || true",), daemon=True
+                target=os.system, args=("pkill -f '[f]irefox.*--kiosk' || true",), daemon=True
             ).start()
             return self._json({"ok": True})
         return self._json({"error": "not found"}, 404)

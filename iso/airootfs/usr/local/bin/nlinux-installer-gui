@@ -57,4 +57,4 @@ if ! server_up; then
   exit 1
 fi
 
-exec firefox --kiosk "$URL"
+exec firefox --private-window --kiosk "$URL"

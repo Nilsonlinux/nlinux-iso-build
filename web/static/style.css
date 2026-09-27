@@ -401,8 +401,18 @@ body {
   stroke-dasharray: 553; /* 2*pi*88 */
   stroke-dashoffset: 553;
   transition: stroke-dashoffset .3s cubic-bezier(.4, 0, .2, 1);
-  filter: drop-shadow(0 0 6px rgba(23, 162, 211, .6));
+  filter: drop-shadow(0 0 4px rgba(23, 162, 211, .5));
   animation: ringGlow 1.8s ease-in-out infinite;
+}
+.ring-loader {
+  fill: none;
+  stroke: #b7f2ff;
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-dasharray: 18 535;
+  transform-box: view-box;
+  transform-origin: center;
+  animation: ringRotate 1.4s linear infinite;
 }
 .ring-center {
   position: absolute; inset: 0;
@@ -511,16 +521,16 @@ body {
   100% { transform: translateY(0); opacity: 1; }
 }
 @keyframes ringGlow {
-  0%, 100% { filter: drop-shadow(0 0 6px rgba(23, 162, 211, .45)); }
-  50% { filter: drop-shadow(0 0 18px rgba(23, 162, 211, .95)); }
+  0%, 100% { filter: drop-shadow(0 0 4px rgba(23, 162, 211, .45)); }
+  50% { filter: drop-shadow(0 0 8px rgba(23, 162, 211, .75)); }
 }
+@keyframes ringRotate { to { transform: rotate(360deg); } }
 @keyframes shaking { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-3px)} }
 @keyframes stagePulse { 0%,100%{transform:translateX(0)} 50%{transform:translateX(3px)} }
 @keyframes shimmer { 0% { background-position: 200% 0; } 100% { background-position: -200% 0; } }
 
 @media (prefers-reduced-motion: reduce) {
-  #ring-gradient animateTransform { display: none; }
-  .ring-fg { animation: none; }
+  .ring-fg, .ring-loader { animation: none; }
 }
 
 ::-webkit-scrollbar { width: 10px; height: 10px; }
