@@ -191,7 +191,7 @@ class InstallJob:
             fh.write("#!/bin/bash\n")
             fh.write("AUR_HELPER=\"$(command -v paru || command -v yay)\"\n")
             fh.write("[ -n \"$AUR_HELPER\" ] || { echo \"AUR helper ausente (instale paru ou yay).\" >&2; exit 2; }\n")
-            fh.write("\"$AUR_HELPER\" -Sy --noconfirm --needed ")
+            fh.write("\"$AUR_HELPER\" -S --noconfirm --needed ")
             fh.write(" ".join(shlex.quote(p) for p in self.packages))
             fh.write("\n")
         os.chmod(inner_path, 0o700)
@@ -228,7 +228,7 @@ class InstallJob:
                     artifacts = [script_path, inner_path]
                     cmd = ["pkexec", "bash", script_path]
                 else:
-                    cmd = ["pkexec", "pacman", "-Sy", "--noconfirm", "--needed"] + self.packages
+                    cmd = ["pkexec", "pacman", "-S", "--noconfirm", "--needed"] + self.packages
                 process = subprocess.Popen(
                     cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True
                 )
@@ -926,6 +926,29 @@ def admin_delete(handler):
     return {"ok": True}, 200
 
 
+def _write_assets_manifest(pkg_root: str, revision: int) -> None:
+    assets_dir = os.path.join(pkg_root, "src", "apps", "assets")
+    files = {}
+    for root, _, names in os.walk(assets_dir):
+        for name in names:
+            path = os.path.join(root, name)
+            rel = os.path.relpath(path, os.path.join(pkg_root, "src", "apps"))
+            rel = rel.replace(os.sep, "/")
+            if not ASSET_RE.fullmatch(rel):
+                continue
+            digest = hashlib.sha256()
+            with open(path, "rb") as fh:
+                for chunk in iter(lambda: fh.read(1024 * 1024), b""):
+                    digest.update(chunk)
+            files[rel] = digest.hexdigest()
+
+    manifest = {"revision": revision, "files": files}
+    path = os.path.join(pkg_root, "catalog-assets.json")
+    with open(path, "w", encoding="utf-8") as fh:
+        json.dump(manifest, fh, ensure_ascii=False, indent=2, sort_keys=True)
+        fh.write("\n")
+
+
 def admin_build(progress=None):
     """Gera o pacote de distribuição da loja (sem a opção de administração).
 
@@ -1032,8 +1055,32 @@ def admin_build(progress=None):
                     "EOF\n"
                     "chmod +x /usr/local/bin/nlinux-software\n"
                     "# --- ícone + atalho no menu de aplicativos --------------------------\n"
-                    "install -Dm644 \"$DEST/src/nlinux/icon-store.png\" /usr/share/icons/hicolor/256x256/apps/nlinux-software.png\n"
-                    "rm -f /usr/share/icons/hicolor/scalable/apps/nlinux-software.svg\n"
+                    "cat > \"$DEST/icon.svg\" <<'SVG'\n"
+                    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"128\" height=\"128\" viewBox=\"0 0 128 128\">\n"
+                    "  <defs>\n"
+                    "    <linearGradient id=\"bg\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">\n"
+                    "      <stop offset=\"0\" stop-color=\"#1f6feb\"/>\n"
+                    "      <stop offset=\"1\" stop-color=\"#0d3b8f\"/>\n"
+                    "    </linearGradient>\n"
+                    "    <linearGradient id=\"bag\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n"
+                    "      <stop offset=\"0\" stop-color=\"#58c25e\"/>\n"
+                    "      <stop offset=\"1\" stop-color=\"#2ea043\"/>\n"
+                    "    </linearGradient>\n"
+                    "  </defs>\n"
+                    "  <rect x=\"8\" y=\"8\" width=\"112\" height=\"112\" rx=\"24\" fill=\"url(#bg)\"/>\n"
+                    "  <rect x=\"8\" y=\"8\" width=\"112\" height=\"112\" rx=\"24\" fill=\"none\" stroke=\"#12233f\" stroke-width=\"4\"/>\n"
+                    "  <path d=\"M8 74 C34 54 66 46 120 40 L120 34 C64 38 26 50 8 66 Z\" fill=\"#ffffff\" opacity=\"0.08\"/>\n"
+                    "  <path d=\"M48 40 C48 30 58 24 64 24 C70 24 80 30 80 40\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"5\" stroke-linecap=\"round\"/>\n"
+                    "  <path d=\"M40 40 H88 L96 84 Q96 98 86 98 H42 Q32 98 32 84 Z\" fill=\"url(#bag)\"/>\n"
+                    "  <path d=\"M64 40 L64 96\" stroke=\"#1a7a2e\" stroke-width=\"3\" opacity=\"0.35\"/>\n"
+                    "  <ellipse cx=\"46\" cy=\"60\" rx=\"10\" ry=\"7\" fill=\"#ffffff\" opacity=\"0.3\"/>\n"
+                    "  <rect x=\"55\" y=\"62\" width=\"18\" height=\"18\" rx=\"5\" fill=\"#ffffff\"/>\n"
+                    "  <path d=\"M63.5 66 V72 L60 72 L64 77 L68 72 L64.5 72 V66 Z\" fill=\"#2ea043\"/>\n"
+                    "  <rect x=\"59\" y=\"78\" width=\"10\" height=\"2\" rx=\"1\" fill=\"#2ea043\"/>\n"
+                    "</svg>\n"
+                    "SVG\n"
+                    "mkdir -p /usr/share/icons/hicolor/scalable/apps\n"
+                    "cp \"$DEST/icon.svg\" /usr/share/icons/hicolor/scalable/apps/nlinux-software.svg\n"
                     "(command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -f -t /usr/share/icons/hicolor) || true\n"
                     "rm -f /usr/share/applications/nlinux-software.desktop\n"
                     "rm -f /usr/share/applications/nlinuxsoftware.desktop\n"
@@ -1089,13 +1136,14 @@ def admin_build(progress=None):
             marker = {
                 "revision": rev,
                 "compiled": raw.get("stats", {}).get("compiled"),
-                "apps": sum(len(v) for v in raw.values() if isinstance(v, list)),
+                "apps": raw.get("stats", {}).get("apps"),
                 "sha1": _catalog_fingerprint(raw),
                 "published": int(time.time()),
             }
             with open(os.path.join(pkg_root, "catalog-head.json"), "w",
                       encoding="utf-8") as fh:
                 json.dump(marker, fh, ensure_ascii=False, indent=2)
+            _write_assets_manifest(pkg_root, rev)
 
             # Assinatura GPG real (detached, armadura ASCII) pela curadoria.
             _step("assinando com GPG")
@@ -1247,6 +1295,10 @@ def _cache_busted(url: str) -> str:
 
 def _remote_get(url: str, timeout: int = 20):
     """GET sem cache: o parâmetro cb= força o CDN a buscar no servidor."""
+    return json.loads(_remote_get_bytes(url, timeout).decode("utf-8"))
+
+
+def _remote_get_bytes(url: str, timeout: int = 20) -> bytes:
     import urllib.request
 
     req = urllib.request.Request(
@@ -1254,7 +1306,7 @@ def _remote_get(url: str, timeout: int = 20):
         headers={"User-Agent": "nlinux-software", "Cache-Control": "no-cache"},
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
-        return json.loads(resp.read().decode("utf-8"))
+        return resp.read()
 
 
 def remote_head_sha() -> str | None:
@@ -1322,12 +1374,19 @@ def apply_remote_catalog(force: bool = False) -> bool:
                 marker = _remote_get(REMOTE_MARKER_URL, timeout=15)
                 _REMOTE_SYNC["last_full"] = time.time()
                 if _local_matches_marker(local, marker):
+                    assets_key = marker.get("sha1")
+                    if assets_key and _REMOTE_SYNC.get("assets") != assets_key:
+                        if _sync_remote_assets(local, None):
+                            _REMOTE_SYNC["assets"] = assets_key
                     return False
             except Exception:
                 if time.time() - _REMOTE_SYNC["last_full"] < REMOTE_FALLBACK_SECONDS:
                     return False
                 _REMOTE_SYNC["last_full"] = time.time()
         elif sha == _REMOTE_SYNC["sha"]:
+            if _REMOTE_SYNC.get("assets") != sha:
+                if _sync_remote_assets(local, sha):
+                    _REMOTE_SYNC["assets"] = sha
             return False  # nada novo publicado no repositório
     else:
         _REMOTE_SYNC["last_full"] = time.time()
@@ -1341,12 +1400,17 @@ def apply_remote_catalog(force: bool = False) -> bool:
         print("[nlinux] catálogo remoto vazio ou inválido; mantido o atual")
         return False
 
+    assets_synced = _sync_remote_assets(remote, sha)
+    assets_key = sha or _catalog_fingerprint(remote)
     with _ADMIN_LOCK:
         current = _load_raw()
         same = json.dumps(remote, sort_keys=True, ensure_ascii=False) == \
             json.dumps(current, sort_keys=True, ensure_ascii=False)
         if same:
             _REMOTE_SYNC["applied"] = _catalog_fingerprint(remote)
+            _REMOTE_SYNC["sha"] = sha
+            if assets_synced:
+                _REMOTE_SYNC["assets"] = assets_key
             return False
         new_stats = remote.get("stats")
         if not (isinstance(new_stats, dict)
@@ -1360,11 +1424,92 @@ def apply_remote_catalog(force: bool = False) -> bool:
         rebuild_payload()
         revision = remote.get("stats", {}).get("revision")
         _REMOTE_SYNC["applied"] = _catalog_fingerprint(remote)
-        if sha:
-            _REMOTE_SYNC["sha"] = sha
+        _REMOTE_SYNC["sha"] = sha
+        if assets_synced:
+            _REMOTE_SYNC["assets"] = assets_key
     print(f"[nlinux] catálogo atualizado do repositório remoto "
           f"(revision {revision}, commit {sha[:8] if sha else 'local'})", flush=True)
     return True
+
+
+def _sync_remote_assets(raw: dict, sha: str | None) -> bool:
+    """Atualiza a mídia referenciada pelo catálogo a partir da mesma revisão."""
+    manifest_url = (
+        f"{REMOTE_REPO_RAW}/{sha}/catalog-assets.json" if sha
+        else f"{REMOTE_REPO_RAW}/main/catalog-assets.json"
+    )
+    try:
+        manifest = _remote_get(manifest_url)
+    except (OSError, ValueError) as exc:
+        print(f"[nlinux] manifesto de mídia remoto indisponível: {exc}")
+        return False
+
+    files = manifest.get("files") if isinstance(manifest, dict) else None
+    if not isinstance(files, dict):
+        print("[nlinux] manifesto de mídia remoto inválido")
+        return False
+
+    referenced = set()
+    for category, items in raw.items():
+        if category in SPECIAL_KEYS or not isinstance(items, dict):
+            continue
+        for app in items.values():
+            if not isinstance(app, dict):
+                continue
+            icon = app.get("icon")
+            if isinstance(icon, str) and ASSET_RE.fullmatch(icon):
+                referenced.add(icon)
+            for shot in app.get("screenshots") or []:
+                if isinstance(shot, str) and ASSET_RE.fullmatch(shot):
+                    referenced.add(shot)
+
+    updated = 0
+    complete = True
+    for rel in sorted(referenced):
+        expected = files.get(rel)
+        if not isinstance(expected, str) or not re.fullmatch(r"[a-f0-9]{64}", expected):
+            print(f"[nlinux] mídia ausente ou inválida no manifesto: {rel}")
+            complete = False
+            continue
+
+        destination = os.path.join(APPS_DIR, rel)
+        try:
+            with open(destination, "rb") as fh:
+                local_hash = hashlib.sha256(fh.read()).hexdigest()
+        except FileNotFoundError:
+            local_hash = ""
+        except OSError as exc:
+            print(f"[nlinux] não foi possível ler a mídia local {rel}: {exc}")
+            complete = False
+            continue
+        if local_hash == expected:
+            continue
+
+        asset_url = (
+            f"{REMOTE_REPO_RAW}/{sha}/src/apps/{rel}" if sha
+            else f"{REMOTE_REPO_RAW}/main/src/apps/{rel}"
+        )
+        try:
+            data = _remote_get_bytes(asset_url)
+            if hashlib.sha256(data).hexdigest() != expected:
+                raise ValueError("hash diferente do manifesto")
+            os.makedirs(os.path.dirname(destination), exist_ok=True)
+            tmp = destination + f".sync-{os.getpid()}"
+            try:
+                with open(tmp, "wb") as fh:
+                    fh.write(data)
+                os.replace(tmp, destination)
+            finally:
+                if os.path.exists(tmp):
+                    os.remove(tmp)
+            updated += 1
+        except (OSError, ValueError) as exc:
+            print(f"[nlinux] falha ao sincronizar mídia {rel}: {exc}")
+            complete = False
+
+    if updated:
+        print(f"[nlinux] {updated} arquivo(s) de mídia atualizado(s)", flush=True)
+    return complete
 
 
 def remote_refresh_loop() -> None:
@@ -1426,7 +1571,10 @@ def ensure_admin_shortcut() -> None:
         return
 
     icon_src = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "icon-dist.svg")
+        os.path.dirname(os.path.abspath(__file__)), "icon-admin.svg")
+    if not os.path.exists(icon_src):
+        icon_src = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "icon.svg")
     icon_name = "nlinux-software-admin"
     icons_dir = os.path.join(
         os.path.expanduser("~"), ".local", "share", "icons", "hicolor",
