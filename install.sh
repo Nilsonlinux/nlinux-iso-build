@@ -780,8 +780,30 @@ stage_packages() {
     amd)   pkgs="$pkgs amd-ucode" ;;
   esac
 
+  # Não passa --noconfirm: o getopts do pacstrap (`':C:cDGiKMNPU'`) aborta em
+  # opção desconhecida. Sem -i ele já acrescenta --noconfirm sozinho.
   info "Instalando sistema base e pacotes (pacstrap), isso pode demorar..."
-  pacstrap -K "$MNT" $pkgs
+  # O pacstrap baixa centenas de MB e falha por motivo de rede com frequência
+  # (espelho lento, DNS, 502). Como o pacman reaproveita o cache já baixado,
+  # repetir a tentativa é barato — e abortar na primeira falha joga fora a
+  # partição já formatada. Até 3 tentativas antes de desistir.
+  local attempt=1 max_attempts=3 rc=0
+  while (( attempt <= max_attempts )); do
+    set +e
+    pacstrap -K "$MNT" $pkgs
+    rc=$?
+    set -e
+    if (( rc == 0 )); then
+      break
+    fi
+    if (( attempt < max_attempts )); then
+      warn "pacstrap falhou (rc=$rc); repetindo em 15s (tentativa $((attempt + 1)) de $max_attempts)..."
+      sleep 15
+      attempt=$((attempt + 1))
+      continue
+    fi
+    die "O pacstrap falhou $max_attempts vezes (rc=$rc).\n  Verifique a conexão e o espelho escolhido em /etc/pacman.d/mirrorlist e rode a instalação novamente."
+  done
 }
 
 # ---------------------------------------------------------------------------
@@ -1000,7 +1022,12 @@ remove_installer_artifacts() {
 }
 
 main() {
-  trap 'rc=$?; (( rc != 0 )) && _save_error_marker "$rc"; umount_all || true' EXIT
+  # Sentinela de resultado NLRESULT|<rc> como ÚLTIMA linha do log: é o que
+  # permite ao painel (web/server.py) saber o código de saída mesmo quando a
+  # execução foi reanexada de outro processo do servidor. O `if` (em vez de
+  # `&&`) evita que o set -e mate o trap antes de o sentinela ser escrito, e o
+  # `rc` original é preservado como status de saída do script.
+  trap 'rc=$?; if (( rc != 0 )); then _save_error_marker "$rc"; fi; umount_all || true; printf "NLRESULT|%s\n" "$rc"' EXIT
 
   progress 2 "stage.start"
   info "Instalador Arch Linux + Noctalia (Umbriel, greetd, noctalia-greeter)"

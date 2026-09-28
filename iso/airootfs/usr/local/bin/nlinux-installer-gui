@@ -33,11 +33,20 @@ if ! command -v firefox >/dev/null 2>&1; then
 fi
 
 # Sobe o servidor como root (o usuário nlinux tem sudo sem senha no live).
+# Roda sob um supervisor: se o processo do servidor cair (falta de memória no
+# live, por exemplo), ele é reiniciado e reanexa a instalação em andamento em
+# vez de deixar o painel morto. O log é acumulado (>>) para não perder o
+# diagnóstico de antes da queda.
 if ! server_up; then
+  SUPERVISOR='while :; do
+    echo "--- servidor do instalador (re)iniciado em $(date -Is) ---"
+    python3 "$1/web/server.py"
+    sleep 2
+  done'
   if [ "$(id -u)" -eq 0 ]; then
-    setsid python3 "$INST/web/server.py" >"$LOG" 2>&1 < /dev/null &
+    setsid sh -c "$SUPERVISOR" sh "$INST" >>"$LOG" 2>&1 < /dev/null &
   else
-    sudo -n setsid python3 "$INST/web/server.py" >"$LOG" 2>&1 < /dev/null &
+    sudo -n setsid sh -c "$SUPERVISOR" sh "$INST" >>"$LOG" 2>&1 < /dev/null &
   fi
   i=0
   while [ "$i" -lt 20 ]; do

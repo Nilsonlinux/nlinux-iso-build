@@ -6,11 +6,26 @@ Serve a interface (HTML/CSS/JS), coleta as escolhas e executa o install.sh
 em subprocesso (GUI_DRIVEN=1), transmitindo o progresso para o navegador
 via Server-Sent Events (SSE):
 
+  event: state      {pct, label, lines, running, done, code, error}  ressincroniza
   event: progress   {pct, label}      atualiza a barra/anel
   event: tail       {line}            linha viva (ex.: progresso do rsync)
-  event: log        {line}            linha de log permanente
+  event: log        {lines: [...]}    linhas de log (enviadas em lote)
   event: done       {code}            fim da instalação
   event: error      {message}
+
+Robustez — a instalação NÃO pode depender do navegador nem do servidor:
+
+  * a saída do install.sh vai para um ARQUIVO de log e o servidor apenas o
+    acompanha (em vez de ler um pipe): se o servidor cair, a instalação
+    continua até o fim e, quando ele volta, reanexa a execução em andamento
+    (estado em disco + log) em vez de perdê-la;
+  * o estado (etapa, %, código de saída, últimas linhas) fica no servidor e é
+    reenviado a cada cliente que (re)conecta: recarregar a página ou reconectar
+    depois de uma queda devolve a tela de progresso, sem reinstalar nada;
+  * queda de conexão é tratada como o que é — transitória. O navegador
+    reconecta sozinho e nunca a transforma em falha de instalação;
+  * POST /api/install enquanto já existe uma instalação em andamento devolve
+    409 + o estado atual (impede apagar o disco por cima da instalação).
 
 Dependências: apenas a biblioteca padrão do Python.
 """
@@ -18,7 +33,6 @@ Dependências: apenas a biblioteca padrão do Python.
 import json
 import os
 import re
-import select
 import stat
 import subprocess
 import sys
@@ -33,6 +47,11 @@ STATIC = os.path.join(ROOT, "static")
 INSTALL_SH = os.path.join(os.path.dirname(ROOT), "install.sh")
 HOST = "127.0.0.1"
 PORT = int(os.environ.get("NLINUX_WEB_PORT", "8765"))
+
+# Log da execução atual e "checkpoint" do estado (reanexação após queda do
+# servidor). Ambos no /tmp do live.
+LOG_PATH = os.environ.get("NLINUX_LOG_PATH", "/tmp/nlinux-install.log")
+STATE_PATH = os.environ.get("NLINUX_STATE_PATH", "/tmp/nlinux-install-state.json")
 
 # Reusa as traduções (install/translations.py): as etapas do install.sh chegam
 # como CHAVES (ex.: stage.copy.offline) e aqui são traduzidas para o idioma
@@ -57,7 +76,18 @@ DEFAULT_LANG = "pt"
 NTFS_RESIZE_RESERVE = 1024**3
 MIB = 1024**2
 
-_ui_lang = DEFAULT_LANG
+# Slice de porcentagem ocupado pela etapa de cópia (rsync/pacstrap). O
+# progresso real (progress2 do rsync, "N/M" do pacman) é interpolado nele.
+COPY_SLICE = (35, 90)
+
+LOG_MAX_LINES = 400        # linhas de log mantidas para ressincronizar a tela
+LOG_SENT_LINES = 300       # linhas enviadas a cada cliente
+FOLLOW_POLL = 0.2          # intervalo de leitura do arquivo de log
+BATCH_INTERVAL = 0.2       # agrupa linhas de log em um único evento
+TAIL_INTERVAL = 0.25       # cadência do "tail" (progresso com \r)
+SAVE_INTERVAL = 5.0        # persiste o estado em disco
+KEEPALIVE_S = 5.0          # heartbeat do SSE
+WRITE_TIMEOUT = 30.0       # escrita travada por cliente não segura a thread
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 MIME = {
@@ -70,6 +100,92 @@ MIME = {
     ".ico": "image/x-icon",
 }
 
+_ui_lang = DEFAULT_LANG
+_state_lock = threading.RLock()
+
+
+def _tr(key):
+    """Traduz uma chave de etapa para o idioma da interface (ou devolve a chave)."""
+    if translations is None or not key:
+        return key
+    return translations.T(_ui_lang, key)
+
+
+# ---------------------------------------------------------------------------
+# Estado da instalação
+# ---------------------------------------------------------------------------
+# Fonte da verdade do progresso. Vive no processo do servidor E é persistido
+# em disco a cada poucos segundos: é o que permite retomar a interface depois
+# de recarregar a página ou de o servidor ter morrido durante a instalação.
+STATE = {
+    "running": False,
+    "pid": None,
+    "pct": 0,
+    "label": "stage.start",
+    "lines": [],
+    "done": False,
+    "code": None,
+    "error": None,
+    "started": 0.0,
+    "finished": 0.0,
+    "log": LOG_PATH,
+}
+# Progresso real da etapa de cópia (rsync/pacman): última etiqueta traduzida.
+_copying = {"on": False, "label": ""}
+
+
+def _public_state():
+    """Estado pronto para o navegador (SSE /api/status)."""
+    with _state_lock:
+        return {
+            "running": bool(STATE["running"]),
+            "pct": int(STATE["pct"]),
+            "label": _tr(STATE["label"]),
+            "lang": _ui_lang,
+            "done": bool(STATE["done"]),
+            "code": STATE["code"],
+            "error": STATE["error"],
+            "started": STATE["started"],
+            "finished": STATE["finished"],
+            "lines": list(STATE["lines"][-LOG_SENT_LINES:]),
+        }
+
+
+def _state_save():
+    """Checkpoint do estado em disco (para reanexar após queda do servidor)."""
+    try:
+        with _state_lock:
+            data = dict(STATE)
+        data["lines"] = data["lines"][-100:]
+        data["lang"] = _ui_lang
+        tmp = STATE_PATH + ".tmp"
+        with open(tmp, "w", encoding="utf-8") as fh:
+            json.dump(data, fh, ensure_ascii=False)
+        os.replace(tmp, STATE_PATH)
+    except OSError:
+        pass
+
+
+def _state_load():
+    try:
+        with open(STATE_PATH, encoding="utf-8") as fh:
+            data = json.load(fh)
+        return data if isinstance(data, dict) else None
+    except (OSError, ValueError):
+        return None
+
+
+def _pid_alive(pid):
+    """True se o install.sh indicado ainda estiver em execução."""
+    if not isinstance(pid, int) or pid <= 0:
+        return False
+    try:
+        with open("/proc/%d/cmdline" % pid, "rb") as fh:
+            cmdline = fh.read().replace(b"\0", b" ").decode("utf-8", "replace")
+    except OSError:
+        return False
+    return "install.sh" in cmdline
+
 
 class Broadcaster:
     """Distribui eventos para todos os clientes SSE conectados."""
@@ -78,8 +194,10 @@ class Broadcaster:
         self._subs = []
         self._lock = threading.Lock()
 
-    def subscribe(self):
+    def subscribe(self, initial=None):
         q = deque()
+        if initial:
+            q.append(initial)
         with self._lock:
             self._subs.append(q)
         return q
@@ -101,12 +219,14 @@ class Broadcaster:
 
 BROADCAST = Broadcaster()
 
-# Slice de porcentagem ocupado pela etapa de cópia (rsync/pacstrap). O
-# progresso real (progress2 do rsync, "N/M" do pacman) é interpolado nele.
-COPY_SLICE = (35, 90)
-_ctx = {"copying": False, "label": ""}
+
+def _payload(event, data):
+    return "event: %s\ndata: %s\n\n" % (event, json.dumps(data, ensure_ascii=False))
 
 
+# ---------------------------------------------------------------------------
+# Progresso e eventos
+# ---------------------------------------------------------------------------
 def _clean(raw):
     return ANSI_RE.sub("", raw.decode("utf-8", "replace")).rstrip("\r").strip()
 
@@ -114,79 +234,223 @@ def _clean(raw):
 def _push_real_progress(seg):
     """Interpola o progresso real (rsync progress2 ou N/M do pacman) no slice
     da etapa de cópia e emite um evento de progresso para o anel."""
-    if not _ctx["copying"]:
-        return
-    base, end = COPY_SLICE
-    m = re.search(r"(\d+)%\s+.*to-chk=", seg)
-    if m:
-        frac = min(float(m.group(1)), 100.0) / 100.0
-    else:
-        m = re.search(r"\(\s*(\d+)\s*/\s*(\d+)\s*\)\s*\d+%", seg)
-        if not m:
+    with _state_lock:
+        if not _copying["on"]:
             return
-        done, total = float(m.group(1)), float(m.group(2))
-        if total <= 0:
-            return
-        frac = min(done / total, 1.0)
-    BROADCAST.push("progress", {"pct": int(base + (end - base) * frac), "label": _ctx["label"]})
+        base, end = COPY_SLICE
+        m = re.search(r"(\d+)%\s+.*to-chk=", seg)
+        if m:
+            frac = min(float(m.group(1)), 100.0) / 100.0
+        else:
+            m = re.search(r"\(\s*(\d+)\s*/\s*(\d+)\s*\)\s*\d+%", seg)
+            if not m:
+                return
+            done, total = float(m.group(1)), float(m.group(2))
+            if total <= 0:
+                return
+            frac = min(done / total, 1.0)
+        pct = int(base + (end - base) * frac)
+        label = _copying["label"]
+        STATE["pct"] = pct
+    BROADCAST.push("progress", {"pct": pct, "label": label})
 
 
-def emit_line(raw):
+def _on_progress(line):
+    _, p, key = line.split("|", 2)
+    try:
+        pct = int(float(p.strip()))
+    except ValueError:
+        pct = 0
+    key = key.strip()
+    with _state_lock:
+        if key.startswith("stage.copy.offline") or key.startswith("stage.copy.online"):
+            _copying["on"] = True
+        elif key.startswith("stage.copy.") or key == "stage.pac.done":
+            _copying["on"] = False
+        STATE["pct"] = pct
+        STATE["label"] = key
+    BROADCAST.push("progress", {"pct": pct, "label": _tr(key)})
+
+
+def _on_result(line):
+    """NLRESULT|<rc>: última linha escrita pelo install.sh (EXIT trap)."""
+    try:
+        code = int(line.split("|", 1)[1].strip())
+    except (IndexError, ValueError):
+        code = 1
+    _finish(code)
+
+
+def _finish(code, error=None):
+    """Marca a instalação como encerrada e avisa os clientes (uma única vez)."""
+    with _state_lock:
+        if STATE["done"]:
+            return
+        STATE["running"] = False
+        STATE["done"] = True
+        STATE["code"] = code
+        STATE["error"] = error
+        STATE["finished"] = time.time()
+        if code == 0 and not error:
+            STATE["pct"] = 100
+        _copying["on"] = False
+    _state_save()
+    if error:
+        BROADCAST.push("error", {"message": error})
+    BROADCAST.push("done", {"code": code})
+
+
+def _push_state():
+    BROADCAST.push("state", _public_state())
+
+
+def _handle_line(raw, pending):
+    """Traduz uma linha do log em evento (ou a guarda no lote de log)."""
     line = _clean(raw)
     if not line:
         return
     if line.startswith("NLPROGRESS|"):
-        _, p, lab = line.split("|", 2)
-        try:
-            pct = int(float(p.strip()))
-        except ValueError:
-            pct = 0
-        label = lab.strip()
-        if label.startswith("stage.copy.offline") or label.startswith("stage.copy.online"):
-            _ctx["copying"] = True
-        elif label.startswith("stage.copy.") or label == "stage.pac.done":
-            _ctx["copying"] = False
-        if translations is not None:
-            translated = translations.T(_ui_lang, label)
-            if translated != label:
-                label = translated
-        if _ctx["copying"]:
-            _ctx["label"] = label
-        BROADCAST.push("progress", {"pct": pct, "label": label})
+        _on_progress(line)
+    elif line.startswith("NLRESULT|"):
+        _on_result(line)
     else:
-        BROADCAST.push("log", {"line": line})
+        pending.append(line)
+        with _state_lock:
+            STATE["lines"].append(line)
+            if len(STATE["lines"]) > LOG_MAX_LINES:
+                del STATE["lines"][:-LOG_MAX_LINES]
 
 
-def drain(proc, logfh=None):
-    """Lê stdout do install.sh de forma reativa (suporta \r do rsync).
+def _push_logs(pending):
+    if not pending:
+        return
+    BROADCAST.push("log", {"lines": list(pending)})
+    del pending[:]
 
-    Se logfh for informado, grava TODA a saída em bytes nele (persistência do
-    log da instalação em /tmp/nlinux-install.log, independente do painel).
+
+def follow_log(path=None):
+    """Acompanha o arquivo de log do install.sh e publica os eventos.
+
+    Segue o ARQUIVO (e não um pipe) de propósito: se o servidor cair, o
+    install.sh continua escrevendo no log — quando o servidor volta, este
+    laço reproduz o log já gravado e reanexa a execução em andamento.
     """
-    fd = proc.stdout.fileno()
+    path = path or LOG_PATH
+    pending = []
     buf = b""
-    last_tail = 0.0
-    while True:
-        r, _, _ = select.select([fd], [], [], 0.2)
-        if fd in r:
-            chunk = os.read(fd, 8192)
-            if not chunk:
-                break
-            if logfh:
-                logfh.write(chunk)
-                logfh.flush()
-            buf += chunk
+    last_tail = last_push = last_save = 0.0
+    try:
+        fh = open(path, "rb")
+    except OSError:
+        return
+    try:
+        while True:
+            try:
+                chunk = fh.read(65536)
+            except OSError:
+                chunk = b""
+            now = time.time()
+            if chunk:
+                buf += chunk
             while b"\n" in buf:
                 raw, buf = buf.split(b"\n", 1)
-                emit_line(raw)
-        now = time.time()
-        if buf and b"\r" in buf and now - last_tail > 0.25:
-            seg = buf.rsplit(b"\r", 1)[-1].decode("utf-8", "replace").strip()
-            if seg:
-                clean_seg = ANSI_RE.sub("", seg)
-                BROADCAST.push("tail", {"line": clean_seg})
-                _push_real_progress(clean_seg)
-            last_tail = now
+                _handle_line(raw, pending)
+            # "Linha viva": progresso com \r do rsync/pacman.
+            if b"\r" in buf and now - last_tail >= TAIL_INTERVAL:
+                seg = buf.rsplit(b"\r", 1)[-1].decode("utf-8", "replace").strip()
+                if seg:
+                    clean_seg = ANSI_RE.sub("", seg)
+                    BROADCAST.push("tail", {"line": clean_seg})
+                    _push_real_progress(clean_seg)
+                last_tail = now
+            # Lote de log (evita um evento por linha durante os builds AUR).
+            if pending and (now - last_push >= BATCH_INTERVAL or len(pending) >= 100):
+                _push_logs(pending)
+                last_push = now
+            if now - last_save >= SAVE_INTERVAL:
+                _state_save()
+                last_save = now
+            if not chunk:
+                with _state_lock:
+                    finished = STATE["done"] and not STATE["running"]
+                if finished:
+                    # Última linha parcial (install.sh morto sem \n final).
+                    if buf.strip():
+                        _handle_line(buf.rstrip(b"\r\n"), pending)
+                    _push_logs(pending)
+                    _push_state()
+                    return
+                time.sleep(FOLLOW_POLL)
+    finally:
+        fh.close()
+
+
+def adopt_running_install():
+    """Reanexa uma instalação que continuou rodando enquanto o servidor caiu.
+
+    Sem isso, uma queda do servidor (OOM, Ctrl+C, reinício do launcher)
+    deixaria a interface órfã mesmo com a instalação seguindo no disco.
+    """
+    data = _state_load()
+    if not data:
+        return
+    global _ui_lang
+    with _state_lock:
+        for key in ("pct", "label", "done", "code", "error", "started", "finished", "log"):
+            if data.get(key) is not None:
+                STATE[key] = data[key]
+        # As linhas do checkpoint NÃO são recarregadas: o laço que segue o log
+        # abaixo reproduz o arquivo desde o começo, e as duas cópias apareceriam
+        # duplicadas no painel.
+        STATE["lines"] = []
+        STATE["running"] = bool(data.get("running"))
+    if not STATE["running"]:
+        return
+    if isinstance(data.get("lang"), str) and data["lang"]:
+        _ui_lang = data["lang"]
+    pid = data.get("pid")
+    if not _pid_alive(pid):
+        # O install.sh morreu junto com o servidor: o disco pode estar pela
+        # metade, então o painel assume falha em vez de oferecer reinstalar.
+        with _state_lock:
+            STATE["pid"] = None
+        _finish(1, "A instalação foi interrompida (o instalador foi fechado).")
+        return
+    with _state_lock:
+        STATE["pid"] = pid
+    log = data.get("log") or LOG_PATH
+    with _state_lock:
+        STATE["log"] = log
+    if not os.path.isfile(log):
+        # Sem log para reanexar: marca como falha em vez de prometer progresso.
+        with _state_lock:
+            STATE["pid"] = None
+        _finish(1, "A instalação foi interrompida (log indisponível).")
+        return
+    threading.Thread(target=follow_log, args=(log,), daemon=True).start()
+    threading.Thread(target=_watch_pid, args=(pid,), daemon=True).start()
+
+
+def _watch_pid(pid, poll=1.0):
+    """Segue o install.sh adotado até ele terminar.
+
+    O resultado normal chega pelo sentinela NLRESULT (lido pelo laço do log). Se o
+    processo morrer sem escrevê-lo (morto por sinal, OOM), o painel ficaria
+    girando para sempre — aqui ele é encerrado como falha explícita.
+    """
+    while _pid_alive(pid):
+        time.sleep(poll)
+    # O NLRESULT é a última coisa escrita no log: dá uma folga para ele ser lido.
+    for _ in range(25):
+        with _state_lock:
+            if STATE["done"]:
+                return
+        time.sleep(0.2)
+    with _state_lock:
+        running = STATE["running"]
+    if running:
+        _finish(1, "A instalação foi encerrada sem informar o resultado "
+                   "(o processo do instalador terminou).")
 
 
 ESP_TYPE = "c12a7328-f81f-11d2-ba4b-00a0c93ec93b"
@@ -332,7 +596,7 @@ def get_ntfs_partitions(disk):
             partitions.append({
                 "path": name,
                 "label": part.get("partlabel") or name,
-                "size": int(part.get("size") or 0),
+                "size": size,
                 "resizable": False,
                 "error": str(exc),
             })
@@ -371,6 +635,26 @@ def get_disks():
     return disks
 
 
+def _begin_run():
+    """Prepara estado e arquivo de log para uma nova instalação."""
+    with _state_lock:
+        STATE.update(
+            running=True, pid=None, pct=0, label="stage.start", lines=[],
+            done=False, code=None, error=None, started=time.time(), finished=0.0,
+            log=LOG_PATH,
+        )
+        _copying["on"] = False
+        _copying["label"] = ""
+    try:
+        # Log da execução anterior fica em .1 (o install.sh consulta
+        # /tmp/nlinux-install.log para gravar o marcador de erro no disco).
+        if os.path.exists(LOG_PATH):
+            os.replace(LOG_PATH, LOG_PATH + ".1")
+    except OSError:
+        pass
+    _state_save()
+
+
 def run_install(config):
     """Roda o install.sh com as escolhas do navegador e transmite o progresso."""
     global _ui_lang
@@ -380,34 +664,41 @@ def run_install(config):
         nllang = DEFAULT_LANG
     _ui_lang = nllang
 
-    if translations is not None:
-        BROADCAST.push("progress", {"pct": 2, "label": translations.T(_ui_lang, "stage.start")})
-    else:
-        BROADCAST.push("progress", {"pct": 2, "label": "Preparando instalação"})
+    _begin_run()
+    BROADCAST.push("progress", {"pct": 2, "label": _tr("stage.start")})
     env = dict(os.environ)
     for k, v in config.items():
         env[str(k)] = str(v)
     env["GUI_DRIVEN"] = "1"
     env["NLINUX_WEB"] = "1"
     env["NLLANG"] = _ui_lang
-    logfh = open("/tmp/nlinux-install.log", "ab")
-    logfh.write(b"\n========== instalacao iniciada: %s ==========\n" % time.asctime().encode())
+    proc = None
     try:
-        proc = subprocess.Popen(
-            ["bash", INSTALL_SH],
-            env=env,
-            stdin=subprocess.DEVNULL,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.STDOUT,
-        )
-        drain(proc, logfh)
+        # A saída vai para o ARQUIVO de log: o install.sh não depende do
+        # servidor para continuar (se o servidor cair, ele não leva SIGPIPE)
+        # e o log continua completo para reanexar a execução.
+        logfh = open(LOG_PATH, "ab", buffering=0)
+        try:
+            logfh.write(b"\n========== instalacao iniciada: %s ==========\n" % time.asctime().encode())
+            proc = subprocess.Popen(
+                ["bash", INSTALL_SH],
+                env=env,
+                stdin=subprocess.DEVNULL,
+                stdout=logfh,
+                stderr=subprocess.STDOUT,
+                start_new_session=True,
+            )
+        finally:
+            logfh.close()
+        with _state_lock:
+            STATE["pid"] = proc.pid
+        _state_save()
+        threading.Thread(target=follow_log, args=(LOG_PATH,), daemon=True).start()
         code = proc.wait()
     except Exception as exc:  # noqa: BLE001
-        BROADCAST.push("error", {"message": str(exc)})
-        code = 1
-    finally:
-        logfh.close()
-    BROADCAST.push("done", {"code": code})
+        _finish(1, str(exc))
+        return
+    _finish(code)
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -477,36 +768,48 @@ class Handler(BaseHTTPRequestHandler):
             return self._json({"partitions": partitions})
         if p == "/api/i18n":
             return self._i18n()
+        if p == "/api/status":
+            return self._json(_public_state())
         if p == "/api/stream":
             return self._stream()
         return self._json({"error": "not found"}, 404)
 
     def _stream(self):
-        q = BROADCAST.subscribe()
-        self.send_response(200)
-        self.send_header("Content-Type", "text/event-stream; charset=utf-8")
-        self.send_header("Cache-Control", "no-cache")
-        self.send_header("X-Accel-Buffering", "no")
-        self.end_headers()
+        # Esta conexão vive até o fim (SSE): nada de atende outro pedido nela.
+        self.close_connection = True
+        q = BROADCAST.subscribe(_payload("state", _public_state()))
         try:
-            self.wfile.write(": connected\n\n".encode())
-            self.wfile.flush()
+            # Escrita travada (cliente que parou de ler) não pode prender a
+            # thread nem a conexão para sempre: expira e o cliente reconecta.
+            self.connection.settimeout(WRITE_TIMEOUT)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream; charset=utf-8")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("X-Accel-Buffering", "no")
+            self.end_headers()
+            self.wfile.write(b"retry: 1500\n: connected\n\n")
+            last_kb = time.time()
             while True:
+                wrote = False
                 while q:
                     payload = q.popleft()
-                    try:
-                        self.wfile.write(payload.encode())
-                        self.wfile.flush()
-                    except OSError:
-                        return
+                    self.wfile.write(payload.encode())
+                    wrote = True
                     if payload.startswith(("event: done\n", "event: error\n")):
                         return
-                time.sleep(8)
-                try:
-                    self.wfile.write(": keepalive\n\n".encode())
-                    self.wfile.flush()
-                except OSError:
-                    return
+                # Espera curta quando não há nada a enviar: sem isso, o
+                # progresso da instalação só apareceria a cada KEEPALIVE_S.
+                now = time.time()
+                if now - last_kb >= KEEPALIVE_S:
+                    self.wfile.write(b": keepalive\n\n")
+                    last_kb = now
+                if not wrote:
+                    time.sleep(FOLLOW_POLL)
+        except (OSError, ValueError):
+            # Queda de conexão é rotina: o EventSource do navegador reconecta
+            # e recebe o estado atual no evento `state`. Não é erro de
+            # instalação — por isso nada é propagado como falha.
+            return
         finally:
             BROADCAST.unsubscribe(q)
 
@@ -520,6 +823,13 @@ class Handler(BaseHTTPRequestHandler):
                 return self._json({"error": "json inválido"}, 400)
             if not config.get("INSTALL_DISK"):
                 return self._json({"error": "disco não informado"}, 400)
+            with _state_lock:
+                busy = bool(STATE["running"])
+            if busy:
+                # Duas instalações no mesmo /mnt destruiriam o disco: devolve
+                # o estado em andamento para a página voltar ao painel.
+                return self._json({"error": "instalação já em andamento",
+                                   "state": _public_state()}, 409)
             threading.Thread(target=run_install, args=(config,), daemon=True).start()
             return self._json({"ok": True})
         if path == "/api/reboot":
@@ -539,6 +849,8 @@ def main():
     if not os.path.isfile(INSTALL_SH):
         print("install.sh não encontrado: %s" % INSTALL_SH, file=sys.stderr)
         return 1
+    # Retoma uma instalação que sobreviveu à queda do servidor (se houver).
+    adopt_running_install()
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
     print("NLinux web installer em http://%s:%d" % (HOST, PORT), flush=True)
     try:

@@ -696,6 +696,16 @@ const RING_CIRC = 2 * Math.PI * 88;
 let curPct = 0;
 let tweenRaf = null;
 
+/* Cópia local do estado da execução mostrada na tela. Quem manda é o servidor:
+   o SSE atualiza `run` e, a cada (re)conexão, o evento `state` devolve o
+   quadro completo (etapa, %, últimas linhas). */
+const run = { pct: 0, lines: [], label: "", done: false, code: null };
+let src = null;
+let watchdog = null;
+let logRaf = null;
+let lastLogText = null;
+let installRequested = false;
+
 function tweenPct(targetPct) {
   if (tweenRaf) cancelAnimationFrame(tweenRaf);
   $("#ring-fg").style.transition = "none";
@@ -736,97 +746,207 @@ function buildStages() {
   });
 }
 
-function pump(aborted) {
-  $("#log-box").textContent = aborted.lines.join("\n");
-  const box = $("#log-box");
-  box.scrollTop = box.scrollHeight;
-  document.querySelectorAll(".stage-item").forEach((it, i) => {
-    const th = STAGE_THRESH[i];
-    it.classList.toggle("done", !aborted.aborted && aborted.pct >= th);
-    it.classList.toggle("current", !aborted.aborted && i < STAGES.length - 1 && aborted.pct >= (i === 0 ? 2 : STAGE_THRESH[i - 1]) && aborted.pct < th);
+/* Log: redesenha o <pre> no máximo uma vez por frame. Durante os builds AUR
+   chegam centenas de linhas por segundo; redesenhar a cada linha trava o
+   renderizador, o navegador deixa de ler o stream e a conexão cai. */
+function scheduleLog() {
+  if (logRaf) return;
+  logRaf = requestAnimationFrame(() => {
+    logRaf = null;
+    const text = run.lines.join("\n");
+    if (text === lastLogText) return;
+    lastLogText = text;
+    const box = $("#log-box");
+    box.textContent = text;
+    box.scrollTop = box.scrollHeight;
   });
 }
 
+function addLines(lines) {
+  for (const l of lines) run.lines.push(l);
+  if (run.lines.length > 300) run.lines.splice(0, run.lines.length - 300);
+  scheduleLog();
+}
+
+function setLabel(text) {
+  $("#stage-label").textContent = text;
+}
+
+function paint() {
+  $("#ring-fg").style.transition = "stroke-dashoffset .3s cubic-bezier(.4, 0, .2, 1)";
+  tweenPct(run.pct);
+  if (run.label) setLabel(run.label);
+  document.querySelectorAll(".stage-item").forEach((it, i) => {
+    const th = STAGE_THRESH[i];
+    it.classList.toggle("done", run.pct >= th);
+    it.classList.toggle("current", i < STAGES.length - 1 && run.pct >= (i === 0 ? 2 : STAGE_THRESH[i - 1]) && run.pct < th);
+  });
+  scheduleLog();
+}
+
+function enterInstalling() {
+  if (!$("#installing").classList.contains("active")) {
+    show("installing");
+    document.querySelector(".install-title").textContent = t("tui.installing");
+    document.querySelector(".logs summary").textContent = t("web.logs");
+    buildStages();
+  }
+  paint();
+}
+
+function showResult(code) {
+  if (src) {
+    try { src.close(); } catch (e) {}
+    src = null;
+  }
+  if (watchdog) {
+    clearInterval(watchdog);
+    watchdog = null;
+  }
+  run.done = true;
+  run.code = code;
+  if (code === 0) {
+    $("#done-title").textContent = t("tui.done");
+    $("#done-msg").textContent = t("web.done.okmsg");
+    $("#btn-reboot").textContent = t("web.done.reboot");
+    $("#btn-reboot").style.display = "";
+    $("#btn-done").textContent = t("web.done.continue");
+    $("#done").classList.remove("err");
+  } else {
+    $("#done-title").textContent = t("web.done.fail");
+    $("#done-msg").textContent = t("web.done.failmsg");
+    $("#btn-reboot").style.display = "none";
+    $("#btn-done").textContent = t("web.done.close");
+    $("#done").classList.add("err");
+  }
+  enterDone(code === 0 ? "/static/success.png" : "/static/error.png");
+}
+
+/* Aplica o quadro de estado vindo do servidor (evento `state` ou /api/status). */
+function applyState(st) {
+  if (!st) return;
+  if (Array.isArray(st.lines) && st.lines.length) {
+    run.lines = st.lines.slice(-300);
+    lastLogText = null;
+  }
+  if (typeof st.pct === "number") run.pct = Math.max(run.pct, st.pct);
+  if (st.label) run.label = st.label;
+  if (st.running) enterInstalling();
+  if (st.done) showResult(st.code === 0 ? 0 : st.code || 1);
+}
+
+async function fetchStatus() {
+  try {
+    const r = await fetch("/api/status", { cache: "no-store" });
+    if (!r.ok) return null;
+    return await r.json();
+  } catch (e) {
+    return null;
+  }
+}
+
+/* Queda de conexão NÃO é falha de instalação: o install.sh continua rodando
+   no servidor. Só marca "reconectando" — o watchdog ressincroniza. */
+function onStreamDropped() {
+  if (run.done) return;
+  setLabel(t("web.reconnecting"));
+}
+
+function openStream() {
+  if (src) return;
+  src = new EventSource("/api/stream");
+  src.addEventListener("state", (ev) => applyState(JSON.parse(ev.data)));
+  src.addEventListener("progress", (ev) => {
+    const d = JSON.parse(ev.data);
+    run.pct = Math.max(run.pct, d.pct || 0);
+    run.label = d.label;
+    enterInstalling();
+  });
+  src.addEventListener("tail", (ev) => {
+    $("#live-tail").textContent = JSON.parse(ev.data).line;
+  });
+  src.addEventListener("log", (ev) => {
+    const d = JSON.parse(ev.data);
+    addLines(Array.isArray(d.lines) ? d.lines : [d.line]);
+  });
+  src.addEventListener("done", (ev) => showResult(JSON.parse(ev.data).code));
+  src.addEventListener("error", onStreamDropped);
+}
+
+/* Vigia a conexão: se o stream cair, sonda o servidor e, respondendo ele,
+   reabre o stream (que volta com o estado `state` do progresso atual). */
+function startWatchdog() {
+  if (watchdog) return;
+  watchdog = setInterval(async () => {
+    if (run.done) return;
+    if (src && src.readyState === 1) return;
+    const st = await fetchStatus();
+    if (!st) {
+      onStreamDropped();
+      return;
+    }
+    if (src) {
+      try { src.close(); } catch (e) {}
+      src = null;
+    }
+    openStream();
+    applyState(st);
+  }, 4000);
+}
+
 async function startInstall() {
+  if (installRequested) return;
+  installRequested = true;
   await loadI18n(state.NLLANG || UI_LANG);
   if (state.ROOT_SAME) state.ROOT_PASS = state.INSTALL_USER_PASS;
-  show("installing");
-  document.querySelector(".install-title").textContent = t("tui.installing");
-  document.querySelector(".logs summary").textContent = t("web.logs");
-  buildStages();
-  const aborted = { pct: 0, lines: [], aborted: false };
-  $("#ring-pct").textContent = "0%";
+  run.lines = [];
+  run.pct = 0;
+  run.label = "";
+  run.done = false;
+  run.code = null;
+  lastLogText = null;
+  enterInstalling();
   curPct = 0;
   if (tweenRaf) cancelAnimationFrame(tweenRaf);
+  tweenRaf = null;
+  $("#ring-pct").textContent = "0%";
   $("#ring-fg").style.strokeDashoffset = RING_CIRC;
-  $("#stage-label").textContent = t("web.start");
+  setLabel(t("web.start"));
   $("#btn-done").removeAttribute("data-ok");
   $("#done").classList.remove("err");
   $("#done-img").src = "/static/logo.png";
   $("#btn-reboot").style.display = "none";
+  openStream();
+  startWatchdog();
 
-  const src = new EventSource("/api/stream");
-  src.addEventListener("progress", (ev) => {
-    const d = JSON.parse(ev.data);
-    aborted.pct = d.pct;
-    aborted.aborted = false;
-    $("#ring-fg").style.transition = "stroke-dashoffset .3s cubic-bezier(.4, 0, .2, 1)";
-    tweenPct(d.pct);
-    $("#stage-label").textContent = d.label;
-    pump(aborted);
-  });
-  src.addEventListener("tail", (ev) => {
-    const d = JSON.parse(ev.data);
-    $("#live-tail").textContent = d.line;
-  });
-  src.addEventListener("log", (ev) => {
-    const d = JSON.parse(ev.data);
-    aborted.lines.push(d.line);
-    while (aborted.lines.length > 300) aborted.lines.shift();
-    $("#log-box").textContent = aborted.lines.join("\n");
-    const box = $("#log-box");
-    box.scrollTop = box.scrollHeight;
-  });
-  src.addEventListener("done", (ev) => {
-    src.close();
-    const d = JSON.parse(ev.data);
-    if (d.code === 0) {
-      $("#done-title").textContent = t("tui.done");
-      $("#done-msg").textContent = t("web.done.okmsg");
-      $("#btn-reboot").textContent = t("web.done.reboot");
-      $("#btn-reboot").style.display = "";
-      $("#btn-done").textContent = t("web.done.continue");
-      $("#done").classList.remove("err");
-    } else {
-      $("#done-title").textContent = t("web.done.fail");
-      $("#done-msg").textContent = t("web.done.failmsg");
-      $("#btn-reboot").style.display = "none";
-      $("#btn-done").textContent = t("web.done.close");
-      $("#done").classList.add("err");
+  try {
+    const r = await fetch("/api/install", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(Object.assign({}, state)),
+    });
+    if (r.status === 409) {
+      // Já existe instalação em andamento (pedido duplicado ou página
+      // recarregada): volta para o painel dela em vez de apagar o disco.
+      const d = await r.json().catch(() => ({}));
+      applyState(d.state || (await fetchStatus()));
+      return;
     }
-    enterDone(d.code === 0 ? "/static/success.png" : "/static/error.png");
-  });
-  src.addEventListener("error", (ev) => {
-    src.close();
-    $("#done-title").textContent = t("web.done.fail");
-    $("#done-msg").textContent = t("web.err.connect");
-    $("#btn-reboot").style.display = "none";
-    $("#done").classList.add("err");
-    enterDone("/static/error.png");
-  });
-
-  fetch("/api/install", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(Object.assign({}, state)),
-  }).catch((e) => {
-    src.close();
-    $("#done-title").textContent = t("web.done.fail");
-    $("#done-msg").textContent = t("web.err.server");
-    $("#btn-reboot").style.display = "none";
-    $("#done").classList.add("err");
-    enterDone("/static/error.png");
-  });
+    if (!r.ok) {
+      const d = await r.json().catch(() => ({}));
+      if (d.error) console.error(d.error);
+      showResult(1);
+    }
+  } catch (e) {
+    // Falha de rede no pedido: a instalação pode ter começado mesmo assim —
+    // consulta o estado em vez de declarar erro.
+    const st = await fetchStatus();
+    if (st && (st.running || st.pct > 0 || st.done)) {
+      applyState(st);
+      return;
+    }
+    showResult(1);
+  }
 }
 
 /* ---------- navegação ---------- */
@@ -957,5 +1077,26 @@ $("#btn-reboot").addEventListener("click", async () => {
 (async () => {
   await loadI18n(state.NLLANG);
   render();
+  // Instalação já em andamento (página recarregada, navegador reconectando ou
+  // servidor reanexado após uma queda): volta direto ao painel em vez do
+  // assistente — assim ninguém reinicia a instalação por cima da que roda.
+  let st = await fetchStatus();
+  if (st && st.lang) {
+    state.NLLANG = st.lang;
+    await loadI18n(st.lang);
+  }
+  if (st && (st.running || st.done)) {
+    installRequested = true;
+    run.pct = st.pct || 0;
+    run.label = st.label || "";
+    run.lines = Array.isArray(st.lines) ? st.lines.slice(-300) : [];
+    lastLogText = null;
+    curPct = run.pct;
+    openStream();
+    startWatchdog();
+    if (st.running) enterInstalling();
+    else showResult(st.code === 0 ? 0 : st.code || 1);
+    return;
+  }
   setTimeout(() => show("wizard"), 3600);
 })();

@@ -31,6 +31,8 @@ make-splash.sh                   gera splash.png a partir de NLinux.jpg (menu de
 install.sh                       instalador principal (web-installed; GUI_DRIVEN=1 do servidor web)
 install/translations.py           tabela de traduções (7 idiomas) usada pelo instalador web
 install/chroot/                  etapas executadas dentro do chroot do sistema instalado
+web/server.py                    servidor local do instalador (SSE, estado, execução do install.sh)
+web/static/                      interface do instalador (wizard + painel de progresso)
 packages/                        listas de pacotes do sistema instalado
 iso/packages.live                pacotes extras do live (ISO)
 iso/airootfs/                    camada over de arquivos do live (branding, auto-run, personalize)
@@ -81,7 +83,10 @@ O instalador:
      etapas (✓ concluída, ▸ atual, ○ pendente), **barra de progresso
      `[███░░░] 45%`** e as duas últimas linhas de log (com o progresso real do
      `rsync`/`pacstrap` ao vivo). O motor roda em subprocesso com
-     `GUI_DRIVEN=1` e sinaliza via `NLPROGRESS|<pct>|<etapa>`.
+     `GUI_DRIVEN=1` e sinaliza via `NLPROGRESS|<pct>|<etapa>`. Se a página
+     recarregar, a conexão cair ou o servidor morrer, o painel volta sozinho ao
+     ponto em que a instalação está — nada é reiniciado (ver
+     "Instalador web").
    - Fontes maiores no live: instalador via menu abre o kitty com
      `font_size 18`; no modo direto (tty) o console usa `ter-120b`.
    - Navegação: **setas** ou **k/j** · **Enter** seleciona · **Backspace** apaga na
@@ -184,7 +189,7 @@ O que ele faz:
 3. Anexa `iso/packages.live` à lista de pacotes do live;
 4. Copia a camada `iso/airootfs/` (autologin, auto-run, branding, serviços do live);
 5. **Embuta este projeto** em `/opt/noctalia-installer` no live:
-   `install.sh`, `install/`, `config/`, `packages/`;
+   `install.sh`, `install/`, `config/`, `packages/`, `web/`;
 6. Transforma o boot: **systemd-boot** (UEFI), **GRUB** (UEFI/BIOS boot) e
    **syslinux** (BIOS) — títulos, items e a splash NLinux;
 7. Roda `mkarchiso -v` → ISO em `iso/out/nlinux-<data>-x86_64.iso`.
@@ -226,7 +231,9 @@ sudo dd if=iso/out/*.iso of=/dev/sdX bs=4M status=progress conv=fsync
 - **Instalar** (somente pelo live): atalho **Instalar NLinux** do desktop/menu
   (roda `/usr/local/bin/nlinux-installer-gui`) abre o Firefox em kiosk apontando
   para o servidor web local (`http://127.0.0.1:8765`, root via sudo). Não há
-  instalador TUI.
+  instalador TUI. O servidor roda sob um **supervisor** (reinicia em 2 s se
+  cair) e a instalação é desacoplada dele: uma queda não interrompe nem
+  reinicia a instalação (ver "Instalador web").
 - Consoles extras do live: CTRL+ALT+F2 (shell root). Terminais no desktop:
   `Mod+T` / `Mod+Shift+T` (kitty).
 
@@ -238,6 +245,89 @@ sudo dd if=iso/out/*.iso of=/dev/sdX bs=4M status=progress conv=fsync
 - `/etc/issue` → `NLinux \r (\l)` (live e instalado);
 - `/etc/motd` → ASCII-art "Bem-vindo ao NLinux!";
 - título do bootloader instalado → `NLinux` (systemd-boot `arch.conf`).
+
+---
+
+## Instalador web (resiliência da instalação)
+
+O instalador do live é um servidor local (`web/server.py`, só biblioteca padrão do
+Python) que serve a interface de `web/static/` e executa o `install.sh` em
+subprocesso com `GUI_DRIVEN=1`. O painel do navegador acompanha o progresso por
+**SSE** (`/api/stream`).
+
+**Regra central: a instalação não depende do navegador nem do servidor.** A saída
+do `install.sh` vai para um **arquivo** de log (`/tmp/nlinux-install.log`) que o
+servidor apenas acompanha — não um pipe — e o estado (etapa, %, últimas linhas,
+código de saída) fica no servidor, com checkpoint em
+`/tmp/nlinux-install-state.json` a cada 5 s. Consequências:
+
+| Situação | O que acontece |
+|---|---|
+| Queda de conexão, reload do kiosk, suspensão do Firefox | O `EventSource` reconecta sozinho e a tela mostra *"Reconectando ao instalador… (a instalação continua)"*. **Nunca** vira falha de instalação. |
+| Servidor cai (falta de memória, Ctrl+C, reabrir o atalho) | O `install.sh` continua até o fim escrevendo no arquivo. Ao voltar, o supervisor do launcher o reinicia e o servidor **reanexa** a execução em andamento (log + checkpoint). |
+| Página recarregada com a instalação rodando | O boot da página consulta `/api/status` e volta direto ao painel de progresso (adota também o idioma da execução) em vez do assistente. |
+| Formulário enviado duas vezes | `POST /api/install` devolve **409** com o estado atual e a página volta ao painel: ninguém apaga o disco por cima da instalação que roda. |
+| `install.sh` morre sem escrever o resultado (morto por sinal/OOM) | Watchdog da execução reanexada encerra o painel como falha explícita, em vez de girar para sempre. |
+| Erro de verdade na instalação | `die` no `install.sh` → `_save_error_marker` grava `/var/log/install-error.log` **no disco instalado** (com as últimas 150 linhas do log) antes de desmontar. |
+| Falha de espelho no modo online | `pacstrap` tenta até 3 vezes (o pacman reaproveita o cache) antes de abortar com dica de rede/mirror. |
+
+### Protocolo (SSE) e API
+
+| Evento SSE | Dados | Para que serve |
+|---|---|---|
+| `state` | `{pct, label, lines, running, done, code, error, lang}` | Ressincroniza tudo a cada (re)conexão |
+| `progress` | `{pct, label}` | Anel/barra de progresso |
+| `tail` | `{line}` | Última linha viva (progresso com `\r` do rsync/pacman) |
+| `log` | `{lines: [...]}` | Linhas do log, em lote (não um evento por linha) |
+| `done` | `{code}` | Fim da execução (o `state` final vem logo em seguida) |
+| `error` | `{message}` | Falha real do servidor/execução |
+
+| Endpoint | Uso |
+|---|---|
+| `GET /` | interface (`web/static/index.html`) |
+| `GET /api/stream` | stream SSE (keepalive a cada 5 s) |
+| `GET /api/status` | estado atual sem SSE — usado no boot da página e pelo watchdog do cliente |
+| `GET /api/disks` | discos candidatos (`lsblk`, ignora `loop`/`zram`) |
+| `GET /api/ntfs-partitions?disk=…` | partições NTFS e o limite seguro de redução (dual boot) |
+| `GET /api/i18n?lang=…` | tabela de traduções (pt/en/es/fr/de/it/ja) |
+| `POST /api/install` | inicia a instalação (**409** se já houver uma em andamento) |
+| `POST /api/reboot` · `POST /api/quit` | reinicia a máquina · fecha o Firefox kiosk |
+
+### Conversa entre o servidor e o `install.sh`
+
+- `NLPROGRESS|<pct>|<chave>` — progresso (ex.: `NLPROGRESS|90|stage.copy.done`);
+  a chave é traduzida no servidor para o idioma escolhido na página.
+- `NLRESULT|<rc>` — **última linha do log**, escrita pelo `trap … EXIT` do
+  `install.sh` com o código de saída. É o que permite a uma execução *reanexada*
+  (servidor que caiu no meio) reportar o resultado final.
+- `GUI_DRIVEN=1` habilita a emissão de `NLPROGRESS`; `NLLANG=<idioma>` fixa o
+  idioma das etapas.
+
+### Arquivos e variáveis
+
+| Caminho (live) | Papel |
+|---|---|
+| `/tmp/nlinux-install.log` | saída completa da execução atual (o `install.sh` a relê ao falhar, para gravar o marcador de erro no disco) |
+| `/tmp/nlinux-install.log.1` | log da execução anterior (rotacionado a cada novo `POST /api/install`) |
+| `/tmp/nlinux-install-state.json` | checkpoint do estado (reanexação após queda do servidor) |
+| `/tmp/nlinux-web.log` | stdout/stderr do servidor, com marcador de cada reinício do supervisor |
+| `/var/log/install-error.log` (instalado) | resumo da falha + últimas linhas do log, para ler depois sem o live |
+
+Variáveis de ambiente do servidor: `NLINUX_WEB_PORT` (padrão `8765`),
+`NLINUX_LOG_PATH` e `NLINUX_STATE_PATH` (útil para testar fora do live).
+
+### Diagnóstico
+
+```bash
+curl -s http://127.0.0.1:8765/api/status   # estado real da execução (pct, etapa, code)
+tail -f /tmp/nlinux-install.log            # log vivo da instalação
+tail -f /tmp/nlinux-web.log                # reinícios e erros do servidor
+```
+
+O live também tem **swap em RAM comprimida**: `iso/airootfs/etc/systemd/zram-generator.conf`
+(`zram-size = min(ram / 2, 4096)`, zstd) com o `zram-generator` de
+`iso/packages.live`. Sem ele, `rsync`/`pacstrap`/`mkinitcpio` disputam memória com
+o Firefox e o OOM killer encerra a janela do instalador no meio da cópia.
 
 ---
 
@@ -312,8 +402,12 @@ Aplicados ao usuário do **live** (`~/home/nlinux`) e do **sistema instalado**
 - **Auto-run / serviços / branding do live**: `iso/airootfs/` —
   `root/customize_airootfs.sh` (roda no chroot do build), `root/.bash_profile`,
   `root/.zprofile`, `etc/systemd/system/getty@tty1.service.d/autologin.conf`,
+  `etc/systemd/zram-generator.conf` (swap em RAM comprimida),
   `usr/local/bin/nlinux-installer{,-gui}`.
 - **Etapas da instalação**: `install/chroot/*.sh`.
+- **Textos do instalador web** (7 idiomas): `install/translations.py` — é a fonte
+  única; o `web/server.py` e o `web/static/app.js` só pedem as chaves
+  (`stage.*`, `web.*`, `tui.*`, `part.*`).
 - Trocar o logo/arte do menu de boot: substitua `NLinux.jpg` e rode
   `./make-splash.sh`.
 
