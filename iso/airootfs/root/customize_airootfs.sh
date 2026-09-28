@@ -219,11 +219,18 @@ fi
 chmod +x /usr/local/bin/nlinux-software 2>/dev/null || true
 chmod 0755 /opt/nlinux-software/nlinux-software 2>/dev/null || true
 
-# --- Loja gravável: o app sincroniza o catálogo e compila bytecode na própria
-# árvore (/opt/nlinux-software). Dá dono ao usuário do live.
-if [[ -d /opt/nlinux-software ]]; then
-  chown -R nlinux:nlinux /opt/nlinux-software
-  chmod -R u+rwX /opt/nlinux-software
+# --- Loja gravável: o app NÃO escreve mais em /opt. Desde a v117 o catálogo e a
+# mídia da loja foram para ~/.local/share/nlinux/store e o /opt é só a semente
+# embarcada, então a árvore pode ficar no root (o app só precisa ler). Semear
+# a pasta do usuário aqui evita que a primeira abertura espere a cópia.
+if [[ -d /opt/nlinux-software/src/apps ]]; then
+  store_data="/home/nlinux/.local/share/nlinux/store"
+  mkdir -p "$store_data"
+  if [[ ! -d "$store_data/apps" ]]; then
+    cp -a /opt/nlinux-software/src/apps "$store_data/apps"
+  fi
+  chown -R nlinux:nlinux /home/nlinux/.local/share/nlinux
+  chmod -R u+rwX /home/nlinux/.local/share/nlinux
 fi
 
 # --- Marca os atalhos da Área de Trabalho como confiáveis (GNOME pediria

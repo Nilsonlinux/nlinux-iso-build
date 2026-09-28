@@ -15,5 +15,6 @@ def _pick_runner():
 
         return lambda: run(open_browser=False)
 
+
 if "__main__" == __name__:
     _pick_runner()()

@@ -49,8 +49,28 @@ cat > /usr/local/bin/nlinux-software <<'EOF'
 exec /opt/nlinux-software/nlinux-software "$@"
 EOF
 chmod +x /usr/local/bin/nlinux-software
+# --- dados gravaveis, fora do /opt ---------------------------------
+# O catalogo e a midia mudam toda vez que a loja sincroniza com o
+# GitHub. Em /opt isso pediria root, entao vao para o HOME do
+# usuario que instalou, com a propriedade dele.
+STORE_USER="${SUDO_USER:-root}"
+STORE_HOME="$(getent passwd "$STORE_USER" | cut -d: -f6)"
+if [ -n "$STORE_HOME" ] && [ "$STORE_USER" != "root" ]; then
+  STORE_DATA="${XDG_DATA_HOME:-$STORE_HOME/.local/share}"
+  APP_DATA="$STORE_DATA/nlinux"
+  DATA_DIR="$APP_DATA/store"
+  mkdir -p "$DATA_DIR"
+  if [ ! -d "$DATA_DIR/apps" ]; then
+    cp -a "$DEST/src/apps" "$DATA_DIR/apps"
+  fi
+  # o chown tem de pegtar a arvore inteira: um 'mkdir -p' como root
+  # deixa os diretorios intermediarios do root, e sem dono o usuario
+  # nao consegue criar mais nada dentro deles
+  chown -R "$STORE_USER" "$APP_DATA"
+  echo "Catalogo e midia: $DATA_DIR/apps"
+fi
 # --- ícone + atalho no menu de aplicativos --------------------------
-mkdir -p /usr/share/pixmaps /usr/share/icons/hicolor/scalable/apps
+mkdir -p /usr/share/pixmaps
 cp "$DEST/src/apps/nlinux-logo.png" /usr/share/pixmaps/nlinux-software.png
 rm -f /usr/share/icons/hicolor/scalable/apps/nlinux-software.svg
 rm -f /usr/share/applications/nlinux-software.desktop
@@ -70,4 +90,4 @@ StartupWMClass=nlinuxstore
 X-GNOME-UsesNotifications=false
 EOF
 (command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database /usr/share/applications) || true
-echo "Instalado: NLinux Software v113 (/usr/local/bin/nlinux-software)"
+echo "Instalado: NLinux Software v130 (/usr/local/bin/nlinux-software)"

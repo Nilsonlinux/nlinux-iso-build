@@ -112,14 +112,13 @@ def run_window() -> None:
         if ADMIN_ENABLED:
             app_id = "io.github.nilsonlinux.NLinuxCuradoria"
             wm_class = "nlinuxcuradoria"
-            icon_file = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)), "icon-admin.svg")
         else:
             app_id = "io.github.nilsonlinux.NLinuxStore"
             wm_class = "nlinuxstore"
-            icon_file = os.path.join(
-                os.path.dirname(os.path.abspath(__file__)),
-                "..", "apps", "nlinux-logo.png")
+        # ícone único do projeto: a loja e a curadoria usam o mesmo arquivo
+        icon_file = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)),
+            "..", "apps", "nlinux-logo.png")
         GLib.set_prgname(wm_class)
         try:
             from gi.repository import Gdk

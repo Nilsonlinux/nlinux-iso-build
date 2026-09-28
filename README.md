@@ -36,6 +36,7 @@ iso/packages.live                pacotes extras do live (ISO)
 iso/airootfs/                    camada over de arquivos do live (branding, auto-run, personalize)
 iso/profiledef.sh                metadados da ISO (nome, label, versão)
 config/                          dotfiles aplicados ao usuário (live e instalado)
+nlinux-software/                 loja de software embarcada em /opt (build publicado; ver "Atualizar a loja")
 NLinux.jpg / splash.png          arte do menu de boot
 ```
 
@@ -315,6 +316,31 @@ Aplicados ao usuário do **live** (`~/home/nlinux`) e do **sistema instalado**
 - **Etapas da instalação**: `install/chroot/*.sh`.
 - Trocar o logo/arte do menu de boot: substitua `NLinux.jpg` e rode
   `./make-splash.sh`.
+
+### Atualizar a loja embarcada
+
+`nlinux-software/` é a cópia do build publicado da loja
+(`github.com/Nilsonlinux/nlinux-software`) que o `build-iso.sh` embute em
+`/opt/nlinux-software`. Para atualizar, gere a nova versão pela curadoria
+(ela já publica no GitHub) e substitua o conteúdo:
+
+```bash
+cd /home/nilsonlinux/nlinux-iso-build
+rm -rf nlinux-software && mkdir nlinux-software
+git clone --depth 1 https://github.com/Nilsonlinux/nlinux-software.git /tmp/loja
+cp -a /tmp/loja/. nlinux-software/
+rm -rf nlinux-software/.git nlinux-software/*.tar.gz nlinux-software/*.tar.gz.asc
+```
+
+Confirme com `cat nlinux-software/catalog-head.json` (a revisão tem que ser a
+mais recente) e conferindo que a assinatura bate:
+`gpg --verify nlinux-software/nlinux-software-v<N>.tar.gz.asc nlinux-software/nlinux-software-v<N>.tar.gz`
+(precisa do `.tar.gz`, que só existe no repositório, não na pasta embute).
+
+Desde a v117 o app **não grava mais dentro do `/opt`**: o catálogo e a mídia
+vão para `~/.local/share/nlinux/store/apps` e o `/opt` é só a semente. Por
+isso `customize_airootfs.sh` (live) e `40-user-config.sh` (instalado) semeiam
+essa pasta do usuário em vez de dar escrita no `/opt`.
 
 ## Pós-instalação sugerida
 

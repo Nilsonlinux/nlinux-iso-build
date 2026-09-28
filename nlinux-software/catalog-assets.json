@@ -62,7 +62,6 @@
     "assets/deja-dup.png": "3c62658f35914d4a13df8d831c4222f692a18a3853b2b9705ab5d4b142216ff8",
     "assets/dia-1.jpg": "8851612599cac4a4ca89df81c17327c495369e266d67fc2580e17f81a811826f",
     "assets/dia.png": "f71de25e54a7004c24686f1cca7121533dc14ca554e72d58970ba904c69eab95",
-    "assets/diodon.png": "7791c4ef929a6a55a8b6f55a0e9ab152621b4cdd66574030f3f45a1d2abdc7d9",
     "assets/easytag-1.jpg": "030baa76cd6e65342c95178b4fbafe0e00d41c33bc37ecf8463d408f88a627c4",
     "assets/easytag.png": "63a8563bab28189615aea6504b14ad86a77602c43b7b906f46e3a942f6dd32b6",
     "assets/emby.png": "73d058969eb32752bd361e819b910c18fd08d0a7c8c0f17a915dd7e20ab2ea09",
@@ -70,7 +69,7 @@
     "assets/enpass.png": "dee5a2fc8bd84b0ba15ffb4da394a0e757c945b16a168fd49b829b2f76099396",
     "assets/entangle.png": "409ec5e8b6458973ba98b22b9cccde87abf63552a8a9abca85f2d52f8a83c345",
     "assets/etcher-1.jpg": "0eeef21c82ddd93561a7896fdffef5d5f8eea2a394c2eb24aadf243657e9e7cd",
-    "assets/etcher.png": "ed816438b20232d39935d3d7e7e5c0fd725c8ceed089a89ebbc8d6590fc6ab80",
+    "assets/etcher.png": "5209d3bfcc74ed0d6232e30df8100e1dbc288d6ab5f9f24f462b16c7b478155c",
     "assets/eviacam.png": "2289b9f355263be4f56efed0efb618aade8cdc98166dae0446f896919a35df04",
     "assets/evolution-1.jpg": "5b1010465e262adf0ab36dba2e59049adce6e8970ddd8cf197992e5894b7726b",
     "assets/evolution-2.jpg": "815ce4a0484c78a403c3b39515fc387e9b7bf5951e6964969f635316414531bf",
@@ -247,6 +246,7 @@
     "assets/syncthing.png": "516e9d5a5719c59fb846c157dc5ee366827e0009587e19c56ca191a5c47bb3d8",
     "assets/teeworlds.png": "585ca2d5d0bf4a2ca3868fa2536cbeb47eb0d3693ea9489181a3e45bc9466246",
     "assets/telegram-1.jpg": "288159926852e5a135f21ef8e3dae56ee77c8257c75f16b940db507d6247d284",
+    "assets/telegram-1.png": "8a2baa8dc66373283beaa1baaea752b722bc454696667e2b64e87b20badbaa70",
     "assets/telegram.png": "9a1bffc1800c5fbfa8b7b6199667fc092a7456664e898a731539ae74d430b45d",
     "assets/terminator-1.jpg": "b8b2ec94c76c1b0c001d603de9b9ddd05fecbedd9e7922057d4f75510f700a9d",
     "assets/terminator.png": "792d3e5abeb5151f63b1593ac55b9fb4b3a38cba338d6b5afd9531189668b0d4",
@@ -290,5 +290,5 @@
     "assets/zim-1.jpg": "2b83fa9c5a899fc636e6f139ba8076c2875452a85bb17ce8f0cb6ea5e23fd150",
     "assets/zim.png": "09298fb0f6be4250e7b34cdcaa6d9007370c6aa2be5cd981c1351da9bc85124a"
   },
-  "revision": 113
+  "revision": 130
 }

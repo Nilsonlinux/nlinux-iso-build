@@ -13,8 +13,8 @@ import shutil
 import struct
 import subprocess
 import threading
-import time
 import termios
+import time
 import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from uuid import uuid4
@@ -23,7 +23,6 @@ from nlinux import resources
 from nlinux.system_state import SystemState
 
 SRC_ROOT = resources.SRC_ROOT
-APPS_DIR = os.path.join(SRC_ROOT, "apps")
 WEB_DIR = os.path.join(SRC_ROOT, "assets", "web")
 
 # Idiomas suportados pela loja (mesmos do instalador web) com sua região.
@@ -74,18 +73,25 @@ def _resolve_dist_dir() -> str:
 
     No projeto (ou via pkexec, rodando como root) fica em `<projeto>/dist`.
     Se a curadoria estiver instalada em /opt e o processo for o usuário comum,
-    usa `~/NLinux-Software/dist` — /opt não é gravável por ele.
+    usa `~/.local/share/nlinux/dist` — /opt não é gravável por ele.
     """
     padrao = os.path.join(os.path.dirname(SRC_ROOT), "dist")
     if os.access(os.path.dirname(SRC_ROOT), os.W_OK):
-        return padrao
-    return os.path.join(os.path.expanduser("~"), "NLinux-Software", "dist")
+        return resources.writable(padrao)
+    return resources.writable(os.path.join(resources.data_home(), "dist"))
 
 
 DIST_DIR = _resolve_dist_dir()
 
 # Desativada na versão de distribuição (gerada pela página de administração).
 ADMIN_ENABLED = False
+
+# Catálogo e mídia: no projeto de desenvolvimento fica em src/apps; instalado
+# em /opt, em ~/.local/share/nlinux/<papel>/apps, gravável sem root.
+# Definido aqui
+# porque depende de ADMIN_ENABLED.
+APPS_DIR = resources.apps_dir("admin" if ADMIN_ENABLED else "store")
+ASSETS_DIR = os.path.join(APPS_DIR, "assets")
 
 # Publicação automática no GitHub quando o build da versão da loja terminar.
 # Desligue com NLINUX_GIT_PUSH=0. O repositório local é clonado no GIT_PUSH_DIR
@@ -246,8 +252,6 @@ class InstallJob:
             self._update_counted_step(match, transaction=True)
             return
 
-        # pacman localizes its phase labels, but the (current/total) counters
-        # and percentages in its progress display are language-independent.
         count_match = re.search(r"\(\s*(\d+)\s*/\s*(\d+)\s*\)", text)
         if count_match and (
             ".pkg.tar." in text or re.search(r"\btotal\s*\(", text)
@@ -762,7 +766,7 @@ class BoutiqueHandler(BaseHTTPRequestHandler):
 
 
 def build_payload() -> dict:
-    index_path = resources.resource_path(f"apps/{pick_index_file()}")
+    index_path = os.path.join(APPS_DIR, pick_index_file())
     with open(index_path) as f:
         raw = json.load(f)
 
@@ -860,7 +864,6 @@ def mark_installed(packages: list) -> None:
 
 _ADMIN_LOCK = threading.Lock()
 SPECIAL_KEYS = ("stats", "distro", "supported")
-ASSETS_DIR = os.path.join(APPS_DIR, "assets")
 IMG_RE = re.compile(r"^data:image/(png|jpeg|webp);base64,", re.IGNORECASE)
 ASSET_RE = re.compile(r"^assets/[a-z0-9][a-z0-9._-]*\.(png|jpe?g|webp)$", re.IGNORECASE)
 APP_KEY_ORDER = [
@@ -877,7 +880,7 @@ def _slug(value: str) -> str:
 
 
 def _index_path() -> str:
-    return resources.resource_path(f"apps/{pick_index_file()}")
+    return os.path.join(APPS_DIR, pick_index_file())
 
 
 def _load_raw() -> dict:
@@ -1197,6 +1200,14 @@ def admin_build(progress=None):
             shutil.copytree(SRC_ROOT, os.path.join(pkg_root, "src"),
                             ignore=ignore, dirs_exist_ok=True)
 
+            # Fora do projeto de desenvolvimento o catálogo e a mídia não moram
+            # em src/apps, e sim na pasta gravável do usuário. O build tem que
+            # levar o catálogo vivo, não o snapshot que veio no pacote.
+            if os.path.realpath(APPS_DIR) != os.path.realpath(
+                    os.path.join(SRC_ROOT, "apps")):
+                shutil.copytree(APPS_DIR, os.path.join(pkg_root, "src", "apps"),
+                                dirs_exist_ok=True)
+
             src_ws = os.path.join(pkg_root, "src", "nlinux", "web_server.py")
             with open(src_ws, encoding="utf-8") as fh:
                 content = fh.read()
@@ -1265,34 +1276,30 @@ def admin_build(progress=None):
                     "exec /opt/nlinux-software/nlinux-software \"$@\"\n"
                     "EOF\n"
                     "chmod +x /usr/local/bin/nlinux-software\n"
+                    "# --- dados gravaveis, fora do /opt ---------------------------------\n"
+                    "# O catalogo e a midia mudam toda vez que a loja sincroniza com o\n"
+                    "# GitHub. Em /opt isso pediria root, entao vao para o HOME do\n"
+                    "# usuario que instalou, com a propriedade dele.\n"
+                    "STORE_USER=\"${SUDO_USER:-root}\"\n"
+                    "STORE_HOME=\"$(getent passwd \"$STORE_USER\" | cut -d: -f6)\"\n"
+                    "if [ -n \"$STORE_HOME\" ] && [ \"$STORE_USER\" != \"root\" ]; then\n"
+                    "  STORE_DATA=\"${XDG_DATA_HOME:-$STORE_HOME/.local/share}\"\n"
+                    "  APP_DATA=\"$STORE_DATA/nlinux\"\n"
+                    "  DATA_DIR=\"$APP_DATA/store\"\n"
+                    "  mkdir -p \"$DATA_DIR\"\n"
+                    "  if [ ! -d \"$DATA_DIR/apps\" ]; then\n"
+                    "    cp -a \"$DEST/src/apps\" \"$DATA_DIR/apps\"\n"
+                    "  fi\n"
+                    "  # o chown tem de pegtar a arvore inteira: um 'mkdir -p' como root\n"
+                    "  # deixa os diretorios intermediarios do root, e sem dono o usuario\n"
+                    "  # nao consegue criar mais nada dentro deles\n"
+                    "  chown -R \"$STORE_USER\" \"$APP_DATA\"\n"
+                    "  echo \"Catalogo e midia: $DATA_DIR/apps\"\n"
+                    "fi\n"
                     "# --- ícone + atalho no menu de aplicativos --------------------------\n"
-                    "cat > \"$DEST/icon.svg\" <<'SVG'\n"
-                    "<svg xmlns=\"http://www.w3.org/2000/svg\" width=\"128\" height=\"128\" viewBox=\"0 0 128 128\">\n"
-                    "  <defs>\n"
-                    "    <linearGradient id=\"bg\" x1=\"0\" y1=\"0\" x2=\"1\" y2=\"1\">\n"
-                    "      <stop offset=\"0\" stop-color=\"#1f6feb\"/>\n"
-                    "      <stop offset=\"1\" stop-color=\"#0d3b8f\"/>\n"
-                    "    </linearGradient>\n"
-                    "    <linearGradient id=\"bag\" x1=\"0\" y1=\"0\" x2=\"0\" y2=\"1\">\n"
-                    "      <stop offset=\"0\" stop-color=\"#58c25e\"/>\n"
-                    "      <stop offset=\"1\" stop-color=\"#2ea043\"/>\n"
-                    "    </linearGradient>\n"
-                    "  </defs>\n"
-                    "  <rect x=\"8\" y=\"8\" width=\"112\" height=\"112\" rx=\"24\" fill=\"url(#bg)\"/>\n"
-                    "  <rect x=\"8\" y=\"8\" width=\"112\" height=\"112\" rx=\"24\" fill=\"none\" stroke=\"#12233f\" stroke-width=\"4\"/>\n"
-                    "  <path d=\"M8 74 C34 54 66 46 120 40 L120 34 C64 38 26 50 8 66 Z\" fill=\"#ffffff\" opacity=\"0.08\"/>\n"
-                    "  <path d=\"M48 40 C48 30 58 24 64 24 C70 24 80 30 80 40\" fill=\"none\" stroke=\"#ffffff\" stroke-width=\"5\" stroke-linecap=\"round\"/>\n"
-                    "  <path d=\"M40 40 H88 L96 84 Q96 98 86 98 H42 Q32 98 32 84 Z\" fill=\"url(#bag)\"/>\n"
-                    "  <path d=\"M64 40 L64 96\" stroke=\"#1a7a2e\" stroke-width=\"3\" opacity=\"0.35\"/>\n"
-                    "  <ellipse cx=\"46\" cy=\"60\" rx=\"10\" ry=\"7\" fill=\"#ffffff\" opacity=\"0.3\"/>\n"
-                    "  <rect x=\"55\" y=\"62\" width=\"18\" height=\"18\" rx=\"5\" fill=\"#ffffff\"/>\n"
-                    "  <path d=\"M63.5 66 V72 L60 72 L64 77 L68 72 L64.5 72 V66 Z\" fill=\"#2ea043\"/>\n"
-                    "  <rect x=\"59\" y=\"78\" width=\"10\" height=\"2\" rx=\"1\" fill=\"#2ea043\"/>\n"
-                    "</svg>\n"
-                    "SVG\n"
-                    "mkdir -p /usr/share/icons/hicolor/scalable/apps\n"
-                    "cp \"$DEST/icon.svg\" /usr/share/icons/hicolor/scalable/apps/nlinux-software.svg\n"
-                    "(command -v gtk-update-icon-cache >/dev/null 2>&1 && gtk-update-icon-cache -f -t /usr/share/icons/hicolor) || true\n"
+                    "mkdir -p /usr/share/pixmaps\n"
+                    "cp \"$DEST/src/apps/nlinux-logo.png\" /usr/share/pixmaps/nlinux-software.png\n"
+                    "rm -f /usr/share/icons/hicolor/scalable/apps/nlinux-software.svg\n"
                     "rm -f /usr/share/applications/nlinux-software.desktop\n"
                     "rm -f /usr/share/applications/nlinuxsoftware.desktop\n"
                     "cat > /usr/share/applications/nlinuxstore.desktop <<'EOF'\n"
@@ -1335,6 +1342,8 @@ def admin_build(progress=None):
                     "  sudo ./install.sh\n"
                     "Executar:\n"
                     "  nlinux-software\n"
+                    "Os bancos do pacman são atualizados com `pacman -Sy` ao iniciar\n"
+                    "uma instalação, não ao abrir a loja.\n"
                 )
 
             _step(f"empacotando {os.path.basename(tar_path)}")
@@ -1414,6 +1423,49 @@ def git_publish(build_dir: str, tar_path: str, rev: int) -> dict:
         return {"pushed": False, "reason": f"clone: {exc}"}
 
     try:
+        # Atualiza a referência de origem ANTES de mexer no clone. O
+        # --force-with-lease do push compara o remoto com
+        # refs/remotes/origin/<branch>: se ela estiver velha (o remoto andou
+        # de outra máquina, ou por web), o push é recusado com "stale info".
+        fetch = subprocess.run(
+            ["git", "-C", clone_dir, "fetch", "--quiet", "origin",
+             f"+refs/heads/{GIT_PUSH_BRANCH}"
+             f":refs/remotes/origin/{GIT_PUSH_BRANCH}"],
+            capture_output=True, text=True,
+        )
+        if fetch.returncode != 0:
+            return {"pushed": False,
+                    "reason": fetch.stderr.strip() or "git fetch falhou"}
+
+        # Trava anti-retrocesso. A revisão sai do catálogo local, e o mesmo
+        # repositório pode ser publicado por mais de uma máquina: se o remoto
+        # já estiver à frente, o push de aqui sobrescreveria um catálogo mais
+        # novo com um mais velho. Melhor recusar e pedir a sincronização.
+        if not os.environ.get("NLINUX_PUBLISH_FORCE"):
+            head = subprocess.run(
+                ["git", "-C", clone_dir, "show",
+                 f"refs/remotes/origin/{GIT_PUSH_BRANCH}:catalog-head.json"],
+                capture_output=True, text=True,
+            )
+            if head.returncode == 0 and head.stdout.strip():
+                try:
+                    remoto_rev = int(
+                        json.loads(head.stdout).get("revision", 0))
+                except (ValueError, TypeError):
+                    remoto_rev = None
+                if remoto_rev is not None and remoto_rev > rev:
+                    return {"pushed": False, "reason": (
+                        f"o GitHub está na revisão {remoto_rev} e o catálogo "
+                        f"local está na {rev}. Publicar agora sobrescreveria "
+                        f"um catálogo mais novo com um mais antigo — "
+                        f"sincronize o catálogo com o GitHub e gere de novo. "
+                        f"Para publicar mesmo assim, gere com "
+                        f"NLINUX_PUBLISH_FORCE=1.")}
+
+    except Exception as exc:
+        return {"pushed": False, "reason": str(exc)}
+
+    try:
         # Substitui o conteúdo do repositório (mantém apenas .git e .gitignore).
         keep = {".git", ".gitignore"}
         for entry in os.listdir(clone_dir):
@@ -1462,17 +1514,18 @@ def git_publish(build_dir: str, tar_path: str, rev: int) -> dict:
             return {"pushed": False, "reason": add.stderr.strip() or "git add falhou"}
 
         status = _git("status", "--porcelain")
-        if not status.stdout.strip():
-            return {"pushed": True, "clean": True}
-
-        commit = _git(
-            "commit", "-q",
-            "-m", f"NLinux Software v{rev}: catálogo atualizado",
-            env=author_env,
-        )
-        if commit.returncode != 0:
-            return {"pushed": False, "reason": commit.stderr.strip() or "git commit falhou"}
-
+        if status.stdout.strip():
+            commit = _git(
+                "commit", "-q",
+                "-m", f"NLinux Software v{rev}: catálogo atualizado",
+                env=author_env,
+            )
+            if commit.returncode != 0:
+                return {"pushed": False,
+                        "reason": commit.stderr.strip() or "git commit falhou"}
+        # O push acontece mesmo sem commit novo: um build anterior pode ter
+        # commitado e falhado só na publicação, e nesse caso a árvore está
+        # limpa mas o remoto continua desatualizado.
         push = subprocess.run(
             ["git", "-C", clone_dir, "push", "origin",
              f"HEAD:{GIT_PUSH_BRANCH}", "--force-with-lease"],
@@ -1574,10 +1627,15 @@ def apply_remote_catalog(force: bool = False) -> bool:
 
     if not force and _REMOTE_SYNC["applied"] is not None \
             and local and _catalog_fingerprint(local) != _REMOTE_SYNC["applied"]:
-        force = True  # arquivo local divergiu do que foi aplicado: rebaixa
+        # o arquivo local mudou por fora (curadoria editando, merge, restauração
+        # de backup): rebaixa. Não conta como pedido explícito do usuário, então
+        # a trava de revisão abaixo ainda vale.
+        rebaixar = True
+    else:
+        rebaixar = force
 
     sha = remote_head_sha()
-    if not force:
+    if not rebaixar:
         if sha is None:
             # Sem git disponível: usa o marcador minúsculo; se nem ele responder,
             # rebaixa o catálogo inteiro no máximo a cada 5 minutos.
@@ -1609,6 +1667,21 @@ def apply_remote_catalog(force: bool = False) -> bool:
         return False
     if not isinstance(remote, dict) or not remote:
         print("[nlinux] catálogo remoto vazio ou inválido; mantido o atual")
+        return False
+
+    # Trava de recuo, espelhando a da publicação. A sincronização só comparava
+    # conteúdo: qualquer edição local que ainda não foi publicada era apagada
+    # assim que o remoto devolvesse um catálogo diferente — inclusive na
+    # partida, quando a referência de commit é desconhecida. Sem isso não há
+    # como curatejar e publicar: o trabalho some antes de chegar ao GitHub.
+    # `force` explícito (pedido do usuário) continua prevalecendo.
+    rev_local = int((local.get("stats") or {}).get("revision") or 0)
+    rev_remoto = int((remote.get("stats") or {}).get("revision") or 0)
+    if not force and rev_remoto and rev_local > rev_remoto:
+        print(f"[nlinux] catálogo local na revisão {rev_local} é mais novo que o "
+              f"remoto ({rev_remoto}); mantido o local", flush=True)
+        _REMOTE_SYNC["applied"] = _catalog_fingerprint(local)
+        _REMOTE_SYNC["sha"] = sha
         return False
 
     assets_synced = _sync_remote_assets(remote, sha)
@@ -1782,17 +1855,23 @@ def ensure_admin_shortcut() -> None:
         return
 
     icon_src = os.path.join(
-        os.path.dirname(os.path.abspath(__file__)), "icon-admin.svg")
-    if not os.path.exists(icon_src):
-        icon_src = os.path.join(
-            os.path.dirname(os.path.abspath(__file__)), "icon.svg")
+        os.path.dirname(os.path.abspath(__file__)),
+        "..", "apps", "nlinux-logo.png")
     icon_name = "nlinux-software-admin"
-    icons_dir = os.path.join(
-        os.path.expanduser("~"), ".local", "share", "icons", "hicolor",
-        "scalable", "apps")
+    icons_root = os.path.join(
+        os.path.expanduser("~"), ".local", "share", "icons", "hicolor")
+    icons_dir = os.path.join(icons_root, "128x128", "apps")
     try:
         os.makedirs(icons_dir, exist_ok=True)
-        shutil.copy2(icon_src, os.path.join(icons_dir, icon_name + ".svg"))
+        shutil.copy2(icon_src, os.path.join(icons_dir, icon_name + ".png"))
+        # ícone antigo em SVG sobrepunha o PNG no tema (scalable tem prioridade)
+        stale = os.path.join(icons_root, "scalable", "apps", icon_name + ".svg")
+        if os.path.exists(stale):
+            os.remove(stale)
+        updater = shutil.which("gtk-update-icon-cache")
+        if updater:
+            subprocess.run([updater, "-f", "-t", icons_root],
+                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     except OSError:
         icon_name = icon_src
 
