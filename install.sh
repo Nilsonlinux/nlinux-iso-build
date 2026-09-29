@@ -20,12 +20,73 @@ die()   { echo -e "${COLOR_RED}[erro]${COLOR_RESET} $*" >&2; exit 1; }
 ok()    { echo -e "${COLOR_GREEN}[ok]${COLOR_RESET} $*"; }
 
 GUI_DRIVEN="${GUI_DRIVEN:-0}"
-# Sinal de progresso do instalador web: NLPROGRESS|<pct>|<chave>.
+# Sinais de progresso do instalador web (lidos pelo web/server.py):
+#   NLSTEPS|<pct>:<chave>,…   plano completo das etapas, enviado uma vez
+#   NLPROGRESS|<pct>|<chave>  etapa atual com a porcentagem
+#   NLSTEP|<chave>            etapa atual; a porcentagem vem do plano
+#   NLNOTE|<chave>            atividade temporária (não muda a etapa)
+#   NLRESULT|<rc>             resultado final (trap EXIT)
 # <chave> é uma chave de tradução; o web/server.py a traduz para o NLLANG.
-# Só emite quando dirigido pela web, para não poluir o modo standalone.
+# Tudo só é emitido quando dirigido pela web, para não poluir o modo
+# standalone.
 progress() {
   [[ "$GUI_DRIVEN" == "1" ]] || return 0
   printf 'NLPROGRESS|%s|%s\n' "$1" "$2"
+}
+note() {
+  [[ "$GUI_DRIVEN" == "1" ]] || return 0
+  printf 'NLNOTE|%s\n' "$1"
+}
+
+# ---------------------------------------------------------------------------
+# Plano de etapas do instalador web
+# ---------------------------------------------------------------------------
+# Lista ordenada das etapas NA ORDEM em que o instalador realmente executa,
+# e diferentes entre o modo offline (cópia do pendrive) e o online
+# (pacstrap + AUR). É a fonte única: o plano é enviado ao navegador e a
+# porcentagem de cada etapa sai dele — assim a lista da tela não pode
+# divergir do que o script está fazendo.
+PLAN=()
+plan_add() { PLAN+=("$1|$2"); }   # <chave>|<pct em que a etapa começa>
+
+build_plan() {
+  PLAN=()
+  plan_add stage.lang_key 8
+  plan_add stage.mirror 12
+  plan_add stage.disk 20
+  plan_add stage.fs 30
+  if (( OFFLINE )); then
+    plan_add stage.copy.offline 35
+    plan_add stage.chroot.system 62
+    plan_add stage.chroot.desktop 76
+  else
+    plan_add stage.pac.download 35
+    plan_add stage.chroot.system 62
+    plan_add stage.chroot.aur 70
+    plan_add stage.chroot.desktop 88
+  fi
+  plan_add stage.boot 96
+  plan_add stage.final 100
+  local item out=""
+  for item in "${PLAN[@]}"; do
+    out+="${out:+,}${item#*|}:${item%%|*}"
+  done
+  [[ "$GUI_DRIVEN" == "1" ]] && printf 'NLSTEPS|%s\n' "$out"
+  return 0
+}
+
+# Anuncia a etapa atual: a porcentagem vem do plano (fonte única). Vai pelo
+# NLPROGRESS (e não NLSTEP) de propósito — se a linha NLSTEPS se perder no
+# log (execução antiga reanexada), a etapa ainda chega com a % certa.
+stage() {
+  local key=$1 item pct=""
+  for item in "${PLAN[@]}"; do
+    if [[ "${item%%|*}" == "$key" ]]; then
+      pct="${item#*|}"
+      break
+    fi
+  done
+  progress "${pct:-0}" "$key"
 }
 
 # ---------------------------------------------------------------------------
@@ -518,7 +579,7 @@ partition_disk() {
       || die "Dual boot: a partição EFI $p_efi não é FAT32. Não é seguro instalar ao lado."
 
     info "Reutilizando ESP existente $p_efi (não será formatada)"
-    progress 22 "stage.dual.esp"
+    note "stage.dual.esp"
 
     local free_num=1
     while (( free_num <= 128 )) && lsblk -nrno PARTN "$DISK" | grep -Fxq "$free_num"; do
@@ -535,7 +596,7 @@ partition_disk() {
       die "Dual boot: sem espaço livre suficiente em $DISK para a raiz NLinux."
     fi
     p_root="$(part_path "$DISK" "$free_num")"
-    progress 26 "stage.dual.create"
+    note "stage.dual.create"
     partprobe "$DISK" >/dev/null 2>&1 || true
     udevadm trigger --subsystem-match=block 2>/dev/null || true
     udevadm settle 2>/dev/null || true
@@ -912,6 +973,7 @@ run_chroot_setup() {
     MICROCODE="${MICROCODE:-none}" \
     OFFLINE="$OFFLINE" \
     SHARE_DIR="$SHARE_DIR" \
+    GUI_DRIVEN="$GUI_DRIVEN" \
     /bin/bash "$SHARE_DIR/chroot/all.sh"
 }
 
@@ -1027,33 +1089,36 @@ main() {
   # execução foi reanexada de outro processo do servidor. O `if` (em vez de
   # `&&`) evita que o set -e mate o trap antes de o sentinela ser escrito, e o
   # `rc` original é preservado como status de saída do script.
-  trap 'rc=$?; if (( rc != 0 )); then _save_error_marker "$rc"; fi; umount_all || true; printf "NLRESULT|%s\n" "$rc"' EXIT
+  trap 'rc=$?; if (( rc != 0 )); then _save_error_marker "$rc"; fi; note "stage.note.unmount"; umount_all || true; printf "NLRESULT|%s\n" "$rc"' EXIT
 
-  progress 2 "stage.start"
   info "Instalador Arch Linux + Noctalia (Umbriel, greetd, noctalia-greeter)"
   preflight
   collect_options
   apply_live_options
-  progress 8 "stage.lang_key"
+  # O plano precisa de OFFLINE definitivo (collect_options) e vem antes de
+  # qualquer NLPROGRESS, para o painel já ter a lista completa de etapas.
+  build_plan
+  stage stage.lang_key
   apply_mirror
-  progress 12 "stage.mirror"
-  progress 20 "stage.disk"
+  stage stage.mirror
+  stage stage.disk
   partition_disk
   setup_filesystem
-  progress 30 "stage.fs"
+  stage stage.fs
   if (( OFFLINE )); then
-    progress 35 "stage.copy.offline"
+    stage stage.copy.offline
     offline_clone
-    progress 90 "stage.copy.done"
+    note "stage.copy.done"
   else
-    progress 35 "stage.copy.online"
+    stage stage.pac.download
     stage_packages
-    progress 90 "stage.pac.done"
+    note "stage.pac.done"
   fi
-  progress 95 "stage.chroot"
+  note "stage.note.store"
   stage_software_store
+  # As etapas dentro do chroot se anunciam sozinhas (NLSTEP, via all.sh).
   run_chroot_setup
-  progress 99 "stage.boot"
+  stage stage.boot
   remove_installer_artifacts
 
   if [[ -d /sys/firmware/efi/efivars ]]; then
@@ -1062,7 +1127,7 @@ main() {
     warn "Ambiente sem efivars; apenas o fallback /EFI/BOOT será gravado."
   fi
 
-  progress 100 "stage.final"
+  stage stage.final
   ok "Instalação concluída com sucesso. Desmonte é feito automaticamente."
   ok "Remova o pendrive e reinicie: reboot"
 }

@@ -248,7 +248,7 @@ sudo dd if=iso/out/*.iso of=/dev/sdX bs=4M status=progress conv=fsync
 
 ---
 
-## Instalador web (resiliência da instalação)
+## Instalador web (painel, etapas e resiliência)
 
 O instalador do live é um servidor local (`web/server.py`, só biblioteca padrão do
 Python) que serve a interface de `web/static/` e executa o `install.sh` em
@@ -275,10 +275,13 @@ código de saída) fica no servidor, com checkpoint em
 
 | Evento SSE | Dados | Para que serve |
 |---|---|---|
-| `state` | `{pct, label, lines, running, done, code, error, lang}` | Ressincroniza tudo a cada (re)conexão |
+| `state` | `{pct, label, steps, mode, started, finished, download, lines, running, done, code, error, lang}` | Ressincroniza tudo a cada (re)conexão |
 | `progress` | `{pct, label}` | Anel/barra de progresso |
+| `step` | `{pct, label, index, total}` | Troca de etapa (o texto da lista é o do plano) |
+| `note` | `{label}` | Atividade temporária, sem trocar de etapa |
 | `tail` | `{line}` | Última linha viva (progresso com `\r` do rsync/pacman) |
 | `log` | `{lines: [...]}` | Linhas do log, em lote (não um evento por linha) |
+| `download` | `{bytes, rate, files}` | MB baixados, velocidade e nº de pacotes (modo online) |
 | `done` | `{code}` | Fim da execução (o `state` final vem logo em seguida) |
 | `error` | `{message}` | Falha real do servidor/execução |
 
@@ -295,13 +298,69 @@ código de saída) fica no servidor, com checkpoint em
 
 ### Conversa entre o servidor e o `install.sh`
 
-- `NLPROGRESS|<pct>|<chave>` — progresso (ex.: `NLPROGRESS|90|stage.copy.done`);
-  a chave é traduzida no servidor para o idioma escolhido na página.
-- `NLRESULT|<rc>` — **última linha do log**, escrita pelo `trap … EXIT` do
-  `install.sh` com o código de saída. É o que permite a uma execução *reanexada*
-  (servidor que caiu no meio) reportar o resultado final.
-- `GUI_DRIVEN=1` habilita a emissão de `NLPROGRESS`; `NLLANG=<idioma>` fixa o
-  idioma das etapas.
+O `install.sh` fala com o painel por **linhas de sentinela** no próprio log
+(`NL<tipo>|…`). Cada `<chave>` é uma chave de tradução de
+`install/translations.py`; o servidor a traduz para o idioma escolhido na
+página. Só são emitidas com `GUI_DRIVEN=1`, para não poluir o modo standalone.
+
+| Linha | Significado |
+|---|---|
+| `NLSTEPS\|<pct>:<chave>,…` | **Plano completo e ordenado** das etapas, enviado uma vez. A porcentagem de cada etapa está aqui. |
+| `NLPROGRESS\|<pct>\|<chave>` | Etapa atual com a porcentagem (uso pontual). |
+| `NLSTEP\|<chave>` | Etapa atual; a porcentagem sai do plano. É o que os scripts do chroot usam. |
+| `NLNOTE\|<chave>` | Atividade temporária dentro da etapa (salvar pacotes, montar/desmontar…), sem mudar a etapa. |
+| `NLRESULT\|<rc>` | Resultado final, escrito pelo `trap … EXIT`. **Sempre a última linha do log**, o que permite a uma execução *reanexada* (servidor que caiu no meio) reportar o fim. |
+
+`NLLANG=<idioma>` fixa o idioma das etapas.
+
+#### Etapas na tela: o plano manda
+
+A lista de etapas da tela **não é uma constante do navegador**: é o plano do
+`install.sh` (`build_plan` em `install.sh`), que é montado conforme o modo e
+enviado no primeiro `NLSTEPS`. Os dois modos instalam coisas diferentes, então
+também têm planos diferentes:
+
+| % | Online (pacstrap + AUR) | Offline (cópia do pendrive) |
+|---|---|---|
+| 8 | Idioma e layout de teclado | Idioma e layout de teclado |
+| 12 | espelho (mirror) | espelho (mirror) |
+| 20 | Particionar o disco | Particionar o disco |
+| 30 | Formatar e montar | Formatar e montar |
+| 35 | **Baixar / instalar pacotes** | **Copiar o sistema do pendrive** |
+| 62 | Sistema no chroot (locale, keymap, usuários, zram, bootloader) | idem |
+| 70 | **Compilar pacotes AUR (yay)** | — |
+| 88 | Área de trabalho, greeter, serviços e dotfiles | idem |
+| 96 | Bootloader | Bootloader |
+| 100 | Finalização (desmontar, sincronizar) | idem |
+
+Os scripts do chroot anunciam as suas etapas com `cstage`/`cnote`
+(`install/chroot/helpers.sh`, chamadas de `all.sh` e `20-aur.sh`) — por isso
+"compilar os pacotes AUR" aparece como etapa própria em vez de ficar escondido
+em "bootloader e finalização". A saída do `yay` deixou de ir para `/dev/null` e
+passa a aparecer no log da tela.
+
+O progresso real de dentro da etapa de cópia (rsync/pacman) continua sendo
+lido do log e é **interpolado dentro da faixa da etapa** (35 % até 1 % antes
+da seguinte), então o anel nunca "anda" durante uma etapa e depois volta.
+
+Se o `install.sh` for uma versão antiga (sem `NLSTEPS`), o servidor monta a
+lista pela ordem das porcentagens das etapas que aparecerem no log, e o
+navegador tem um plano reserva por modo — a tela nunca fica vazia.
+
+#### Relógio e download no painel
+
+- **Relógio digital** (`H:MM:SS`) no topo do painel: cada dígito é uma fita
+  0-9 que rola com `translateY` quando o número muda. O tempo vem do
+  `started` do servidor, então **recarregar a página no meio não volta a
+  zero**; o total (`X min Y s`) aparece na tela de fim, nos dois modos.
+- **Monitor de download** (só no modo online): MB baixados, velocidade e nº de
+  pacotes. A contagem é feita **medindo o cache do pacman**
+  (`/var/cache/pacman/pkg` do alvo e o do chroot), com uma linha de base
+  tirada no início da execução e guardada no checkpoint — assim uma execução
+  reanexada continua contando do ponto em que parou, e o total não zera.
+  Não depende do idioma do pacman nem do formato das linhas dele.
+  Os caminhos podem ser sobrescritos com `NLINUX_CACHE_DIRS` (separados por
+  `:`).
 
 ### Arquivos e variáveis
 
@@ -314,7 +373,9 @@ código de saída) fica no servidor, com checkpoint em
 | `/var/log/install-error.log` (instalado) | resumo da falha + últimas linhas do log, para ler depois sem o live |
 
 Variáveis de ambiente do servidor: `NLINUX_WEB_PORT` (padrão `8765`),
-`NLINUX_LOG_PATH` e `NLINUX_STATE_PATH` (útil para testar fora do live).
+`NLINUX_LOG_PATH` e `NLINUX_STATE_PATH` (útil para testar fora do live),
+`NLINUX_CACHE_DIRS` (diretórios do cache do pacman usados como contador de
+download, separados por `:`).
 
 ### Diagnóstico
 
@@ -334,6 +395,11 @@ o Firefox e o OOM killer encerra a janela do instalador no meio da cópia.
 ## Etapas no chroot (sistema instalado)
 
 Roteiro: `install.sh` → `install/chroot/all.sh` → cada etapa abaixo.
+
+No painel web essas etapas viram os blocos "Sistema no chroot", "Compilar
+pacotes AUR" (só no online) e "Área de trabalho" da lista de progresso: quem
+avisa é o `all.sh`, com `cstage`/`cnote` (ver
+[Conversa entre o servidor e o `install.sh`](#conversa-entre-o-servidor-e-o-installsh)).
 
 | Etapa | Arquivo | Função |
 |---|---|---|

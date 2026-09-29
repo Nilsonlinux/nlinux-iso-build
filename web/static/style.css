@@ -433,6 +433,46 @@ body {
 
 .shimmer { background: linear-gradient(90deg, var(--text) 30%, var(--accent) 50%, var(--text) 70%); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: shimmer 2.2s linear infinite; }
 
+/* Relógio digital: cada dígito é uma fita 0-9 que rola quando o valor muda
+   (translateY de um passo por dígito). O passo da fita (1.2em) é o mesmo
+   inteiro usado no translateY do app.js (DIGIT_STEP) — se divergirem, os
+   dígitos saem de posição depois da primeira virada. */
+.install-meters { display: flex; justify-content: center; margin: 16px auto 0; }
+.meter { display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.clock { display: flex; align-items: baseline; gap: 10px; }
+.clock-digits {
+  display: inline-flex; align-items: center; gap: 2px;
+  font-family: ui-monospace, "Fira Code", monospace;
+  font-size: 1.7rem; font-weight: 700; letter-spacing: .5px;
+  color: var(--text);
+  font-variant-numeric: tabular-nums;
+}
+.clock-digits .sep { color: var(--muted); animation: clockBlink 1s steps(1) infinite; }
+.digit { display: inline-block; width: 1ch; height: 1.2em; overflow: hidden; position: relative; }
+.digit > i {
+  display: block; font-style: normal;
+  transition: transform .38s cubic-bezier(.34, 1.3, .5, 1);
+}
+.digit > i > span { display: block; height: 1.2em; line-height: 1.2em; }
+.clock-title { color: var(--muted); font-size: .8rem; text-transform: lowercase; }
+@keyframes clockBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: .25; } }
+
+/* Monitor de download (só no modo online). */
+.dl {
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  flex-wrap: wrap; max-width: 100%;
+  padding: 6px 12px; border-radius: 999px;
+  background: rgba(23, 162, 211, .08);
+  border: 1px solid var(--line);
+  font-size: .82rem; color: var(--muted);
+}
+.dl-title { color: var(--text); font-weight: 600; }
+.dl[hidden] { display: none; }
+.dl-values { display: inline-flex; gap: 10px; font-family: ui-monospace, "Fira Code", monospace; }
+.dl-total { color: var(--accent); font-weight: 700; }
+.done-time { margin-top: 10px; color: var(--muted); font-family: ui-monospace, "Fira Code", monospace; }
+.done-time b { color: var(--text); }
+
 .live-tail {
   margin-top: 12px;
   min-height: 1.2em;

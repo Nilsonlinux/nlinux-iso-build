@@ -24,3 +24,16 @@ as_user() {
   shift
   runuser -u "$user" -- "$@"
 }
+
+# Etapa atual para o painel do instalador web. A porcentagem NÃO vem aqui: ela
+# está no plano que o install.sh enviou (NLSTEPS) e o web/server.py a aplica.
+# Atividade temporária (não muda a etapa da lista) é cnote.
+cstage() {
+  [[ "${GUI_DRIVEN:-0}" == "1" ]] || return 0
+  printf 'NLSTEP|%s\n' "$1"
+}
+
+cnote() {
+  [[ "${GUI_DRIVEN:-0}" == "1" ]] || return 0
+  printf 'NLNOTE|%s\n' "$1"
+}

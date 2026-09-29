@@ -16,11 +16,12 @@ echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/10-noctalia-builder
 chmod 440 /etc/sudoers.d/10-noctalia-builder
 
 log "Instalando yay (yay-bin) via makepkg"
+cnote stage.note.yay
 as_user builder bash -c '
   git clone --depth 1 https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
   cd /tmp/yay-bin
   makepkg --config "$SHARE_DIR/chroot/makepkg-no-debug.conf" -si --noconfirm
-' >/dev/null
+'
 
 aur_package_file="$SHARE_DIR/packages/aur.packages"
 [[ -r "$aur_package_file" ]] || die "Lista de pacotes AUR indisponível: $aur_package_file"
@@ -36,12 +37,14 @@ done < <(awk 'NF && $1 !~ /^#/ { print $1 }' "$aur_package_file")
 ((${#aur_dependent_pkgs[@]} > 0)) || die "A lista dependente de pacotes AUR está vazia."
 
 install_aur_packages() {
+  # Sem >/dev/null: o download e a compilação da AUR aparecem no log do
+  # instalador web (é a etapa mais longa e a que mais parece travada).
   as_user builder bash -c '
   export GOCACHE=/tmp/gocache CARGO_HOME=/tmp/cargo
   yay -S --noconfirm --needed \
     --mflags "--config $SHARE_DIR/chroot/makepkg-no-debug.conf" \
     "$@"
-' _ "$@" >/dev/null
+' _ "$@"
 }
 
 log "Instalando pacotes AUR iniciais: ${aur_initial_pkgs[*]}"

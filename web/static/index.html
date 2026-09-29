@@ -47,6 +47,26 @@
   <section id="installing" class="screen">
     <div class="install-shell">
       <h2 class="install-title">Instalando NLinux</h2>
+
+      <!-- Relógio digital: começa em 00:00:00 quando a janela abre e corre
+           com animação. No modo online mostra também o download dos pacotes. -->
+      <div class="install-meters">
+        <div class="meter">
+          <div id="clock" class="clock" role="timer" aria-label="tempo decorrido">
+            <span class="clock-digits" id="clock-digits"></span>
+            <span class="clock-title" id="clock-title">tempo decorrido</span>
+          </div>
+          <div id="dl" class="dl" hidden>
+            <span class="dl-title" id="dl-title">Download dos pacotes</span>
+            <span class="dl-values">
+              <span class="dl-total" id="dl-total">0 MB</span>
+              <span class="dl-rate" id="dl-rate"></span>
+              <span class="dl-files" id="dl-files"></span>
+            </span>
+          </div>
+        </div>
+      </div>
+
       <div class="ring-wrap">
         <svg class="ring" viewBox="0 0 200 200">
           <defs>
@@ -84,6 +104,7 @@
       </div>
       <h2 id="done-title" class="done-title">Instalação concluída!</h2>
       <p id="done-msg" class="done-msg">Remova o pendrive e reinicie a máquina.</p>
+      <p id="done-time" class="done-time" hidden></p>
       <div class="done-actions">
         <button id="btn-reboot" class="btn primary">Reiniciar</button>
         <button id="btn-done" class="btn ghost">Fechar</button>

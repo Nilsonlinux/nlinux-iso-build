@@ -6,10 +6,11 @@ Serve a interface (HTML/CSS/JS), coleta as escolhas e executa o install.sh
 em subprocesso (GUI_DRIVEN=1), transmitindo o progresso para o navegador
 via Server-Sent Events (SSE):
 
-  event: state      {pct, label, lines, running, done, code, error}  ressincroniza
+  event: state      {pct, label, steps, mode, lines, running, done, code, error}  ressincroniza
   event: progress   {pct, label}      atualiza a barra/anel
   event: tail       {line}            linha viva (ex.: progresso do rsync)
   event: log        {lines: [...]}    linhas de log (enviadas em lote)
+  event: download   {bytes, rate, files}   bytes baixados (modo online)
   event: done       {code}            fim da instalação
   event: error      {message}
 
@@ -76,9 +77,20 @@ DEFAULT_LANG = "pt"
 NTFS_RESIZE_RESERVE = 1024**3
 MIB = 1024**2
 
-# Slice de porcentagem ocupado pela etapa de cópia (rsync/pacstrap). O
-# progresso real (progress2 do rsync, "N/M" do pacman) é interpolado nele.
-COPY_SLICE = (35, 90)
+# Slice de porcentagem ocupado pela etapa de cópia (rsync/pacstrap) quando o
+# install.sh é antigo e não manda o plano de etapas. Com o plano (NLSTEPS) o
+# fim do slice é a porcentagem da etapa seguinte — ver _copy_range().
+COPY_SLICE = (35, 62)
+
+# Etapas de cópia: o progresso real (rsync/pacman) é interpolado dentro delas.
+COPY_STEPS = ("stage.copy.offline", "stage.pac.download", "stage.copy.online")
+
+# Cache do pacman como contador de download (modo online): o pacstrap baixa no
+# cache do ALVO (só o `pacstrap -c` usa o do host) e o yay dentro do chroot usa
+# o mesmo. Medir a soma dos dois conta tudo o que foi baixado, sem depender do
+# idioma do pacman nem do formato das linhas dele.
+CACHE_DIRS = [d for d in os.environ.get(
+    "NLINUX_CACHE_DIRS", "/mnt/var/cache/pacman/pkg:/var/cache/pacman/pkg").split(":") if d]
 
 LOG_MAX_LINES = 400        # linhas de log mantidas para ressincronizar a tela
 LOG_SENT_LINES = 300       # linhas enviadas a cada cliente
@@ -86,8 +98,15 @@ FOLLOW_POLL = 0.2          # intervalo de leitura do arquivo de log
 BATCH_INTERVAL = 0.2       # agrupa linhas de log em um único evento
 TAIL_INTERVAL = 0.25       # cadência do "tail" (progresso com \r)
 SAVE_INTERVAL = 5.0        # persiste o estado em disco
+DL_INTERVAL = 1.0          # amostragem do cache do pacman (bytes baixados)
 KEEPALIVE_S = 5.0          # heartbeat do SSE
 WRITE_TIMEOUT = 30.0       # escrita travada por cliente não segura a thread
+DRAIN_TIMEOUT = 30.0       # espera o log terminar de ser lido ao encerrar o run
+
+# O install.sh desta execução já terminou: o laço que segue o log pode fechar.
+# Sem isso, um run que acaba rápido publicaria o `done` antes das últimas
+# linhas/progresso, e o painel perderia o fim da instalação.
+_log_eof = threading.Event()
 
 ANSI_RE = re.compile(r"\x1b\[[0-9;]*[A-Za-z]")
 MIME = {
@@ -122,6 +141,9 @@ STATE = {
     "pid": None,
     "pct": 0,
     "label": "stage.start",
+    "step": "",             # chave da etapa atual
+    "steps": [],            # plano ordenado: [{"pct": int, "key": str}]
+    "mode": "",             # "offline" | "online"
     "lines": [],
     "done": False,
     "code": None,
@@ -130,8 +152,79 @@ STATE = {
     "finished": 0.0,
     "log": LOG_PATH,
 }
-# Progresso real da etapa de cópia (rsync/pacman): última etiqueta traduzida.
-_copying = {"on": False, "label": ""}
+# A etapa de cópia (rsync/pacman) está em curso? Só isso: o progresso real é
+# interpretado no log e interpolado na faixa da etapa (_copy_range()).
+_copying = {"on": False}
+
+# Monitor de download (modo online): bytes/arquivos já baixados para o cache do
+# pacman, medidos a partir de uma linha de base (base/base_files) tirada no
+# início da execução. Também vai no checkpoint, para a contagem não zerar se o
+# servidor cair no meio da instalação.
+_dl = {"base": 0, "base_files": 0, "bytes": 0, "files": 0, "rate": 0.0}
+
+
+def _cache_usage():
+    """(bytes, arquivos) do cache do pacman somando os diretórios observados."""
+    total = files = 0
+    for path in CACHE_DIRS:
+        try:
+            with os.scandir(path) as it:
+                for entry in it:
+                    try:
+                        st = entry.stat(follow_symlinks=False)
+                    except OSError:
+                        continue
+                    if not stat.S_ISREG(st.st_mode):
+                        continue
+                    total += st.st_size
+                    files += 1
+        except OSError:
+            continue
+    return total, files
+
+
+def _reset_download():
+    """Zera a contagem de download, usando o cache atual como linha de base."""
+    total, files = _cache_usage()
+    with _state_lock:
+        _dl.update(base=total, base_files=files, bytes=0, files=0, rate=0.0)
+
+
+def follow_download():
+    """Publica os bytes baixados para o monitor do painel do instalador.
+
+    Sonda o cache do pacman (DL_INTERVAL) e emite um evento `download` por
+    segundo. Medir o cache — em vez de parsear as linhas do pacman — é o que
+    mantém o monitor correto em qualquer idioma do sistema, já que o
+    instalador roda no live com LANG do usuário (pt, en, ja…).
+    """
+    prev_bytes = 0.0
+    prev_t = time.time()
+    while True:
+        time.sleep(DL_INTERVAL)
+        total, files = _cache_usage()
+        now = time.time()
+        with _state_lock:
+            # O cache nunca encolhe por conta própria; se encolher (limpeza,
+            # live reiniciado), zera em vez de mostrar número negativo.
+            if total < _dl["base"]:
+                _dl["base"], _dl["base_files"] = total, files
+            _dl["bytes"] = total - _dl["base"]
+            _dl["files"] = max(0, files - _dl["base_files"])
+            dt = max(0.2, now - prev_t)
+            inst = max(0.0, (_dl["bytes"] - prev_bytes) / dt)
+            # Média móvel: a taxa cai sozinha quando o download para.
+            _dl["rate"] = inst if _dl["rate"] <= 0 else _dl["rate"] * 0.6 + inst * 0.4
+            done = bool(STATE["done"]) and not STATE["running"]
+            payload = {
+                "bytes": _dl["bytes"],
+                "files": _dl["files"],
+                "rate": int(_dl["rate"]),
+            }
+        BROADCAST.push("download", payload)
+        prev_bytes, prev_t = payload["bytes"], now
+        if done:
+            return
 
 
 def _public_state():
@@ -141,12 +234,16 @@ def _public_state():
             "running": bool(STATE["running"]),
             "pct": int(STATE["pct"]),
             "label": _tr(STATE["label"]),
+            "step": STATE["step"],
+            "steps": [{"pct": s["pct"], "label": _tr(s["key"])} for s in STATE["steps"]],
+            "mode": STATE["mode"],
             "lang": _ui_lang,
             "done": bool(STATE["done"]),
             "code": STATE["code"],
             "error": STATE["error"],
             "started": STATE["started"],
             "finished": STATE["finished"],
+            "download": dict(_dl),
             "lines": list(STATE["lines"][-LOG_SENT_LINES:]),
         }
 
@@ -158,6 +255,7 @@ def _state_save():
             data = dict(STATE)
         data["lines"] = data["lines"][-100:]
         data["lang"] = _ui_lang
+        data["download"] = dict(_dl)
         tmp = STATE_PATH + ".tmp"
         with open(tmp, "w", encoding="utf-8") as fh:
             json.dump(data, fh, ensure_ascii=False)
@@ -231,28 +329,109 @@ def _clean(raw):
     return ANSI_RE.sub("", raw.decode("utf-8", "replace")).rstrip("\r").strip()
 
 
-def _push_real_progress(seg):
-    """Interpola o progresso real (rsync progress2 ou N/M do pacman) no slice
-    da etapa de cópia e emite um evento de progresso para o anel."""
+def _plan_ensure(key, pct):
+    """Garante que a etapa exista no plano, mantendo a ordem por porcentagem.
+
+    Rede de segurança para um install.sh antigo (que não manda NLSTEPS) ou que
+    anuncie uma etapa nova: ela entra na posição certa em vez de sumir do
+    painel — assim as etapas seguem sempre a ordem em que o script as executa.
+    """
+    for s in STATE["steps"]:
+        if s["key"] == key:
+            return False
+    steps = STATE["steps"]
+    pos = len(steps)
+    for i, s in enumerate(steps):
+        if pct < s["pct"]:
+            pos = i
+            break
+    steps.insert(pos, {"pct": int(pct), "key": key})
+    return True
+
+
+def _set_step(key, pct, plan_changed=False):
+    """Fixa a etapa atual e avisa os clientes (progresso + plano, se mudou)."""
+    key = key.strip()
     with _state_lock:
-        if not _copying["on"]:
+        plan_changed = _plan_ensure(key, pct) or plan_changed
+        STATE["step"] = key
+        STATE["label"] = key
+        STATE["pct"] = max(0, min(100, int(pct)))
+        _copying["on"] = key in COPY_STEPS
+        payload = {"pct": STATE["pct"], "label": _tr(key)}
+    BROADCAST.push("progress", payload)
+    if plan_changed:
+        _push_state()
+
+
+def _copy_range():
+    """Faixa de porcentagem da etapa de cópia atual (None se não for cópia).
+
+    O fim da faixa é a porcentagem da PRÓXIMA etapa do plano: o progresso real
+    do rsync/pacman nunca invade a etapa seguinte.
+    """
+    with _state_lock:
+        steps = STATE["steps"]
+        for i, s in enumerate(steps):
+            if s["key"] != STATE["step"]:
+                continue
+            if STATE["step"] not in COPY_STEPS:
+                return None
+            end = steps[i + 1]["pct"] if i + 1 < len(steps) else 100
+            return s["pct"], max(s["pct"] + 1, end)
+    return None
+
+
+def _push_real_progress(seg):
+    """Interpola o progresso real (rsync progress2 ou N/M do pacman) na etapa
+    de cópia e emite um evento de progresso para o anel."""
+    rng = _copy_range()
+    if rng is None:
+        with _state_lock:
+            # Sem plano (install.sh antigo): usa a faixa padrão.
+            rng = COPY_SLICE if _copying["on"] else None
+    if rng is None:
+        return
+    base, end = rng
+    m = re.search(r"(\d+)%\s+.*to-chk=", seg)
+    if m:
+        frac = min(float(m.group(1)), 100.0) / 100.0
+    else:
+        m = re.search(r"\(\s*(\d+)\s*/\s*(\d+)\s*\)\s*\d+%", seg)
+        if not m:
             return
-        base, end = COPY_SLICE
-        m = re.search(r"(\d+)%\s+.*to-chk=", seg)
-        if m:
-            frac = min(float(m.group(1)), 100.0) / 100.0
-        else:
-            m = re.search(r"\(\s*(\d+)\s*/\s*(\d+)\s*\)\s*\d+%", seg)
-            if not m:
-                return
-            done, total = float(m.group(1)), float(m.group(2))
-            if total <= 0:
-                return
-            frac = min(done / total, 1.0)
-        pct = int(base + (end - base) * frac)
-        label = _copying["label"]
+        done, total = float(m.group(1)), float(m.group(2))
+        if total <= 0:
+            return
+        frac = min(done / total, 1.0)
+    pct = min(int(base + (end - base) * frac), end - 1)
+    with _state_lock:
+        label = _tr(STATE["label"])
         STATE["pct"] = pct
     BROADCAST.push("progress", {"pct": pct, "label": label})
+
+
+def _on_plan(line):
+    """NLSTEPS|<pct>:<chave>,…: plano completo das etapas, na ordem real.
+
+    É o install.sh quem define o plano (e ele é diferente entre offline e
+    online); o painel só desenha o que chega aqui.
+    """
+    steps = []
+    for item in line.split("|", 1)[1].split(","):
+        pct_s, sep, key = item.strip().partition(":")
+        if not sep or not key:
+            continue
+        try:
+            pct = int(float(pct_s))
+        except ValueError:
+            continue
+        steps.append({"pct": max(0, min(100, pct)), "key": key.strip()})
+    if not steps:
+        return
+    with _state_lock:
+        STATE["steps"] = steps
+    _push_state()
 
 
 def _on_progress(line):
@@ -261,14 +440,29 @@ def _on_progress(line):
         pct = int(float(p.strip()))
     except ValueError:
         pct = 0
-    key = key.strip()
+    _set_step(key, pct)
+
+
+def _on_step(line):
+    """NLSTEP|<chave>: etapa anunciada de dentro do chroot; o pct vem do plano."""
+    key = line.split("|", 1)[1].strip()
     with _state_lock:
-        if key.startswith("stage.copy.offline") or key.startswith("stage.copy.online"):
-            _copying["on"] = True
-        elif key.startswith("stage.copy.") or key == "stage.pac.done":
-            _copying["on"] = False
-        STATE["pct"] = pct
+        pct = int(STATE["pct"])
+        for s in STATE["steps"]:
+            if s["key"] == key:
+                pct = s["pct"]
+                break
+    _set_step(key, pct)
+
+
+def _on_note(line):
+    """NLNOTE|<chave>: atividade temporária — muda o rótulo, não a etapa."""
+    key = line.split("|", 1)[1].strip()
+    with _state_lock:
         STATE["label"] = key
+        if key.startswith("stage.copy.") or key == "stage.pac.done":
+            _copying["on"] = False
+        pct = int(STATE["pct"])
     BROADCAST.push("progress", {"pct": pct, "label": _tr(key)})
 
 
@@ -309,8 +503,14 @@ def _handle_line(raw, pending):
     line = _clean(raw)
     if not line:
         return
-    if line.startswith("NLPROGRESS|"):
+    if line.startswith("NLSTEPS|"):
+        _on_plan(line)
+    elif line.startswith("NLPROGRESS|"):
         _on_progress(line)
+    elif line.startswith("NLSTEP|"):
+        _on_step(line)
+    elif line.startswith("NLNOTE|"):
+        _on_note(line)
     elif line.startswith("NLRESULT|"):
         _on_result(line)
     else:
@@ -357,7 +557,10 @@ def follow_log(path=None):
                 _handle_line(raw, pending)
             # "Linha viva": progresso com \r do rsync/pacman.
             if b"\r" in buf and now - last_tail >= TAIL_INTERVAL:
-                seg = buf.rsplit(b"\r", 1)[-1].decode("utf-8", "replace").strip()
+                # Alguns programas escrevem o \r no FIM da linha (outros no
+                # começo): o rstrip evita que a linha viva "suma" só porque o
+                # buffer terminou exatamente no \r.
+                seg = buf.rstrip(b"\r").rsplit(b"\r", 1)[-1].decode("utf-8", "replace").strip()
                 if seg:
                     clean_seg = ANSI_RE.sub("", seg)
                     BROADCAST.push("tail", {"line": clean_seg})
@@ -373,7 +576,7 @@ def follow_log(path=None):
             if not chunk:
                 with _state_lock:
                     finished = STATE["done"] and not STATE["running"]
-                if finished:
+                if finished or _log_eof.is_set():
                     # Última linha parcial (install.sh morto sem \n final).
                     if buf.strip():
                         _handle_line(buf.rstrip(b"\r\n"), pending)
@@ -396,9 +599,18 @@ def adopt_running_install():
         return
     global _ui_lang
     with _state_lock:
-        for key in ("pct", "label", "done", "code", "error", "started", "finished", "log"):
+        for key in ("pct", "label", "step", "mode", "done", "code", "error",
+                    "started", "finished", "log"):
             if data.get(key) is not None:
                 STATE[key] = data[key]
+        steps = data.get("steps")
+        if isinstance(steps, list):
+            STATE["steps"] = [s for s in steps
+                              if isinstance(s, dict) and "key" in s and "pct" in s]
+        # A linha de base do download vem junto: sem ela a contagem de MB
+        # reiniciaria do zero quando o servidor volta no meio da instalação.
+        if isinstance(data.get("download"), dict):
+            _dl.update(data["download"])
         # As linhas do checkpoint NÃO são recarregadas: o laço que segue o log
         # abaixo reproduz o arquivo desde o começo, e as duas cópias apareceriam
         # duplicadas no painel.
@@ -429,6 +641,10 @@ def adopt_running_install():
         return
     threading.Thread(target=follow_log, args=(log,), daemon=True).start()
     threading.Thread(target=_watch_pid, args=(pid,), daemon=True).start()
+    with _state_lock:
+        online = STATE["mode"] == "online"
+    if online:
+        threading.Thread(target=follow_download, daemon=True).start()
 
 
 def _watch_pid(pid, poll=1.0):
@@ -635,16 +851,18 @@ def get_disks():
     return disks
 
 
-def _begin_run():
+def _begin_run(mode="offline"):
     """Prepara estado e arquivo de log para uma nova instalação."""
     with _state_lock:
         STATE.update(
-            running=True, pid=None, pct=0, label="stage.start", lines=[],
+            running=True, pid=None, pct=0, label="stage.start", step="",
+            steps=[], mode=mode, lines=[],
             done=False, code=None, error=None, started=time.time(), finished=0.0,
             log=LOG_PATH,
         )
         _copying["on"] = False
-        _copying["label"] = ""
+    _log_eof.clear()
+    _reset_download()
     try:
         # Log da execução anterior fica em .1 (o install.sh consulta
         # /tmp/nlinux-install.log para gravar o marcador de erro no disco).
@@ -664,7 +882,12 @@ def run_install(config):
         nllang = DEFAULT_LANG
     _ui_lang = nllang
 
-    _begin_run()
+    # O modo define o plano de etapas que o install.sh vai mandar e se o
+    # monitor de download aparece no painel (só faz sentido baixando pacotes).
+    offline = str(config.get("OFFLINE", "1")).strip().lower() not in ("0", "false", "no", "")
+    mode = "offline" if offline else "online"
+
+    _begin_run(mode)
     BROADCAST.push("progress", {"pct": 2, "label": _tr("stage.start")})
     env = dict(os.environ)
     for k, v in config.items():
@@ -693,8 +916,15 @@ def run_install(config):
         with _state_lock:
             STATE["pid"] = proc.pid
         _state_save()
-        threading.Thread(target=follow_log, args=(LOG_PATH,), daemon=True).start()
+        log_thread = threading.Thread(target=follow_log, args=(LOG_PATH,), daemon=True)
+        log_thread.start()
+        if mode == "online":
+            threading.Thread(target=follow_download, daemon=True).start()
         code = proc.wait()
+        # Espera o log ser lido até o fim antes de fechar o run: o `done` tem de
+        # ser o ÚLTIMO evento, senão uma instalação rápida perde o trecho final.
+        _log_eof.set()
+        log_thread.join(timeout=DRAIN_TIMEOUT)
     except Exception as exc:  # noqa: BLE001
         _finish(1, str(exc))
         return

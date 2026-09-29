@@ -680,31 +680,41 @@ steps.push(
 );
 
 /* ---------- instalação ---------- */
-const STAGES = [
-  "stage.lang_key",
-  "stage.mirror",
-  "stage.disk",
-  "stage.fs",
-  "stage.copy",
-  "stage.chroot",
-  "stage.boot",
-  "stage.final",
-];
-const STAGE_THRESH = [8, 12, 20, 30, 90, 95, 99, 100];
 const RING_CIRC = 2 * Math.PI * 88;
+
+/* Plano de etapas usado só como reserva: o install.sh manda o plano real
+   (NLSTEPS) e ele é diferente entre os modos offline e online. A lista abaixo
+   existe para o painel não ficar vazio se o log ainda não trouxer o plano. */
+const FALLBACK_STEPS = {
+  offline: [
+    [8, "stage.lang_key"], [12, "stage.mirror"], [20, "stage.disk"], [30, "stage.fs"],
+    [35, "stage.copy.offline"], [62, "stage.chroot.system"], [76, "stage.chroot.desktop"],
+    [96, "stage.boot"], [100, "stage.final"],
+  ],
+  online: [
+    [8, "stage.lang_key"], [12, "stage.mirror"], [20, "stage.disk"], [30, "stage.fs"],
+    [35, "stage.pac.download"], [62, "stage.chroot.system"], [70, "stage.chroot.aur"],
+    [88, "stage.chroot.desktop"], [96, "stage.boot"], [100, "stage.final"],
+  ],
+};
 
 let curPct = 0;
 let tweenRaf = null;
 
 /* Cópia local do estado da execução mostrada na tela. Quem manda é o servidor:
    o SSE atualiza `run` e, a cada (re)conexão, o evento `state` devolve o
-   quadro completo (etapa, %, últimas linhas). */
-const run = { pct: 0, lines: [], label: "", done: false, code: null };
+   quadro completo (etapas, %, últimas linhas, contadores de download). */
+const run = {
+  pct: 0, lines: [], label: "", done: false, code: null,
+  steps: [], step: "", stepSig: "", mode: "", started: 0, finished: 0,
+  download: { bytes: 0, rate: 0, files: 0 },
+};
 let src = null;
 let watchdog = null;
 let logRaf = null;
 let lastLogText = null;
 let installRequested = false;
+let clockTimer = null;
 
 function tweenPct(targetPct) {
   if (tweenRaf) cancelAnimationFrame(tweenRaf);
@@ -738,11 +748,35 @@ function enterDone(imgUrl) {
 function buildStages() {
   const box = $("#stage-check");
   box.innerHTML = "";
-  STAGES.forEach((s) => {
+  run.steps.forEach((s) => {
     const it = document.createElement("div");
     it.className = "stage-item";
-    it.innerHTML = `<span class="dot"></span><span>${t(s)}</span>`;
+    it.dataset.pct = String(s.pct);
+    const label = document.createElement("span");
+    label.textContent = s.label;
+    it.innerHTML = '<span class="dot"></span>';
+    it.appendChild(label);
     box.appendChild(it);
+  });
+}
+
+/* Lista de etapas na ordem em que o instalador realmente executa (vem do
+   install.sh, via NLSTEPS). Etapa atual = a última cuja porcentagem já foi
+   alcançada: o progresso real da cópia (rsync/pacman) fica entre a etapa de
+   cópia e a seguinte, então nunca invade a etapa seguinte. */
+function renderSteps() {
+  const box = $("#stage-check");
+  if (!box.children.length && run.steps.length) buildStages();
+  const items = box.querySelectorAll(".stage-item");
+  if (!items.length) return;
+  let current = -1;
+  items.forEach((it, i) => {
+    if (Number(it.dataset.pct) <= run.pct) current = i;
+  });
+  const finished = run.pct >= 100;
+  items.forEach((it, i) => {
+    it.classList.toggle("done", i < current || (finished && i <= current));
+    it.classList.toggle("current", !finished && i === current);
   });
 }
 
@@ -772,15 +806,142 @@ function setLabel(text) {
   $("#stage-label").textContent = text;
 }
 
+/* ---------- relógio digital ---------- */
+/* Seis dígitos (H:MM:SS) montados uma vez; cada dígito é uma fita 0-9 que
+   recebe um translateY quando o número muda — é isso que dá a animação. */
+const CLOCK_DIGITS = 6;
+/* Passo da fita em em: tem de ser o mesmo valor da altura/line-height de
+   .digit > i > span no style.css (1.2em), senão os dígitos se desalinham. */
+const DIGIT_STEP = 1.2;
+const clockSlots = [];
+
+function buildClock() {
+  const box = $("#clock-digits");
+  box.innerHTML = "";
+  clockSlots.length = 0;
+  for (let i = 0; i < CLOCK_DIGITS; i++) {
+    // H:MM:SS — separadores antes do 3º e do 5º dígito.
+    if (i === 2 || i === 4) {
+      const sep = document.createElement("span");
+      sep.className = "sep";
+      sep.textContent = ":";
+      box.appendChild(sep);
+    }
+    const slot = document.createElement("span");
+    slot.className = "digit";
+    const strip = document.createElement("i");
+    for (let n = 0; n < 10; n++) {
+      const d = document.createElement("span");
+      d.textContent = String(n);
+      strip.appendChild(d);
+    }
+    slot.appendChild(strip);
+    box.appendChild(slot);
+    // Fita já posicionada no zero: o primeiro paint não "pula" e todo dígito
+    // tem um valor explícito (importa para quem lê o DOM).
+    strip.dataset.v = "0";
+    strip.style.transform = "translateY(0em)";
+    clockSlots.push(strip);
+  }
+}
+
+function setDigit(i, value) {
+  const strip = clockSlots[i];
+  if (!strip || strip.dataset.v === String(value)) return;
+  strip.dataset.v = String(value);
+  strip.style.transform = "translateY(" + (-value * DIGIT_STEP).toFixed(2) + "em)";
+}
+
+/* Segundos decorridos: usa o `started` do servidor (assim o relógio não volta
+   a zero se a página recarregar no meio da instalação) e, entre dois quadros
+   do servidor, o relógio local para o contador não engasgar. */
+function elapsedSeconds() {
+  if (!run.started) return 0;
+  const end = run.finished || (Date.now() / 1000);
+  return Math.max(0, Math.floor(end - run.started));
+}
+
+function paintClock() {
+  const total = elapsedSeconds();
+  const h = Math.min(99, Math.floor(total / 3600));
+  const m = Math.floor((total % 3600) / 60);
+  const s = total % 60;
+  const vals = [
+    Math.floor(h / 10), h % 10,
+    Math.floor(m / 10), m % 10,
+    Math.floor(s / 10), s % 10,
+  ];
+  // forEach passa (valor, índice): a ordem dos argumentos de setDigit é o
+  // inverso, então o índice vem explicitamente.
+  vals.forEach((v, i) => setDigit(i, v));
+}
+
+/* "1 h 23 min 41 s" / "23 min 41 s", com as unidades traduzidas. */
+function formatDuration(sec) {
+  sec = Math.max(0, Math.floor(sec || 0));
+  const h = Math.floor(sec / 3600);
+  const m = Math.floor((sec % 3600) / 60);
+  const s = sec % 60;
+  const pad = (n) => String(n).padStart(2, "0");
+  const min = `${m} ${t("web.time.min")}`;
+  const seg = `${pad(s)}${t("web.time.sec")}`;
+  if (h > 0) return `${h} ${t("web.time.hour")} ${min} ${seg}`;
+  return `${min} ${seg}`;
+}
+
+function startClock() {
+  buildClock();
+  paintClock();
+  if (clockTimer) clearInterval(clockTimer);
+  clockTimer = setInterval(paintClock, 1000);
+}
+
+function stopClock() {
+  if (clockTimer) clearInterval(clockTimer);
+  clockTimer = null;
+}
+
+/* ---------- monitor de download (modo online) ---------- */
+function fmtNum(n, digits) {
+  try {
+    return Number(n).toLocaleString(UI_LANG, {
+      minimumFractionDigits: digits,
+      maximumFractionDigits: digits,
+    });
+  } catch (e) {
+    return Number(n).toFixed(digits);
+  }
+}
+
+function showDownload(on) {
+  const el = $("#dl");
+  if (el) el.hidden = !on;
+}
+
+function paintDownload() {
+  const d = run.download || {};
+  const mb = (d.bytes || 0) / MIB;
+  $("#dl-total").textContent = `${fmtNum(mb, mb < 10 ? 1 : 0)} MB`;
+  $("#dl-rate").textContent = d.rate > 0
+    ? `${fmtNum(d.rate / MIB, 1)} MB/s ${t("web.dl.rate")}`
+    : "";
+  $("#dl-files").textContent = d.files > 0
+    ? `${d.files} ${t("web.dl.files")}`
+    : "";
+}
+
+function applyDownload(d) {
+  if (!d) return;
+  run.download = { bytes: d.bytes || 0, rate: d.rate || 0, files: d.files || 0 };
+  showDownload(run.mode === "online" || run.mode === "");
+  paintDownload();
+}
+
 function paint() {
   $("#ring-fg").style.transition = "stroke-dashoffset .3s cubic-bezier(.4, 0, .2, 1)";
   tweenPct(run.pct);
   if (run.label) setLabel(run.label);
-  document.querySelectorAll(".stage-item").forEach((it, i) => {
-    const th = STAGE_THRESH[i];
-    it.classList.toggle("done", run.pct >= th);
-    it.classList.toggle("current", i < STAGES.length - 1 && run.pct >= (i === 0 ? 2 : STAGE_THRESH[i - 1]) && run.pct < th);
-  });
+  renderSteps();
   scheduleLog();
 }
 
@@ -789,7 +950,11 @@ function enterInstalling() {
     show("installing");
     document.querySelector(".install-title").textContent = t("tui.installing");
     document.querySelector(".logs summary").textContent = t("web.logs");
+    $("#clock-title").textContent = t("web.time.title");
+    $("#clock").setAttribute("aria-label", t("web.time.title"));
+    $("#dl-title").textContent = t("web.dl.title");
     buildStages();
+    startClock();
   }
   paint();
 }
@@ -805,6 +970,17 @@ function showResult(code) {
   }
   run.done = true;
   run.code = code;
+  stopClock();
+  const total = $("#done-time");
+  if (total) {
+    if (run.started) {
+      const secs = elapsedSeconds();
+      total.innerHTML = `${t("web.time.total")}: <b>${formatDuration(secs)}</b>`;
+      total.hidden = false;
+    } else {
+      total.hidden = true;
+    }
+  }
   if (code === 0) {
     $("#done-title").textContent = t("tui.done");
     $("#done-msg").textContent = t("web.done.okmsg");
@@ -829,6 +1005,33 @@ function applyState(st) {
     run.lines = st.lines.slice(-300);
     lastLogText = null;
   }
+  // Plano de etapas: o install.sh manda a lista na ordem real (e diferente
+  // entre offline e online). Só a troca de lista redesenha o <div>.
+  if (Array.isArray(st.steps) && st.steps.length) {
+    const sig = st.steps.map((s) => `${s.pct}:${s.label}`).join("|");
+    if (sig !== run.stepSig) {
+      run.stepSig = sig;
+      run.steps = st.steps;
+      // Só redesenha aqui se já havia uma lista na tela; quando a caixa está
+      // vazia quem monta é renderSteps(), chamado logo abaixo por paint().
+      const box = $("#stage-check");
+      if (box && box.children.length) buildStages();
+    }
+  } else if (!run.steps.length) {
+    const online = st.mode === "online" || (st.mode !== "offline" && String(state.OFFLINE) === "0");
+    run.steps = FALLBACK_STEPS[online ? "online" : "offline"].map(([pct, key]) => ({ pct, label: t(key) }));
+  }
+  if (st.mode) {
+    run.mode = st.mode;
+    showDownload(st.mode === "online");
+  }
+  if (typeof st.started === "number" && st.started && st.started !== run.started) {
+    run.started = st.started;
+    // Sem isto o relógio ficaria em 00:00:00 até o próximo tique.
+    if (clockSlots.length) paintClock();
+  }
+  if (typeof st.finished === "number" && st.finished) run.finished = st.finished;
+  if (st.download) applyDownload(st.download);
   if (typeof st.pct === "number") run.pct = Math.max(run.pct, st.pct);
   if (st.label) run.label = st.label;
   if (st.running) enterInstalling();
@@ -869,6 +1072,7 @@ function openStream() {
     const d = JSON.parse(ev.data);
     addLines(Array.isArray(d.lines) ? d.lines : [d.line]);
   });
+  src.addEventListener("download", (ev) => applyDownload(JSON.parse(ev.data)));
   src.addEventListener("done", (ev) => showResult(JSON.parse(ev.data).code));
   src.addEventListener("error", onStreamDropped);
 }
@@ -904,6 +1108,14 @@ async function startInstall() {
   run.label = "";
   run.done = false;
   run.code = null;
+  run.steps = [];
+  run.stepSig = "";
+  run.started = 0;
+  run.finished = 0;
+  run.download = { bytes: 0, rate: 0, files: 0 };
+  // O modo vem do assistente: o monitor de download só existe no online.
+  run.mode = String(state.OFFLINE) === "1" ? "offline" : "online";
+  showDownload(run.mode === "online");
   lastLogText = null;
   enterInstalling();
   curPct = 0;
@@ -916,6 +1128,7 @@ async function startInstall() {
   $("#done").classList.remove("err");
   $("#done-img").src = "/static/logo.png";
   $("#btn-reboot").style.display = "none";
+  $("#done-time").hidden = true;
   openStream();
   startWatchdog();
 
@@ -1087,15 +1300,11 @@ $("#btn-reboot").addEventListener("click", async () => {
   }
   if (st && (st.running || st.done)) {
     installRequested = true;
-    run.pct = st.pct || 0;
-    run.label = st.label || "";
-    run.lines = Array.isArray(st.lines) ? st.lines.slice(-300) : [];
-    lastLogText = null;
-    curPct = run.pct;
     openStream();
     startWatchdog();
-    if (st.running) enterInstalling();
-    else showResult(st.code === 0 ? 0 : st.code || 1);
+    // O próprio applyState cuida do resto (etapas, modo, relógio, download) e
+    // abre o painel ou a tela de resultado.
+    applyState(st);
     return;
   }
   setTimeout(() => show("wizard"), 3600);
