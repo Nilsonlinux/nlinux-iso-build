@@ -486,21 +486,14 @@ body {
 }
 .dl-title { color: var(--text); font-weight: 600; }
 .dl[hidden] { display: none; }
-.dl-values { display: inline-flex; gap: 10px; font-family: ui-monospace, "Fira Code", monospace; }
-.dl-total { color: var(--accent); font-weight: 700; }
+/* Cada medida é um par rótulo/valor: o rótulo é curto e apagado, o valor em
+   monoespaçada para os números não dançarem enquanto o download anda. */
+.dl-values { display: inline-flex; gap: 16px; flex-wrap: wrap; font-family: ui-monospace, "Fira Code", monospace; }
+.dl-cell { display: inline-flex; align-items: baseline; gap: 6px; }
+.dl-key { color: var(--muted); font-size: .74rem; font-family: inherit; }
+.dl-val { color: var(--text); font-weight: 700; white-space: nowrap; }
 .done-time { margin-top: 10px; color: var(--muted); font-family: ui-monospace, "Fira Code", monospace; }
 .done-time b { color: var(--text); }
-
-.live-tail {
-  margin-top: 12px;
-  min-height: 1.2em;
-  color: var(--accent);
-  font-family: ui-monospace, "Fira Code", monospace;
-  font-size: .86rem;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  background: rgba(23, 162, 211, .08);
-  border-radius: 8px; padding: 8px 12px;
-}
 
 .logs { margin-top: 14px; text-align: left; }
 .logs summary { cursor: pointer; color: var(--muted); font-size: .88rem; }

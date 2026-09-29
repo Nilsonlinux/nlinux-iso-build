@@ -277,9 +277,8 @@ código de saída) fica no servidor, com checkpoint em
 |---|---|---|
 | `state` | `{pct, label, act, step, idx, steps, mode, started, finished, download, lines, running, done, code, error, lang}` | Ressincroniza tudo a cada (re)conexão |
 | `progress` | `{pct, label, act, step, idx}` | Anel + linha de etapa/atividade |
-| `tail` | `{line}` | Última linha viva (progresso com `\r` do rsync/pacman) |
 | `log` | `{lines: [...]}` | Linhas do log, em lote (não um evento por linha) |
-| `download` | `{bytes, rate, files}` | MB baixados, velocidade e nº de pacotes (modo online) |
+| `download` | `{bytes, total, rate, files}` | Baixado, total, velocidade e nº de pacotes (modo online) |
 | `done` | `{code}` | Fim da execução (o `state` final vem logo em seguida) |
 | `error` | `{message}` | Falha real do servidor/execução |
 
@@ -287,6 +286,11 @@ Trocar de etapa, nota e atividade **não** têm evento próprio: as três coisas
 no `progress` (e no `state`), que é o único evento que mexe na tela do anel —
 assim uma troca de etapa nunca chega "solta" e o rótulo nunca pisca para um
 estado intermediário.
+
+A linha incompleta do log (o `\r` do `rsync`/`pacman`) **não** é transmitida:
+quem consome esse `\r` é o servidor, para extrair o progresso real da etapa
+abaixo. A linha completa continua chegando pelo evento `log` quando o programa
+termina a linha.
 
 | Endpoint | Uso |
 |---|---|
@@ -379,6 +383,16 @@ instalador mandar o plano e a primeira etapa — o anel fica parado em 0%: sem
 plano não há como estimar quanto da instalação já foi, e estimar errado era o
 que fazia o anel aparecer em 99% logo no começo.
 
+**No fim, o anel aparece em 100% antes da tela de sucesso.** As três últimas
+etapas (desktop/boas-vindas, bootloader e finalização) são rápidas e as suas
+linhas chegam no mesmo instante em que o `install.sh` escreve `NLRESULT|0` —
+antes, o painel via só o `done` e trocava direto para a tela de sucesso com o
+anel ainda no meio do caminho (73% → sucesso, pulando as três etapas). Agora o
+servidor publica um `progress` com 100% **antes** do `done`, e o navegador segura
+esse quadro por `DONE_HOLD_MS` (1,6 s) antes de trocar de tela. É só
+apresentação: nada espera mais do que a instalação, e **no erro a troca continua
+sendo na hora**.
+
 #### A linha abaixo do anel: etapa · atividade
 
 A linha mostra a etapa (ou a nota dela) **e o que está acontecendo agora**,
@@ -412,14 +426,23 @@ anel, que anda dentro da etapa, passaria à frente da lista.
   0-9 que rola com `translateY` quando o número muda. O tempo vem do
   `started` do servidor, então **recarregar a página no meio não volta a
   zero**; o total (`X min Y s`) aparece na tela de fim, nos dois modos.
-- **Monitor de download** (só no modo online): MB baixados, velocidade e nº de
-  pacotes. A contagem é feita **medindo o cache do pacman**
-  (`/var/cache/pacman/pkg` do alvo e o do chroot), com uma linha de base
-  tirada no início da execução e guardada no checkpoint — assim uma execução
-  reanexada continua contando do ponto em que parou, e o total não zera.
-  Não depende do idioma do pacman nem do formato das linhas dele.
+- **Monitor de download** (só no modo online): quatro medidas em MB —
+  `Tamanho total` (o que o pacman anunciou antes de começar), `Baixando`,
+  `Média` (MB/s) e o nº de pacotes. A contagem é feita **medindo o cache do
+  pacman** (`/var/cache/pacman/pkg` do alvo e o do chroot), com uma linha de
+  base tirada no início da execução e guardada no checkpoint — assim uma
+  execução reanexada continua contando do ponto em que parou, e o total não
+  zera. Não depende do idioma do pacman nem do formato das linhas dele.
   Os caminhos podem ser sobrescritos com `NLINUX_CACHE_DIRS` (separados por
   `:`).
+  O **total é um número, não uma soma**: fica o primeiro
+  `…: 1658,48 MiB` da etapa (o do download vem antes do tamanho instalado, e as
+  linhas por pacote trazem o tamanho no meio e a velocidade depois — a forma da
+  linha é o que separa um do outro, sem casar palavra traduzida). Somar as linhas
+  daria um total que cresceria junto com o download e a fração real da etapa
+  ficaria sempre em 100%, com o anel pulando para o fim dela. A medida do total
+  só aparece durante a etapa que está baixando; fora dela some, em vez de
+  mostrar um número velho, e a média some quando decai para zero.
 
 ### Testes do instalador web
 
@@ -434,10 +457,10 @@ web/tests/run-tests.sh --install    # baixa o node_modules antes (precisa de red
 
 | Suíte | Alvo | O que confere |
 |---|---|---|
-| `server_test.py` | `web/server.py` | anel (ritmo do plano, progresso real, cap de 99%), atividade `NLACT` traduzida nos 7 idiomas, resiliência/checkpoint, e a coerência entre o plano do `install.sh`, o reserva do `app.js`, a tabela de pesos acima e as traduções |
+| `server_test.py` | `web/server.py` | anel (ritmo do plano, progresso real, cap de 99%, `progress` de 100% antes do `done`), total do download como número (e não soma), atividade `NLACT` traduzida nos 7 idiomas, resiliência/checkpoint, e a coerência entre o plano do `install.sh`, o reserva do `app.js`, a tabela de pesos acima e as traduções |
 | `e2e_test.py` | log → servidor → HTTP | o `event: progress` **na fio** e o `state` de reconexão, com o servidor de verdade numa porta livre |
-| `client_test.js` | `web/static/app.js` | o que o usuário vê: a linha `etapa · atividade`, a lista destacada pelo índice, o plano de reserva, queda de stream, log e relógio (jsdom) |
-| `css_test.js` | `web/static/style.css` | sintaxe do CSS e as regras de que o anel e o relógio dependem (css-tree) |
+| `client_test.js` | `web/static/app.js` | o que o usuário vê: a linha `etapa · atividade`, a lista destacada pelo índice, o plano de reserva, queda de stream, o monitor do download (total/baixando/média), o anel em 100% segurado antes da tela de sucesso, log e relógio (jsdom) |
+| `css_test.js` | `web/static/style.css` | sintaxe do CSS, as regras de que o anel e o relógio dependem, a linha do download e a ausência da caixinha azul sobre o log (css-tree) |
 
 As duas Python usam só a biblioteca padrão, não pedem root e não encostam nos
 arquivos de `/tmp/nlinux-*` (criam uma pasta temporária). As duas de

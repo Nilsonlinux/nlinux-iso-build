@@ -73,6 +73,13 @@ Cada suíte imprime `ok`/`FAIL` por checagem e sai com status 1 se alguma falhar
   (nos dois formatos de número, com e sem separador de milhar) alimenta a
   fração real; a fração não regride a cada tique e expira depois de `REAL_TTL`;
   o `N/M` do pacman, o `%`/`xfr#` do rsync e o `NN%|…| n/m` do meson também.
+  O total é **um número, não uma soma**: o `Total Installed Size` (que vem logo
+  depois) e as linhas por pacote não mexem nele, e ele vai no evento `download`
+  para o painel mostrar "Tamanho total" (zerado enquanto o pacman não falou).
+- **anel: o fim** — com o plano novo, as três últimas etapas viram três eventos
+  (`85`/`96`/`99`); no sucesso sai um `progress` com 100% **antes** do `done`
+  (é esse quadro que o painel segura antes da tela de sucesso), e na falha ele
+  não sai — o painel mostra o erro onde parou.
 - **atividade** — `NLACT` traduzida nos 7 idiomas com o item no `%s`; ela não
   mexe na etapa nem na %, a repetida não polui o stream, a linha comum do log
   vira log e não atividade, o item longo é cortado, e a atividade some quando a
@@ -102,8 +109,14 @@ Cada suíte imprime `ok`/`FAIL` por checagem e sai com status 1 se alguma falhar
   app, online e offline, sem destacar duas etapas;
 - queda e volta do stream: aparece "Reconectando" e o progresso que chega pelo
   watchdog não atropela esse rótulo;
-- log e cauda ao vivo, e o reset completo ao iniciar outra instalação (rótulo,
-  atividade, índice, anel, lista e log antigo).
+- o monitor do download mostra total/baixando/média/pacotes, esconde a medida
+  do total quando o pacman não anunciou e esconde a média que deceu a zero;
+- a caixinha azul sobre o log não existe mais: nem elemento no HTML, nem
+  ouvinte para o evento `tail`;
+- no fim, as três últimas etapas passam pela tela e o anel fica em 100%
+  **antes** da tela de sucesso (que só vem depois), com o reset completo ao
+  iniciar outra instalação (rótulo, atividade, índice, anel, lista e log
+  antigo).
 
 ## Ao mexer no painel
 

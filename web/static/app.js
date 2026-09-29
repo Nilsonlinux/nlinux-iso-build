@@ -709,7 +709,7 @@ let tweenRaf = null;
 const run = {
   pct: 0, lines: [], label: "", act: "", done: false, code: null,
   steps: [], step: "", stepSig: "", idx: -1, mode: "", started: 0, finished: 0,
-  download: { bytes: 0, rate: 0, files: 0 },
+  download: { bytes: 0, rate: 0, files: 0, total: 0 },
 };
 let src = null;
 let watchdog = null;
@@ -931,13 +931,27 @@ function showDownload(on) {
   if (el) el.hidden = !on;
 }
 
+/* Linha do download (só online): tamanho total anunciado pelo pacman, quanto
+   já foi baixado e a velocidade média. Todas as medidas em MB, para dá para
+   comparar de relance.
+
+   O total é do pacman (é ele quem sabe quanto vem antes de começar), e vale só
+   para a etapa que está baixando: fora dela a medida some em vez de mostrar um
+   número velho. A média também some quando decai para zero — um "0,0 MB/s" na
+   tela depois da etapa só polui. */
+function fmtMB(bytes) {
+  const mb = (bytes || 0) / MIB;
+  return `${fmtNum(mb, mb < 10 ? 1 : 0)} MB`;
+}
+
 function paintDownload() {
   const d = run.download || {};
-  const mb = (d.bytes || 0) / MIB;
-  $("#dl-total").textContent = `${fmtNum(mb, mb < 10 ? 1 : 0)} MB`;
-  $("#dl-rate").textContent = d.rate > 0
-    ? `${fmtNum(d.rate / MIB, 1)} MB/s ${t("web.dl.rate")}`
-    : "";
+  const total = $("#dl-total-cell");
+  if (total) total.hidden = !(d.total > 0);
+  $("#dl-total").textContent = d.total > 0 ? fmtMB(d.total) : "—";
+  $("#dl-got").textContent = fmtMB(d.bytes);
+  const mbs = (d.rate || 0) / MIB;
+  $("#dl-rate").textContent = mbs >= 0.05 ? `${fmtNum(mbs, 1)} MB/s` : "—";
   $("#dl-files").textContent = d.files > 0
     ? `${d.files} ${t("web.dl.files")}`
     : "";
@@ -945,7 +959,12 @@ function paintDownload() {
 
 function applyDownload(d) {
   if (!d) return;
-  run.download = { bytes: d.bytes || 0, rate: d.rate || 0, files: d.files || 0 };
+  run.download = {
+    bytes: d.bytes || 0,
+    rate: d.rate || 0,
+    files: d.files || 0,
+    total: d.total || 0,
+  };
   showDownload(run.mode === "online" || run.mode === "");
   paintDownload();
 }
@@ -968,10 +987,38 @@ function enterInstalling() {
     $("#clock-title").textContent = t("web.time.title");
     $("#clock").setAttribute("aria-label", t("web.time.title"));
     $("#dl-title").textContent = t("web.dl.title");
+    $("#dl-size-label").textContent = t("web.dl.size");
+    $("#dl-got-label").textContent = t("web.dl.got");
+    $("#dl-avg-label").textContent = t("web.dl.avg");
     buildStages();
     startClock();
   }
   paint();
+}
+
+/* Tempo que o painel fica mostrando o anel em 100% antes de trocar para a tela
+   de resultado. As três últimas etapas (desktop/boas-vindas, bootloader e
+   finalização) são rápidas: o `done` chega no mesmo instante em que elas
+   aportaram no log e a tela de sucesso aparecia no lugar delas, com o anel
+   ainda no meio do caminho. Aqui é só apresentação — nada espera mais do que a
+   instalação, e no erro a troca é na hora. */
+const DONE_HOLD_MS = 1600;
+let doneTimer = null;
+
+function finishSoon(code) {
+  if (doneTimer || run.done) return;
+  if (code !== 0) {
+    showResult(code);
+    return;
+  }
+  // A instalação acabou com sucesso: o anel vai a 100% e a etapa corrente
+  // (a última do plano, "Concluído") fica na tela por um instante.
+  run.pct = 100;
+  enterInstalling();
+  doneTimer = setTimeout(() => {
+    doneTimer = null;
+    showResult(0);
+  }, DONE_HOLD_MS);
 }
 
 function showResult(code) {
@@ -1058,7 +1105,13 @@ function applyState(st) {
   if (typeof st.act === "string") run.act = st.act;
   if (typeof st.idx === "number" && st.idx >= 0) run.idx = st.idx;
   if (st.running) enterInstalling();
-  if (st.done) showResult(st.code === 0 ? 0 : st.code || 1);
+  // Só segura o 100% se o painel de instalação é que estava na tela: quem
+  // recarrega a página já terminou de ver e quer logo a tela de resultado.
+  if (st.done) {
+    const code = st.code === 0 ? 0 : st.code || 1;
+    if ($("#installing").classList.contains("active")) finishSoon(code);
+    else showResult(code);
+  }
 }
 
 async function fetchStatus() {
@@ -1095,15 +1148,12 @@ function openStream() {
     if (typeof d.idx === "number" && d.idx >= 0) run.idx = d.idx;
     enterInstalling();
   });
-  src.addEventListener("tail", (ev) => {
-    $("#live-tail").textContent = JSON.parse(ev.data).line;
-  });
   src.addEventListener("log", (ev) => {
     const d = JSON.parse(ev.data);
     addLines(Array.isArray(d.lines) ? d.lines : [d.line]);
   });
   src.addEventListener("download", (ev) => applyDownload(JSON.parse(ev.data)));
-  src.addEventListener("done", (ev) => showResult(JSON.parse(ev.data).code));
+  src.addEventListener("done", (ev) => finishSoon(JSON.parse(ev.data).code));
   src.addEventListener("error", onStreamDropped);
 }
 
@@ -1144,7 +1194,13 @@ async function startInstall() {
   run.idx = -1;
   run.started = 0;
   run.finished = 0;
-  run.download = { bytes: 0, rate: 0, files: 0 };
+  run.download = { bytes: 0, rate: 0, files: 0, total: 0 };
+  // Uma instalação nova cancela a espera da anterior (se é que ela chegou a
+  // esperar): senão a tela de sucesso do run velho entra no meio do painel.
+  if (doneTimer) {
+    clearTimeout(doneTimer);
+    doneTimer = null;
+  }
   // O modo vem do assistente: o monitor de download só existe no online.
   run.mode = String(state.OFFLINE) === "1" ? "offline" : "online";
   showDownload(run.mode === "online");

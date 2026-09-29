@@ -125,6 +125,31 @@ check("o relógio fixa a caixa de linha dos dois-pontos",
       get(relSel, "line-height") === alturaJanela,
       get(relSel, "line-height") + " vs " + alturaJanela);
 
+/* A caixinha azul que ficava sobre o log (a "cauda" com a última linha do
+   install) foi removida: a atividade de agora já está na linha da etapa, no
+   anel e no log. Nenhum resquício dela pode voltar. */
+check("a regra .live-tail não existe mais", !findRule(".live-tail"));
+check("o elemento #live-tail saiu do HTML", !/id="live-tail"/.test(html));
+check("nada mais escreve na cauda", !/live-tail/.test(js));
+
+/* Monitor do download: rótulo + valor, um par por medida, na mesma linha. */
+const cellSel = ".dl-cell";
+check("existe a regra .dl-cell", !!findRule(cellSel));
+check("cada medida é um par rótulo/valor", get(cellSel, "display") === "inline-flex",
+      get(cellSel, "display"));
+check("o par alinha pela linha de base", get(cellSel, "align-items") === "baseline",
+      get(cellSel, "align-items"));
+check("os valores ficam em monoespaçada",
+      !!get(".dl-values", "font-family") && /mono/i.test(get(".dl-values", "font-family")),
+      get(".dl-values", "font-family"));
+check("os valores não quebram de linha", get(".dl-val", "white-space") === "nowrap",
+      get(".dl-val", "white-space"));
+for (const [rot, val] of [["dl-size-label", "dl-total"], ["dl-got-label", "dl-got"],
+                          ["dl-avg-label", "dl-rate"]]) {
+  check(`a medida ${val} tem o rótulo ${rot}`,
+        new RegExp(`id="${rot}"[\\s\\S]{0,80}id="${val}"`).test(html));
+}
+
 console.log("");
 if (fails.length) { console.log("FALHAS: " + fails.length + " -> " + JSON.stringify(fails)); process.exit(1); }
 console.log("todas as checagens passaram");

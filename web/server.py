@@ -8,9 +8,8 @@ via Server-Sent Events (SSE):
 
   event: state      {pct, label, steps, mode, lines, running, done, code, error}  ressincroniza
   event: progress   {pct, label}      atualiza a barra/anel
-  event: tail       {line}            linha viva (ex.: progresso do rsync)
   event: log        {lines: [...]}    linhas de log (enviadas em lote)
-  event: download   {bytes, rate, files}   bytes baixados (modo online)
+  event: download   {bytes, total, rate, files}   download (modo online)
   event: done       {code}            fim da instalação
   event: error      {message}
 
@@ -122,8 +121,10 @@ RE_RSYNC = re.compile(
 RE_PACMAN = re.compile(r"^\s*\[\s*(\d+)\s*/\s*(\d+)\s*\]")
 # "Tamanho total download:  1658,48 MiB" / "Total Download Size: 1658.48 MiB".
 # O rótulo em volta é traduzido, o VALOR não — e é a única forma de saber, sem
-# TTY, quantos bytes o pacman vai baixar antes de começar.
-RE_SIZE = re.compile(r"([\d][\d.,]*)\s*([KMGT]i?B)\b", re.I)
+# TTY, quantos bytes o pacman vai baixar antes de começar. O que separa o
+# TOTAL das linhas por pacote (que trazem o tamanho no meio e a velocidade
+# depois) é a forma: o valor vem logo depois de ":" e fecha a linha.
+RE_SIZE = re.compile(r":\s*([\d][\d.,]*)\s*([KMGT]i?B)\s*$", re.I)
 SIZE_MULT = {"B": 1, "KB": 1000, "KIB": 1024, "MB": 1000**2, "MIB": 1024**2,
              "GB": 1000**3, "GIB": 1024**3, "TB": 1000**4, "TIB": 1024**4}
 
@@ -138,7 +139,7 @@ LOG_MAX_LINES = 400        # linhas de log mantidas para ressincronizar a tela
 LOG_SENT_LINES = 300       # linhas enviadas a cada cliente
 FOLLOW_POLL = 0.2          # intervalo de leitura do arquivo de log
 BATCH_INTERVAL = 0.2       # agrupa linhas de log em um único evento
-TAIL_INTERVAL = 0.25       # cadência do "tail" (progresso com \r)
+PROGRESS_SCAN = 0.25       # cadência da leitura da linha incompleta (\r)
 SAVE_INTERVAL = 5.0        # persiste o estado em disco
 DL_INTERVAL = 1.0          # amostragem do cache do pacman (bytes baixados)
 KEEPALIVE_S = 5.0          # heartbeat do SSE
@@ -280,11 +281,7 @@ def follow_download():
             # Média móvel: a taxa cai sozinha quando o download para.
             _dl["rate"] = inst if _dl["rate"] <= 0 else _dl["rate"] * 0.6 + inst * 0.4
             done = bool(STATE["done"]) and not STATE["running"]
-            payload = {
-                "bytes": _dl["bytes"],
-                "files": _dl["files"],
-                "rate": int(_dl["rate"]),
-            }
+            payload = _download_event()
             if _size_total["bytes"] > 0 and STATE["step"] in COPY_STEPS:
                 # Bytes baixados ÷ total que o pacman disse: a fração real
                 # da etapa, em qualquer idioma.
@@ -294,6 +291,22 @@ def follow_download():
         prev_bytes, prev_t = payload["bytes"], now
         if done:
             return
+
+
+def _download_event():
+    """Uma amostra do download para o painel do instalador.
+
+    `bytes` é o que já foi baixado desde o começo da etapa, `total` é o que o
+    pacman anunciou antes de começar (0 enquanto ele não falou), `rate` é a
+    média de bytes/s e `files` quantos pacotes já chegaram ao cache.
+    """
+    with _state_lock:
+        return {
+            "bytes": _dl["bytes"],
+            "files": _dl["files"],
+            "rate": int(_dl["rate"]),
+            "total": int(_size_total["bytes"]),
+        }
 
 
 def _act_text():
@@ -727,14 +740,24 @@ def _log_activity(line):
     if m:
         # "Tamanho total download:  1658,48 MiB" — o pacman diz quanto vai
         # baixar antes de começar. A partir daí a etapa tem um total em bytes.
+        # Fica o PRIMEIRO total da etapa (o do download vem antes do tamanho
+        # instalado): somar as linhas daria um total que cresce junto com o
+        # download, e a fração real da etapa ficaria sempre em 100%.
         size = _number(m.group(1)) * SIZE_MULT.get(m.group(2).upper(), 1)
         if size > 0:
             with _state_lock:
-                _size_total["bytes"] += size
+                if _size_total["bytes"] <= 0:
+                    _size_total["bytes"] = size
 
 
 def _finish(code, error=None):
-    """Marca a instalação como encerrada e avisa os clientes (uma única vez)."""
+    """Marca a instalação como encerrada e avisa os clientes (uma única vez).
+
+    No sucesso sai um `progress` com 100% ANTES do `done`: as três últimas
+    etapas (desktop, bootloader, finalização) são rápidas e chegam ao mesmo
+    tempo que o fim da execução. Sem esse quadro, o painel só via o `done` e
+    trocava direto para a tela de sucesso com o anel ainda no meio do caminho.
+    """
     with _state_lock:
         if STATE["done"]:
             return
@@ -748,6 +771,8 @@ def _finish(code, error=None):
     _state_save()
     if error:
         BROADCAST.push("error", {"message": error})
+    if code == 0 and not error:
+        BROADCAST.push("progress", _progress_payload(100))
     BROADCAST.push("done", {"code": code})
 
 
@@ -798,7 +823,7 @@ def follow_log(path=None):
     path = path or LOG_PATH
     pending = []
     buf = b""
-    last_tail = last_push = last_save = 0.0
+    last_partial = last_push = last_save = 0.0
     try:
         fh = open(path, "rb")
     except OSError:
@@ -815,17 +840,18 @@ def follow_log(path=None):
             while b"\n" in buf:
                 raw, buf = buf.split(b"\n", 1)
                 _handle_line(raw, pending)
-            # "Linha viva": progresso com \r do rsync/pacman.
-            if b"\r" in buf and now - last_tail >= TAIL_INTERVAL:
+            # Linha incompleta (o \r do rsync/pacman): só interessa o progresso
+            # real que sai dela — a caixinha que mostrava o texto da linha
+            # "viva" no painel foi removida, e a linha completa continua
+            # chegando pelo lote de log quando o programa termina a linha.
+            if b"\r" in buf and now - last_partial >= PROGRESS_SCAN:
                 # Alguns programas escrevem o \r no FIM da linha (outros no
-                # começo): o rstrip evita que a linha viva "suma" só porque o
+                # começo): o rstrip evita que a linha "suma" só porque o
                 # buffer terminou exatamente no \r.
                 seg = buf.rstrip(b"\r").rsplit(b"\r", 1)[-1].decode("utf-8", "replace").strip()
                 if seg:
-                    clean_seg = ANSI_RE.sub("", seg)
-                    BROADCAST.push("tail", {"line": clean_seg})
-                    _push_real_progress(clean_seg)
-                last_tail = now
+                    _push_real_progress(ANSI_RE.sub("", seg))
+                last_partial = now
             # Lote de log (evita um evento por linha durante os builds AUR).
             if pending and (now - last_push >= BATCH_INTERVAL or len(pending) >= 100):
                 _push_logs(pending)

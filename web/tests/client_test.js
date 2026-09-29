@@ -87,9 +87,10 @@ function boot(statusReply) {
   labels: () => ({
     label: doc.getElementById("stage-label").textContent,
     pct: doc.getElementById("ring-pct").textContent,
-    tail: doc.getElementById("live-tail").textContent,
     log: doc.getElementById("log-box").textContent,
     dlHidden: doc.getElementById("dl").hidden,
+    dl: ["dl-total", "dl-got", "dl-rate", "dl-files"].map((id) =>
+      doc.getElementById(id).textContent),
   }),
   items: () => Array.from(doc.querySelectorAll("#stage-check .stage-item")).map((it) => ({
     text: it.textContent,
@@ -102,6 +103,10 @@ function boot(statusReply) {
       Array.prototype.filter.call(doc.querySelectorAll("section.screen"),
         (s) => s.id === id)[0]),
   activeScreen: () => (doc.querySelector("section.screen.active") || {}).id,
+  hidden: (id) => doc.getElementById(id).hidden,
+  // O src é um 'let' do app.js (some do escopo do eval): só o epilogue
+  // consegue olhar os ouvintes que ele registrou.
+  listening: (name) => !!(src && src._h && src._h[name]),
 };`.replace(/doc\./g, "document."));
 
   const T = window.__t;
@@ -220,15 +225,40 @@ const st = (plan, extra) => Object.assign(
   eq("rótulo volta quando o stream volta", T.labels().label, "Desktop e serviços");
 
   /* ----------------------------------------------------------------- */
-  console.log("== log e cauda ao vivo ==");
-  p.emit("tail", { line: "   Compiling umbriel-git v0.1.0" });
-  eq("cauda mostra a última linha", T.labels().tail, "   Compiling umbriel-git v0.1.0");
+  console.log("== log ==");
   p.emit("log", { lines: ["a", "b"] });
   await sleep(60);
   eq("log recebe as linhas", T.labels().log, "a\nb");
   p.emit("log", { line: "c" });
   await sleep(60);
   eq("log aceita linha solta", T.labels().log, "a\nb\nc");
+
+  /* ----------------------------------------------------------------- */
+  /* A caixinha azul que ficava sobre o log (a "cauda" com a última linha) foi
+     removida: o que está acontecendo agora já está na linha da etapa e no anel. */
+  console.log("== caixinha azul sobre o log não existe mais ==");
+  check("elemento da cauda fora do HTML", p.window.document.getElementById("live-tail") === null);
+  check("nenhum ouvinte para o evento tail", T.listening("tail") === false);
+
+  /* ----------------------------------------------------------------- */
+  console.log("== monitor do download (só online) ==");
+  p.emit("download", { bytes: 300 * 1024 ** 2, rate: 0, files: 0, total: 0 });
+  eq("sem total do pacman, total fica com traço",
+     T.labels().dl, ["—", "300 MB", "—", ""]);
+  eq("a medida do total fica escondida sem total", T.hidden("dl-total-cell"), true);
+  p.emit("download", { bytes: 700 * 1024 ** 2, rate: 12.4 * 1024 ** 2, files: 214,
+                       total: 1658.48 * 1024 ** 2 });
+  // O texto das traduções não é carregado no teste (t() devolve a chave), então
+  // "pacotes" aparece como a própria chave — o que importa aqui é a formatação.
+  eq("total, baixado, média e pacotes", T.labels().dl,
+     ["1.658 MB", "700 MB", "12,4 MB/s", "214 web.dl.files"]);
+  eq("a medida do total aparece com o total do pacman",
+     T.hidden("dl-total-cell"), false);
+  eq("o monitor guarda o total", T.run.download.total, 1658.48 * 1024 ** 2);
+  // Média que decai para zero não fica na tela como "0,0 MB/s".
+  p.emit("download", { bytes: 700 * 1024 ** 2, rate: 1024, files: 214,
+                       total: 1658.48 * 1024 ** 2 });
+  eq("média parada some", T.labels().dl[2], "—");
 
   /* ----------------------------------------------------------------- */
   console.log("== relógio ==");
@@ -265,6 +295,35 @@ const st = (plan, extra) => Object.assign(
   eq("segundo startInstall é ignorado",
      q.fetchLog.filter(([u]) => u === "/api/install").length, 1);
   U.stopClock();
+
+  /* ----------------------------------------------------------------- */
+  /* Fim da instalação: as três últimas etapas são rápidas e o `done` chega
+     junto com elas. O painel precisa mostrar o anel em 100% (e as etapas do
+     fim) antes de trocar para a tela de sucesso — era aí que ele pulava da
+     AUR direto para a tela final, com o anel no meio. */
+  console.log("== fim: 100% antes da tela de sucesso ==");
+  const r = boot(st(PLAN_ONLINE, { pct: 73, label: "Baixar e compilar pacotes da AUR",
+                                   idx: 6 }));
+  const R = r.T;
+  await sleep(60);
+  eq("painel aberto no fim", R.activeScreen(), "installing");
+  for (const ev of [
+    { pct: 85, label: "Desktop e serviços", act: "", idx: 7 },
+    { pct: 96, label: "Bootloader", act: "", idx: 8 },
+    { pct: 99, label: "Finalizando", act: "", idx: 9 },
+    { pct: 100, label: "Concluído", act: "", idx: 9 },
+  ]) r.emit("progress", ev);
+  eq("as três últimas etapas passaram pela tela", R.activeScreen(), "installing");
+  eq("etapa do fim em destaque", R.items()[9].text, "Finalizando");
+  // No navegador o app já pré-carrega a imagem de sucesso; aqui basta deixar o
+  // src pronto para o enterDone() trocar de tela sem esperar o fallback.
+  r.window.document.getElementById("done-img").setAttribute("src", "/static/success.png");
+  r.emit("done", { code: 0 });
+  eq("o anel fica em 100% no painel", R.run.pct, 100);
+  eq("a tela de sucesso ainda não veio", R.activeScreen(), "installing");
+  await sleep(1900);
+  eq("a tela de sucesso vem depois", R.activeScreen(), "done");
+  eq("o resultado é sucesso", R.run.code, 0);
 
   console.log("");
   if (fails.length) {

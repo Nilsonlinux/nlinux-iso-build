@@ -54,19 +54,27 @@ def load():
     return mod
 
 
-def events(mod, sub):
-    """Drena os eventos SSE acumulados do assinante para o evento `sub`."""
+def drain(mod):
+    """Drena a fila do assinante: [(evento, dados), ...], na ordem de chegada."""
     out = []
     q = mod._subs_q
     while True:
         try:
             payload = q.popleft()
         except IndexError:
-            break
+            return out
         head, _, rest = payload.partition("\n")
-        if head == "event: " + sub:
-            out.append(json.loads(rest[len("data: "):].strip()))
-    return out
+        out.append((head[len("event: "):], json.loads(rest[len("data: "):].strip())))
+
+
+def heads(mod):
+    """Drena a fila do assinante e devolve os nomes dos eventos, na ordem."""
+    return [nome for nome, _ in drain(mod)]
+
+
+def events(mod, sub):
+    """Drena os eventos SSE acumulados do assinante para o evento `sub`."""
+    return [dados for nome, dados in drain(mod) if nome == sub]
 
 
 # Plano novo: o número é o COMEÇO da etapa e a distância entre duas é o peso.
@@ -81,7 +89,7 @@ OFFLINE_PLAN = "NLSTEPS|0:stage.lang_key,2:stage.mirror,4:stage.disk,9:stage.fs,
 
 
 def fresh(mod, plan, mode="online", lang="pt", total_s=1500.0, interval=1.0):
-    for sub in ("progress", "state", "done", "log", "tail", "download", "error"):
+    for sub in ("progress", "state", "done", "log", "download", "error"):
         events(mod, sub)
     mod.PACE_TOTAL_S = total_s
     mod.PACE_INTERVAL = interval
@@ -361,6 +369,27 @@ feed(m, "NLPROGRESS|13|stage.pac.download")
 feed(m, " resolvendo dependências...")
 check("linha sem tamanho não conta", m._size_total["bytes"] == 0)
 
+# O total é UM número, não uma soma: o "Total Installed Size" (que vem logo
+# depois) e as linhas por pacote (tamanho no meio, velocidade depois) não podem
+# mexer nele — senão o total cresceria junto com o download e a fração real da
+# etapa ficaria sempre em 100% (o anel pulando para o fim da etapa).
+m = load()
+fresh(m, ONLINE_PLAN)
+feed(m, "NLPROGRESS|13|stage.pac.download")
+feed(m, "Total Download Size:   1658.48 MiB")
+feed(m, "Total Installed Size:   4830.37 MiB")
+feed(m, " glibc-2.44-1-x86_64.pkg.tar.zst         12.34 MiB  900.00 KiB/s 00:14")
+check("o total do download não é somado nem trocado",
+      abs(m._size_total["bytes"] - 1658.48 * 1024**2) < 1, m._size_total["bytes"])
+ev = m._download_event()
+check("o evento de download leva o total", abs(ev["total"] - 1658.48 * 1024**2) < 1, ev)
+m._dl.update(bytes=700 * 1024**2, files=123, rate=5.0 * 1024**2)
+ev = m._download_event()
+check("evento de download com bytes, média e arquivos",
+      ev["bytes"] == 700 * 1024**2 and ev["files"] == 123
+      and abs(ev["rate"] - 5.0 * 1024**2) < 1024**2, ev)
+check("total zerado quando o pacman não falou", load()._download_event()["total"] == 0)
+
 # 50% dos bytes = 50% da etapa (13 + 25/2 = 25)
 m = load()
 fresh(m, ONLINE_PLAN)
@@ -472,6 +501,32 @@ check("100% ao terminar com sucesso", m.STATE["pct"] == 100, m.STATE["pct"])
 check("evento done emitido", events(m, "done")[-1]["code"] == 0)
 time.sleep(0.3)
 check("thread do anel para no fim", not m._pace_thread["thread"].is_alive())
+
+# O fim tem que passar pelas etapas de verdade (desktop, bootloader,
+# finalização) e o anel chega a 100% ANTES do `done`: o painel segura o 100%
+# na tela antes de trocar para a tela de sucesso, e sem esse quadro ele trocava
+# de tela no mesmo instante em que o `done` chegava.
+m = load()
+fresh(m, ONLINE_PLAN)
+feed(m, "NLPROGRESS|85|stage.chroot.desktop")
+feed(m, "NLPROGRESS|96|stage.boot")
+feed(m, "NLPROGRESS|99|stage.final")
+ev = [e for e in events(m, "progress")]
+check("as três últimas etapas viram eventos", [e["pct"] for e in ev[-3:]] == [85, 96, 99], ev[-3:])
+heads(m)
+m._finish(0)
+saiu = drain(m)
+nomes = [nome for nome, _ in saiu]
+check("100% é publicado antes do done", nomes == ["progress", "done"], nomes)
+quadro = [dados for nome, dados in saiu if nome == "progress"]
+check("o quadro final vai a 100%", quadro and quadro[-1]["pct"] == 100, quadro)
+# Na falha não vem esse quadro: o painel mostra o erro onde parou.
+m = load()
+fresh(m, ONLINE_PLAN)
+feed(m, "NLPROGRESS|96|stage.boot")
+heads(m)
+m._finish(1, "falhou")
+check("na falha não sai progresso de 100%", heads(m) == ["error", "done"], heads(m))
 
 # Falha: o anel para onde estava e o painel mostra o erro.
 m = load()

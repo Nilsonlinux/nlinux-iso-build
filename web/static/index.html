@@ -56,12 +56,16 @@
             <span class="clock-digits" id="clock-digits"></span>
             <span class="clock-title" id="clock-title">tempo decorrido</span>
           </div>
+          <!-- Monitor do download (só online). Os rótulos vêm das traduções e
+               os valores do evento `download` do servidor: total anunciado
+               pelo pacman, bytes já baixados e velocidade média. -->
           <div id="dl" class="dl" hidden>
             <span class="dl-title" id="dl-title">Download dos pacotes</span>
             <span class="dl-values">
-              <span class="dl-total" id="dl-total">0 MB</span>
-              <span class="dl-rate" id="dl-rate"></span>
-              <span class="dl-files" id="dl-files"></span>
+              <span class="dl-cell" id="dl-total-cell" hidden><span class="dl-key" id="dl-size-label"></span><span class="dl-val" id="dl-total">—</span></span>
+              <span class="dl-cell"><span class="dl-key" id="dl-got-label"></span><span class="dl-val" id="dl-got">0 MB</span></span>
+              <span class="dl-cell"><span class="dl-key" id="dl-avg-label"></span><span class="dl-val" id="dl-rate">—</span></span>
+              <span class="dl-cell"><span class="dl-val" id="dl-files"></span></span>
             </span>
           </div>
         </div>
@@ -88,7 +92,6 @@
       </div>
       <p id="stage-label" class="stage-label shimmer">Iniciando…</p>
       <div id="stage-check" class="stages"></div>
-      <p id="live-tail" class="live-tail"></p>
       <details class="logs">
         <summary>Registro da instalação</summary>
         <pre id="log-box" class="log-box"></pre>
