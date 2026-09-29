@@ -9,3 +9,8 @@ __pycache__/
 
 # ISOs
 *.iso
+
+# Dependências das suítes de teste (jsdom/css-tree): web/tests/README.md
+# Sem barra no fim de propósito: casa também com o link simbólico que o
+# `npm install` deixa quando se aponta node_modules de outro lugar.
+web/tests/node_modules

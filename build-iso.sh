@@ -103,6 +103,9 @@ info "Embutindo o instalador em /opt/noctalia-installer"
 INSTALLER_DST="$PROFILE_DIR/airootfs/opt/noctalia-installer"
 mkdir -p "$INSTALLER_DST"
 cp -a "$BASE/install.sh" "$BASE/install" "$BASE/config" "$BASE/packages" "$BASE/web" "$INSTALLER_DST/"
+# As suítes de teste do painel são ferramenta de desenvolvimento: não têm
+# lugar no live (e o node_modules delas dobraria o tamanho de web/).
+rm -rf "$INSTALLER_DST/web/tests"
 run_root chown -R "$(id -u):$(id -g)" "$PROFILE_DIR"
 
 info "Embutindo a loja de software em /opt/nlinux-software"

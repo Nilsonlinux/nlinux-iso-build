@@ -1,0 +1,12 @@
+{
+  "name": "nlinux-installer-tests",
+  "private": true,
+  "description": "Suites do instalador web (painel, CSS e ponta a ponta). Só para desenvolvimento: nada aqui entra no ISO.",
+  "scripts": {
+    "test": "node client_test.js && node css_test.js"
+  },
+  "devDependencies": {
+    "css-tree": "^3.2.1",
+    "jsdom": "^30.1.1"
+  }
+}

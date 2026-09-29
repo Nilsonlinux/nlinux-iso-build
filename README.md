@@ -418,6 +418,30 @@ anel, que anda dentro da etapa, passaria à frente da lista.
   Os caminhos podem ser sobrescritos com `NLINUX_CACHE_DIRS` (separados por
   `:`).
 
+### Testes do instalador web
+
+O painel só dá para exercitar de verdade numa máquina real, do zero e por ~25
+minutos. Para isso existe `web/tests/`, com quatro suítes que dão retorno
+rápido quando o painel muda:
+
+```bash
+web/tests/run-tests.sh              # o que der para rodar
+web/tests/run-tests.sh --install    # baixa o node_modules antes (precisa de rede)
+```
+
+| Suíte | Alvo | O que confere |
+|---|---|---|
+| `server_test.py` | `web/server.py` | anel (ritmo do plano, progresso real, cap de 99%), atividade `NLACT` traduzida nos 7 idiomas, resiliência/checkpoint, e a coerência entre o plano do `install.sh`, o reserva do `app.js`, a tabela de pesos acima e as traduções |
+| `e2e_test.py` | log → servidor → HTTP | o `event: progress` **na fio** e o `state` de reconexão, com o servidor de verdade numa porta livre |
+| `client_test.js` | `web/static/app.js` | o que o usuário vê: a linha `etapa · atividade`, a lista destacada pelo índice, o plano de reserva, queda de stream, log e relógio (jsdom) |
+| `css_test.js` | `web/static/style.css` | sintaxe do CSS e as regras de que o anel e o relógio dependem (css-tree) |
+
+As duas Python usam só a biblioteca padrão, não pedem root e não encostam nos
+arquivos de `/tmp/nlinux-*` (criam uma pasta temporária). As duas de
+JavaScript precisam de node + `npm install` em `web/tests/`. Detalhes em
+[`web/tests/README.md`](web/tests/README.md). Nada disso é usado pelo build do
+ISO.
+
 ### Arquivos e variáveis
 
 | Caminho (live) | Papel |
