@@ -57,7 +57,6 @@ bat
 starship
 fastfetch
 btop
-htop
 
 wget
 curl

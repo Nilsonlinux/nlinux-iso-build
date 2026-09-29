@@ -63,7 +63,13 @@ check("raio do círculo é 88 no index.html", /id="ring-fg"[^>]*r="88"/.test(htm
 check("app.js calcula a circunferência com o raio 88", /2 \* Math\.PI \* 88/.test(js));
 check("a lista de etapas tem item", !!get(".stage-item", "display"));
 
-/* As fitas do relógio: a altura tem de bater com o DIGIT_STEP do app.js. */
+/* As fitas do relógio: é aqui que um dígito saía alguns milímetros da linha
+   dos outros. A janela do dígito e o passo do translateY têm de ser a MESMA
+   medida — e em `rem`, não em `em`: o navegador resolve `em` por dois caminhos
+   (o height da caixa passa pelo font-size arredondado, o transform não), a fita
+   anda um pouco diferente da janela e, como o erro é por dígito, cada um sai um
+   pouco diferente do vizinho. Medido no Firefox: caixa 32px com passo de
+   32.625px deixava os dígitos em 372, 370, 369, 368... px. */
 const digit = findRule(".digit");
 const dsel = digit && sel(digit);
 check("tem a regra do dígito", !!dsel);
@@ -74,10 +80,50 @@ const spanRule = findRule(".digit > i > span");
 check("tem o digito .digit > i > span", !!spanRule);
 const ssel = spanRule && sel(spanRule);
 const lh = get(ssel, "line-height");
-check("altura da fita = 1.2em (DIGIT_STEP do app.js)", lh === "1.2em", lh);
+const alturaJanela = get(dsel, "height");
+const alturaDigito = get(ssel, "height");
+const lhFita = get(isel, "line-height");
+const lhDigito = get(dsel, "line-height");
+
+check("o número da fita tem altura = a janela do dígito",
+      alturaDigito && alturaDigito === alturaJanela, alturaDigito + " vs " + alturaJanela);
+check("altura da fita em rem (não em em, que o navegador resolve diferente)",
+      /(?:^|\s)\d*\.?\d+rem$/.test(String(alturaJanela))
+        && !/(?:^|\s)\d*\.?\d+em(?:\s|;|$)/.test(String(alturaJanela)),
+      alturaJanela);
+check("a fita e o número usam o mesmo line-height", lh === lhFita, lh + " vs " + lhFita);
+check("a janela do dígito usa o mesmo line-height", lh === lhDigito, lh + " vs " + lhDigito);
 check("a fita esconde o resto dos dígitos", get(dsel, "overflow") === "hidden", get(dsel, "overflow"));
-check("o dígito tem a altura da fita", get(dsel, "height") === "1.2em", get(dsel, "height"));
-check("o app.js usa o mesmo passo", /const DIGIT_STEP = 1\.2;/.test(js));
+
+/* O app.js tem de andar o mesmo número de rem que a altura da janela. */
+const passoJs = /const DIGIT_STEP = (\d+(?:\.\d+)?);/.exec(js);
+check("o app.js declara o passo da fita", !!passoJs, js.match(/DIGIT_STEP[^;]*;/));
+if (passoJs) {
+  const rem = parseFloat(String(alturaJanela));
+  check("o app.js usa o mesmo passo em rem da janela (" + rem + "rem)",
+        Math.abs(parseFloat(passoJs[1]) - rem) < 1e-9, passoJs[1]);
+  check("o transform sai em rem", /DIGIT_STEP\)\.toFixed\(\d+\) \+ "rem\)"/.test(js),
+        (js.match(/strip\.style\.transform = [^\n]*/g) || []).join(" | "));
+}
+
+/* A curva da fita não pode ultrapassar o destino: o overshoot da curva antiga
+   (cubic-bezier(.34, 1.3, .5, 1)) passava 3% do alvo — ~9px na virada 9 -> 0,
+   que anda 10 dígitos de uma vez. */
+const trans = get(isel, "transition") || "";
+const bez = /cubic-bezier\(([^)]*)\)/.exec(trans);
+check("a fita tem curva de transição", !!bez, trans);
+if (bez) {
+  const ys = bez[1].split(",").map((n) => parseFloat(n.trim())).filter((_, i) => i % 2 === 1);
+  check("a curva é monôtona (nenhum ponto de controle passa de 1)",
+        ys.every((y) => y <= 1), bez[1]);
+}
+
+/* Os dois-pontos dividem a caixa de linha dos dígitos: senão ficam numa linha
+   diferente dos números. */
+const relSel = ".clock-digits";
+check("o relógio fixa a caixa de linha dos dois-pontos",
+      get(relSel, "line-height") === alturaJanela,
+      get(relSel, "line-height") + " vs " + alturaJanela);
 
 console.log("");
 if (fails.length) { console.log("FALHAS: " + fails.length + " -> " + JSON.stringify(fails)); process.exit(1); }

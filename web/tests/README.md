@@ -46,7 +46,7 @@ Cada suíte imprime `ok`/`FAIL` por checagem e sai com status 1 se alguma falhar
 | `server_test.py` | `web/server.py` | O cérebro. Importa o módulo e alimenta o log com as linhas que o `install.sh` **realmente** escreve (`NLSTEPS`, `NLPROGRESS`, `NLSTEP`, `NLNOTE`, `NLACT`, `NLRESULT`), conferindo o que o painel receberia. |
 | `e2e_test.py` | log → servidor → HTTP | Sobe o servidor de verdade numa porta livre, escreve no arquivo de log e lê `/api/stream` e `/api/status` como o navegador leria. É o que garante o formato do `event: progress` **na fio**. |
 | `client_test.js` | `web/static/app.js` | O que o usuário vê: a linha `etapa · atividade`, a lista destacando a etapa certa, o plano de reserva, o log ao vivo, a queda do stream e o reset ao iniciar outra instalação. Roda o `app.js` inteiro no DOM do `index.html` (jsdom), com `fetch`/`EventSource` controlados. |
-| `css_test.js` | `web/static/style.css` | Sintaxe (erro de CSS é descartado calado pelo navegador) e as regras de que o painel depende — por exemplo a altura da fita do relógio (`1.2em`) tem que bater com o `DIGIT_STEP` do `app.js`. |
+| `css_test.js` | `web/static/style.css` | Sintaxe (erro de CSS é descartado calado pelo navegador) e as regras de que o painel depende — em especial a fita do relógio: a janela do dígito, o `line-height` de toda a cadeia e o passo do `app.js` têm de ser a **mesma** medida, em `rem` (e a curva, monôtona). É o que impede um dígito de sair alguns milímetros da linha dos outros; o sintoma era o `em`, que o navegador resolve por dois caminhos diferentes, deixando a fita e a janela com alturas diferentes. |
 
 ### `server_test.py` em detalhe
 

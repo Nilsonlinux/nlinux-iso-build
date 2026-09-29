@@ -819,9 +819,13 @@ function setLabel(text, act) {
 /* Seis dígitos (H:MM:SS) montados uma vez; cada dígito é uma fita 0-9 que
    recebe um translateY quando o número muda — é isso que dá a animação. */
 const CLOCK_DIGITS = 6;
-/* Passo da fita em em: tem de ser o mesmo valor da altura/line-height de
-   .digit > i > span no style.css (1.2em), senão os dígitos se desalinham. */
-const DIGIT_STEP = 1.2;
+/* Passo da fita, em rem: tem de ser a MESMA medida que a altura/line-height da
+   janela no style.css (2rem). É em rem, e não em em, porque o navegador resolve
+   `em` por dois caminhos diferentes — o height da caixa passa pelo font-size
+   arredondado e o translateY não — e aí a fita anda um pouco diferente da
+   janela, um pouquinho mais a cada dígito, e um deles acaba alguns milímetros
+   fora da linha dos outros. */
+const DIGIT_STEP = 2;
 const clockSlots = [];
 
 function buildClock() {
@@ -849,7 +853,7 @@ function buildClock() {
     // Fita já posicionada no zero: o primeiro paint não "pula" e todo dígito
     // tem um valor explícito (importa para quem lê o DOM).
     strip.dataset.v = "0";
-    strip.style.transform = "translateY(0em)";
+    strip.style.transform = "translateY(0rem)";
     clockSlots.push(strip);
   }
 }
@@ -858,7 +862,7 @@ function setDigit(i, value) {
   const strip = clockSlots[i];
   if (!strip || strip.dataset.v === String(value)) return;
   strip.dataset.v = String(value);
-  strip.style.transform = "translateY(" + (-value * DIGIT_STEP).toFixed(2) + "em)";
+  strip.style.transform = "translateY(" + (-value * DIGIT_STEP).toFixed(0) + "rem)";
 }
 
 /* Segundos decorridos: usa o `started` do servidor (assim o relógio não volta
