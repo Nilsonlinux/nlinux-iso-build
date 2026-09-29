@@ -435,14 +435,21 @@ anel, que anda dentro da etapa, passaria à frente da lista.
   zera. Não depende do idioma do pacman nem do formato das linhas dele.
   Os caminhos podem ser sobrescritos com `NLINUX_CACHE_DIRS` (separados por
   `:`).
-  O **total é um número, não uma soma**: fica o primeiro
-  `…: 1658,48 MiB` da etapa (o do download vem antes do tamanho instalado, e as
-  linhas por pacote trazem o tamanho no meio e a velocidade depois — a forma da
-  linha é o que separa um do outro, sem casar palavra traduzida). Somar as linhas
-  daria um total que cresceria junto com o download e a fração real da etapa
-  ficaria sempre em 100%, com o anel pulando para o fim dela. A medida do total
-  só aparece durante a etapa que está baixando; fora dela some, em vez de
+  O **total é um número, não uma soma**: das linhas com a forma
+  `…: 1658,48 MiB` (o valor vem logo depois de `:` e fecha a linha, sem casar
+  palavra traduzida) fica a **menor** da etapa, acima de 1 MiB. O pacman
+  imprime dois totais — o de download e o instalado — e o de download é sempre
+  o menor, porque `%CSIZE` é o `.pkg.tar.zst` comprimido e `%ISIZE` é o que fica
+  instalado; escolher pelo menor funciona em qualquer ordem, enquanto somar as
+  linhas daria um total que cresceria junto com o download e a fração real da
+  etapa ficaria sempre em 100%, com o anel pulando para o fim dela. A medida do
+  total só aparece durante a etapa que está baixando; fora dela some, em vez de
   mostrar um número velho, e a média some quando decai para zero.
+  **De onde vem o número:** não é mensagem do espelho. O espelho entrega o banco
+  sincronizado (cada pacote com `%CSIZE`/`%ISIZE` no `desc`) e os `.pkg.tar.zst`;
+  o pacman soma esses campos dos pacotes da transação e imprime o resultado. Por
+  isso o valor muda a cada execução (versões, espelho, o que já está no cache) —
+  o painel mostra o que o pacman disse na hora e não tem nenhum número fixo.
 
 ### Testes do instalador web
 
@@ -457,7 +464,7 @@ web/tests/run-tests.sh --install    # baixa o node_modules antes (precisa de red
 
 | Suíte | Alvo | O que confere |
 |---|---|---|
-| `server_test.py` | `web/server.py` | anel (ritmo do plano, progresso real, cap de 99%, `progress` de 100% antes do `done`), total do download como número (e não soma), atividade `NLACT` traduzida nos 7 idiomas, resiliência/checkpoint, e a coerência entre o plano do `install.sh`, o reserva do `app.js`, a tabela de pesos acima e as traduções |
+| `server_test.py` | `web/server.py` | anel (ritmo do plano, progresso real, cap de 99%, `progress` de 100% antes do `done`), total do download (o menor da etapa, em qualquer ordem, e com teto na fração), atividade `NLACT` traduzida nos 7 idiomas, resiliência/checkpoint, e a coerência entre o plano do `install.sh`, o reserva do `app.js`, a tabela de pesos acima e as traduções |
 | `e2e_test.py` | log → servidor → HTTP | o `event: progress` **na fio** e o `state` de reconexão, com o servidor de verdade numa porta livre |
 | `client_test.js` | `web/static/app.js` | o que o usuário vê: a linha `etapa · atividade`, a lista destacada pelo índice, o plano de reserva, queda de stream, o monitor do download (total/baixando/média), o anel em 100% segurado antes da tela de sucesso, log e relógio (jsdom) |
 | `css_test.js` | `web/static/style.css` | sintaxe do CSS, as regras de que o anel e o relógio dependem, a linha do download e a ausência da caixinha azul sobre o log (css-tree) |

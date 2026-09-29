@@ -109,6 +109,31 @@ def elapsed_to(mod, frac, of="span"):
     mod._pace["at"] = time.time() - mod._pace[of] * frac
 
 
+def fake_install(seconds=30):
+    """Um processo que se apresenta como install.sh, para o teste de reanexar.
+
+    O cmdline de um processo recém-criado pode sair vazio de /proc por alguns
+    milissegundos (o kernel ainda não publicou o argv) — e o _pid_alive() do
+    servidor, que é justamente o que decide se a instalação pode ser reanexada,
+    olha esse arquivo. Por isso o teste ESPERA o cmdline aparecer em vez de
+    apostar que já apareceu: no install de verdade a checagem acontece segundos
+    depois do fork, mas aqui ela é imediata e viraria uma moeda.
+    """
+    proc = subprocess.Popen(
+        ["bash", "-c", "exec -a 'bash /tmp/install.sh' sleep %d" % seconds])
+    deadline = time.time() + 5.0
+    while time.time() < deadline:
+        try:
+            with open("/proc/%d/cmdline" % proc.pid, "rb") as fh:
+                if b"install.sh" in fh.read():
+                    return proc
+        except OSError:
+            pass
+        time.sleep(0.01)
+    proc.terminate()
+    raise SystemExit("o processo falso não ficou visível em /proc")
+
+
 # ---------------------------------------------------------------------------
 print("== anel: ritmo do plano ==")
 m = load()
@@ -390,6 +415,50 @@ check("evento de download com bytes, média e arquivos",
       and abs(ev["rate"] - 5.0 * 1024**2) < 1024**2, ev)
 check("total zerado quando o pacman não falou", load()._download_event()["total"] == 0)
 
+# O total é escolhido pelo MENOR, não pela ordem: o pacman imprime o total de
+# download e o total instalado, e a ordem dos dois não é contrato. Como o
+# %CSIZE é o pacote comprimido e o %ISIZE é o instalado, o de download é
+# sempre o menor — e é ele que interessa.
+m = load()
+fresh(m, ONLINE_PLAN, lang="en")
+feed(m, "NLPROGRESS|13|stage.pac.download")
+feed(m, "Total Installed Size:   4830.37 MiB")
+feed(m, "Total Download Size:   1658.48 MiB")
+check("total na ordem invertida ainda é o do download",
+      abs(m._size_total["bytes"] - 1658.48 * 1024**2) < 1, m._size_total["bytes"])
+m = load()
+fresh(m, ONLINE_PLAN, lang="en")
+feed(m, "NLPROGRESS|13|stage.pac.download")
+feed(m, "Total Download Size:   1658.48 MiB")
+feed(m, "Total Download Size:   1658.48 MiB")
+feed(m, "Total Installed Size:   4830.37 MiB")
+check("total repetido não vira soma",
+      abs(m._size_total["bytes"] - 1658.48 * 1024**2) < 1, m._size_total["bytes"])
+# O valor muda a cada execução (versões, espelho, cache): nada aqui pode
+# depender do número — só da forma da linha. E uma linha qualquer do log que
+# case com a forma não pode virar o total.
+m = load()
+fresh(m, ONLINE_PLAN, lang="en")
+feed(m, "NLPROGRESS|13|stage.pac.download")
+feed(m, "Algum passo levou 00:12 (cache: 512 B)")
+feed(m, "Total Download Size:   8421.77 MiB")
+check("linha miúda não vira total",
+      abs(m._size_total["bytes"] - 8421.77 * 1024**2) < 1, m._size_total["bytes"])
+# Total subestimado (o cache já vinha cheio de outra execução): a fração tem
+# teto, senão o anel pularia para depois do fim da etapa.
+m = load()
+fresh(m, ONLINE_PLAN, lang="en")
+feed(m, "NLPROGRESS|13|stage.pac.download")
+feed(m, "Total Download Size:   100.00 MiB")
+m._dl.update(bytes=500 * 1024**2, files=10, rate=0.0)
+m._dl["base"], m._dl["base_files"] = 0, 0
+m._pace["base"], m._pace["plan_w"] = 13.0, 25.0
+m._pace["real"] = min(1.0, m._dl["bytes"] / m._size_total["bytes"])
+m._pace["real_at"] = 0.0
+m._ring_apply()
+check("fração acima de 1 não empurra o anel para depois da etapa",
+      13 <= m.STATE["pct"] <= 38, m.STATE["pct"])
+
 # 50% dos bytes = 50% da etapa (13 + 25/2 = 25)
 m = load()
 fresh(m, ONLINE_PLAN)
@@ -542,7 +611,7 @@ check("checkpoint guarda a etapa",
 # O painel só reanexa se o install.sh daquele PID ainda estiver vivo
 # (web/server.py confere o cmdline em /proc), então o teste usa um processo
 # que se apresenta como install.sh.
-fake = subprocess.Popen(["bash", "-c", "exec -a 'bash /tmp/install.sh' sleep 30"])
+fake = fake_install()
 with m._state_lock:
     m.STATE.update(running=True, done=False, code=None, error=None, pid=fake.pid,
                    step="stage.pac.download", pct=13, finished=0.0,

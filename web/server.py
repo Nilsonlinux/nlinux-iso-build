@@ -124,9 +124,22 @@ RE_PACMAN = re.compile(r"^\s*\[\s*(\d+)\s*/\s*(\d+)\s*\]")
 # TTY, quantos bytes o pacman vai baixar antes de começar. O que separa o
 # TOTAL das linhas por pacote (que trazem o tamanho no meio e a velocidade
 # depois) é a forma: o valor vem logo depois de ":" e fecha a linha.
+#
+# O número é uma SOMA feita pelo próprio pacman: cada pacote traz %CSIZE (o
+# .pkg.tar.zst comprimido, ou seja, o que é baixado) e %ISIZE (o instalado) no
+# desc do banco sincronizado, e o pacman soma os dois campos dos pacotes da
+# transação. Nada disso vem como mensagem do espelho — o espelho entrega o
+# banco e os .pkg.tar.zst, e a conta é local. Por isso o valor muda a cada
+# execução (versões, espelho, o que já está no cache) e o painel mostra
+#whatever o pacman disse na hora, sem nenhum número fixo.
 RE_SIZE = re.compile(r":\s*([\d][\d.,]*)\s*([KMGT]i?B)\s*$", re.I)
 SIZE_MULT = {"B": 1, "KB": 1000, "KIB": 1024, "MB": 1000**2, "MIB": 1024**2,
              "GB": 1000**3, "GIB": 1024**3, "TB": 1000**4, "TIB": 1024**4}
+# Piso do total: o download de um sistema base é de centenas de MB, então um
+# valor abaixo de 1 MiB não é "Total Download Size" — é alguma linha do log
+# que casou com a forma. Aceitá-la viraria um total falso e, com ele, uma
+# fração de etapa errada.
+MIN_TOTAL = 1024**2
 
 # Cache do pacman como contador de download (modo online): o pacstrap baixa no
 # cache do ALVO (só o `pacstrap -c` usa o do host) e o yay dentro do chroot usa
@@ -284,8 +297,10 @@ def follow_download():
             payload = _download_event()
             if _size_total["bytes"] > 0 and STATE["step"] in COPY_STEPS:
                 # Bytes baixados ÷ total que o pacman disse: a fração real
-                # da etapa, em qualquer idioma.
-                _pace["real"] = _dl["bytes"] / _size_total["bytes"]
+                # da etapa, em qualquer idioma. O teto protege de um total
+                # subestimado (o cache já vinha cheio de outra execução):
+                # acima de 1 a fração não tem para onde ir.
+                _pace["real"] = min(1.0, _dl["bytes"] / _size_total["bytes"])
                 _pace["real_at"] = now
         BROADCAST.push("download", payload)
         prev_bytes, prev_t = payload["bytes"], now
@@ -740,13 +755,17 @@ def _log_activity(line):
     if m:
         # "Tamanho total download:  1658,48 MiB" — o pacman diz quanto vai
         # baixar antes de começar. A partir daí a etapa tem um total em bytes.
-        # Fica o PRIMEIRO total da etapa (o do download vem antes do tamanho
-        # instalado): somar as linhas daria um total que cresce junto com o
-        # download, e a fração real da etapa ficaria sempre em 100%.
+        # Fica o MENOR total da etapa, e não a soma das linhas: o pacman
+        # imprime dois ("total de download" e "total instalado"), e o de
+        # download é sempre o menor — o %CSIZE é o pacote comprimido e o
+        # %ISIZE é o que fica instalado. Escolher pelo menor funciona em
+        # qualquer ordem, e somar as linhas daria um total que cresceria junto
+        # com o download (a fração real da etapa ficaria sempre em 100%, com o
+        # anel pulando para o fim dela).
         size = _number(m.group(1)) * SIZE_MULT.get(m.group(2).upper(), 1)
-        if size > 0:
+        if size >= MIN_TOTAL:
             with _state_lock:
-                if _size_total["bytes"] <= 0:
+                if _size_total["bytes"] <= 0 or size < _size_total["bytes"]:
                     _size_total["bytes"] = size
 
 
