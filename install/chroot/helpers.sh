@@ -37,3 +37,10 @@ cnote() {
   [[ "${GUI_DRIVEN:-0}" == "1" ]] || return 0
   printf 'NLNOTE|%s\n' "$1"
 }
+
+# Atividade com nome, junto da etapa no painel: "Compilando umbriel-git".
+# <item> entra no %s da tradução — por isso o texto sai traduzido e não cru.
+cact() {
+  [[ "${GUI_DRIVEN:-0}" == "1" ]] || return 0
+  printf 'NLACT|%s|%s\n' "$1" "$2"
+}

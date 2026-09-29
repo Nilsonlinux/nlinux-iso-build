@@ -684,17 +684,19 @@ const RING_CIRC = 2 * Math.PI * 88;
 
 /* Plano de etapas usado só como reserva: o install.sh manda o plano real
    (NLSTEPS) e ele é diferente entre os modos offline e online. A lista abaixo
-   existe para o painel não ficar vazio se o log ainda não trouxer o plano. */
+   existe para o painel não ficar vazio se o log ainda não trouxer o plano.
+   O número é o ponto em que a etapa começa; a distância entre duas etapas é o
+   peso dela — é o mesmo plano que o install.sh manda. */
 const FALLBACK_STEPS = {
   offline: [
-    [8, "stage.lang_key"], [12, "stage.mirror"], [20, "stage.disk"], [30, "stage.fs"],
-    [35, "stage.copy.offline"], [62, "stage.chroot.system"], [76, "stage.chroot.desktop"],
-    [96, "stage.boot"], [100, "stage.final"],
+    [0, "stage.lang_key"], [2, "stage.mirror"], [4, "stage.disk"], [9, "stage.fs"],
+    [13, "stage.copy.offline"], [72, "stage.chroot.system"], [85, "stage.chroot.desktop"],
+    [96, "stage.boot"], [99, "stage.final"],
   ],
   online: [
-    [8, "stage.lang_key"], [12, "stage.mirror"], [20, "stage.disk"], [30, "stage.fs"],
-    [35, "stage.pac.download"], [62, "stage.chroot.system"], [70, "stage.chroot.aur"],
-    [88, "stage.chroot.desktop"], [96, "stage.boot"], [100, "stage.final"],
+    [0, "stage.lang_key"], [2, "stage.mirror"], [4, "stage.disk"], [9, "stage.fs"],
+    [13, "stage.pac.download"], [38, "stage.chroot.system"], [54, "stage.chroot.aur"],
+    [85, "stage.chroot.desktop"], [96, "stage.boot"], [99, "stage.final"],
   ],
 };
 
@@ -705,8 +707,8 @@ let tweenRaf = null;
    o SSE atualiza `run` e, a cada (re)conexão, o evento `state` devolve o
    quadro completo (etapas, %, últimas linhas, contadores de download). */
 const run = {
-  pct: 0, lines: [], label: "", done: false, code: null,
-  steps: [], step: "", stepSig: "", mode: "", started: 0, finished: 0,
+  pct: 0, lines: [], label: "", act: "", done: false, code: null,
+  steps: [], step: "", stepSig: "", idx: -1, mode: "", started: 0, finished: 0,
   download: { bytes: 0, rate: 0, files: 0 },
 };
 let src = null;
@@ -715,6 +717,7 @@ let logRaf = null;
 let lastLogText = null;
 let installRequested = false;
 let clockTimer = null;
+let streamDown = false;
 
 function tweenPct(targetPct) {
   if (tweenRaf) cancelAnimationFrame(tweenRaf);
@@ -761,18 +764,21 @@ function buildStages() {
 }
 
 /* Lista de etapas na ordem em que o instalador realmente executa (vem do
-   install.sh, via NLSTEPS). Etapa atual = a última cuja porcentagem já foi
-   alcançada: o progresso real da cópia (rsync/pacman) fica entre a etapa de
-   cópia e a seguinte, então nunca invade a etapa seguinte. */
+   install.sh, via NLSTEPS). A etapa atual é a que o servidor está anunciando
+   (run.idx): ela não é deduzida da porcentagem, porque o anel anda sozinho
+   dentro da etapa e passaria à frente da lista. Sem o índice do servidor
+   (plano antigo), cai para a comparação com a porcentagem. */
 function renderSteps() {
   const box = $("#stage-check");
   if (!box.children.length && run.steps.length) buildStages();
   const items = box.querySelectorAll(".stage-item");
   if (!items.length) return;
-  let current = -1;
-  items.forEach((it, i) => {
-    if (Number(it.dataset.pct) <= run.pct) current = i;
-  });
+  let current = run.idx;
+  if (current < 0) {
+    items.forEach((it, i) => {
+      if (Number(it.dataset.pct) <= run.pct) current = i;
+    });
+  }
   const finished = run.pct >= 100;
   items.forEach((it, i) => {
     it.classList.toggle("done", i < current || (finished && i <= current));
@@ -802,8 +808,11 @@ function addLines(lines) {
   scheduleLog();
 }
 
-function setLabel(text) {
-  $("#stage-label").textContent = text;
+/* Texto abaixo do anel: a etapa (ou a nota dela) e, quando existe, o que está
+   acontecendo agora — "Baixar e compilar pacotes da AUR · Compilando
+   umbriel-git". A atividade vem do servidor já traduzida. */
+function setLabel(text, act) {
+  $("#stage-label").textContent = act ? `${text} · ${act}` : text;
 }
 
 /* ---------- relógio digital ---------- */
@@ -940,7 +949,9 @@ function applyDownload(d) {
 function paint() {
   $("#ring-fg").style.transition = "stroke-dashoffset .3s cubic-bezier(.4, 0, .2, 1)";
   tweenPct(run.pct);
-  if (run.label) setLabel(run.label);
+  // Com o stream fora, o rótulo é "Reconectando" e não pode ser atropelado pelo
+  // progresso que ainda chega pelo watchdog.
+  if (run.label && !streamDown) setLabel(run.label, run.act);
   renderSteps();
   scheduleLog();
 }
@@ -1018,8 +1029,14 @@ function applyState(st) {
       if (box && box.children.length) buildStages();
     }
   } else if (!run.steps.length) {
+    // Sem plano no log (execução antiga, log já rotacionado): entra a reserva
+    // do próprio app. Ela também precisa redesenhar a lista, senão a caixa da
+    // tela ficaria mostrando o plano da execução anterior.
     const online = st.mode === "online" || (st.mode !== "offline" && String(state.OFFLINE) === "0");
+    run.stepSig = "";
     run.steps = FALLBACK_STEPS[online ? "online" : "offline"].map(([pct, key]) => ({ pct, label: t(key) }));
+    const box = $("#stage-check");
+    if (box && box.children.length) buildStages();
   }
   if (st.mode) {
     run.mode = st.mode;
@@ -1034,6 +1051,8 @@ function applyState(st) {
   if (st.download) applyDownload(st.download);
   if (typeof st.pct === "number") run.pct = Math.max(run.pct, st.pct);
   if (st.label) run.label = st.label;
+  if (typeof st.act === "string") run.act = st.act;
+  if (typeof st.idx === "number" && st.idx >= 0) run.idx = st.idx;
   if (st.running) enterInstalling();
   if (st.done) showResult(st.code === 0 ? 0 : st.code || 1);
 }
@@ -1052,17 +1071,24 @@ async function fetchStatus() {
    no servidor. Só marca "reconectando" — o watchdog ressincroniza. */
 function onStreamDropped() {
   if (run.done) return;
+  streamDown = true;
   setLabel(t("web.reconnecting"));
 }
 
 function openStream() {
   if (src) return;
   src = new EventSource("/api/stream");
-  src.addEventListener("state", (ev) => applyState(JSON.parse(ev.data)));
+  src.addEventListener("state", (ev) => {
+    streamDown = false;
+    applyState(JSON.parse(ev.data));
+  });
   src.addEventListener("progress", (ev) => {
     const d = JSON.parse(ev.data);
+    streamDown = false;
     run.pct = Math.max(run.pct, d.pct || 0);
     run.label = d.label;
+    if (typeof d.act === "string") run.act = d.act;
+    if (typeof d.idx === "number" && d.idx >= 0) run.idx = d.idx;
     enterInstalling();
   });
   src.addEventListener("tail", (ev) => {
@@ -1106,10 +1132,12 @@ async function startInstall() {
   run.lines = [];
   run.pct = 0;
   run.label = "";
+  run.act = "";
   run.done = false;
   run.code = null;
   run.steps = [];
   run.stepSig = "";
+  run.idx = -1;
   run.started = 0;
   run.finished = 0;
   run.download = { bytes: 0, rate: 0, files: 0 };

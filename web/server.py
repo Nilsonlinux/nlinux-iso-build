@@ -77,13 +77,55 @@ DEFAULT_LANG = "pt"
 NTFS_RESIZE_RESERVE = 1024**3
 MIB = 1024**2
 
-# Slice de porcentagem ocupado pela etapa de cópia (rsync/pacstrap) quando o
-# install.sh é antigo e não manda o plano de etapas. Com o plano (NLSTEPS) o
-# fim do slice é a porcentagem da etapa seguinte — ver _copy_range().
-COPY_SLICE = (35, 62)
-
-# Etapas de cópia: o progresso real (rsync/pacman) é interpolado dentro delas.
+# Etapas em que o painel mostra progresso real de bytes/arquivos (o resto
+# segue o ritmo do plano). O resto das etapas não tem nada mensurável: o
+# mkinitcpio, o chown e a configuração não dizem quanto falta.
 COPY_STEPS = ("stage.copy.offline", "stage.pac.download", "stage.copy.online")
+
+# Ritmo do anel (porcentagem REAL da instalação inteira, não da etapa).
+#
+# O número de cada etapa no plano (NLSTEPS) é o ponto em que ela começa, e a
+# distância entre duas etapas é o PESO dela. A cada troca de etapa o anel se
+# sincroniza com o plano (sem nunca voltar atrás) e volta a caminhar até 100%
+# no tempo que a instalação inteira deveria levar dali para frente. É isso que
+# faz o anel andar o tempo todo e terminar em 100% -- mesmo quando uma etapa
+# estoura o previsto, porque o que sobrou é repartido pelas seguintes.
+#
+# Onde existe progresso real (bytes do cache do pacman, % do rsync, N/M do
+# pacman, meson) ele entra na frente da estimativa: ali o anel mostra a
+# porcentagem verdadeira da etapa. Depois de REAL_TTL segundos sem medida nova
+# a estimativa assume de volta, para o anel não travar se o download travar.
+PACE_TOTAL_S = 1500.0       # ~25 min: perto da mediana de uma instalação real
+PACE_INTERVAL = 1.0         # com que o anel é recalculado
+PACE_MAX_RUNNING = 99       # 100% só quando a instalação termina com sucesso
+REAL_TTL = 20.0             # segundos que uma medida real continua valendo
+ACT_MAX_ITEM = 80           # tamanho do item da atividade (ver _set_act)
+
+# Atividades lidas do log para a linha abaixo do anel. Só entram padrões de
+# ferramentas que NÃO traduzem a saída (cargo, meson, rsync) ou padrões
+# numéricos do pacman: casar com as palavras do pacman quebraria em qualquer
+# idioma diferente do pt-BR.
+RE_BUILD = re.compile(r"^\s*Compiling\s+(\S+)")
+# meson: "Generating targets:  45%|########     | 18/40" (a barra fica entre
+# as duas réguas, então são dois "|" — um para a %, outro para o contador).
+RE_MESON = re.compile(
+    r"^\s*(?:Generating targets|Writing build\.ninja):\s*\d+%\|[^|]*\|\s*(\d+)/(\d+)")
+# rsync --info=progress2 (o separador de milhar segue o idioma do live):
+#   45% 1,20G 2,60G  0:01:23 (xfr#1.234, to-chk=5.678/12.345) 12,00MB/s
+# O número é \d+([.,]\d+)* para a vírgula final do xfr# não ser comida.
+RE_RSYNC = re.compile(
+    r"(\d+)%.*?xfr#(\d+(?:[.,]\d+)*)(?:,\s*to-chk=(\d+(?:[.,]\d+)*)"
+    r"/(\d+(?:[.,]\d+)*))?")
+# pacman (só quando há TTY, sem isso ele não escreve a linha de progresso):
+#   [ 350/705] Installing glibc (350/705)  120.5 MiB      45%
+# O par [N/M] no começo da linha é o que dá a fração, em qualquer idioma.
+RE_PACMAN = re.compile(r"^\s*\[\s*(\d+)\s*/\s*(\d+)\s*\]")
+# "Tamanho total download:  1658,48 MiB" / "Total Download Size: 1658.48 MiB".
+# O rótulo em volta é traduzido, o VALOR não — e é a única forma de saber, sem
+# TTY, quantos bytes o pacman vai baixar antes de começar.
+RE_SIZE = re.compile(r"([\d][\d.,]*)\s*([KMGT]i?B)\b", re.I)
+SIZE_MULT = {"B": 1, "KB": 1000, "KIB": 1024, "MB": 1000**2, "MIB": 1024**2,
+             "GB": 1000**3, "GIB": 1024**3, "TB": 1000**4, "TIB": 1024**4}
 
 # Cache do pacman como contador de download (modo online): o pacstrap baixa no
 # cache do ALVO (só o `pacstrap -c` usa o do host) e o yay dentro do chroot usa
@@ -151,10 +193,27 @@ STATE = {
     "started": 0.0,
     "finished": 0.0,
     "log": LOG_PATH,
+    # Atividade do momento ("Compilando umbriel-git"), que aparece ao lado da
+    # etapa na linha abaixo do anel. Guarda a chave + os argumentos para que o
+    # texto saia traduzido também no estado salvo em disco.
+    "act_key": "",
+    "act_args": [],
 }
-# A etapa de cópia (rsync/pacman) está em curso? Só isso: o progresso real é
-# interpretado no log e interpolado na faixa da etapa (_copy_range()).
-_copying = {"on": False}
+# Ritmo do anel (ver PACE_*):
+#   base   = onde o anel está quando a etapa começou (nunca volta atrás disso)
+#   plan_w = peso da etapa no plano (a fatia onde o progresso REAL é desenhado)
+#   span   = segundos que a etapa deveria durar até a instalação acabar
+#   at     = quando a etapa começou
+#   real   = fração real da etapa, quando dá para medir (bytes, % do rsync…)
+_pace = {"base": 0.0, "plan_w": 0.0, "span": 1.0, "at": 0.0,
+         "real": None, "real_at": 0.0}
+_pace_thread = {"thread": None}
+
+# Total que o pacman disse que vai baixar na etapa atual ("Tamanho total
+# download: 1658,48 MiB"). É o que fecha a conta do anel nas etapas de
+# download: sem TTY o pacman não escreve "(N/M) x%", então o tamanho é a única
+# forma de saber aonde a etapa vai terminar.
+_size_total = {"bytes": 0}
 
 # Monitor de download (modo online): bytes/arquivos já baixados para o cache do
 # pacman, medidos a partir de uma linha de base (base/base_files) tirada no
@@ -188,6 +247,7 @@ def _reset_download():
     total, files = _cache_usage()
     with _state_lock:
         _dl.update(base=total, base_files=files, bytes=0, files=0, rate=0.0)
+        _size_total["bytes"] = 0
 
 
 def follow_download():
@@ -197,6 +257,9 @@ def follow_download():
     segundo. Medir o cache — em vez de parsear as linhas do pacman — é o que
     mantém o monitor correto em qualquer idioma do sistema, já que o
     instalador roda no live com LANG do usuário (pt, en, ja…).
+
+    A mesma contagem alimenta o anel: se o pacman disse quanto vai baixar na
+    etapa (ver RE_SIZE), a fração de bytes vira a porcentagem real dela.
     """
     prev_bytes = 0.0
     prev_t = time.time()
@@ -221,10 +284,34 @@ def follow_download():
                 "files": _dl["files"],
                 "rate": int(_dl["rate"]),
             }
+            if _size_total["bytes"] > 0 and STATE["step"] in COPY_STEPS:
+                # Bytes baixados ÷ total que o pacman disse: a fração real
+                # da etapa, em qualquer idioma.
+                _pace["real"] = _dl["bytes"] / _size_total["bytes"]
+                _pace["real_at"] = now
         BROADCAST.push("download", payload)
         prev_bytes, prev_t = payload["bytes"], now
         if done:
             return
+
+
+def _act_text():
+    """Atividade atual já formatada e traduzida ("" se não houver)."""
+    key = STATE["act_key"]
+    if not key:
+        return ""
+    text = _tr(key)
+    for arg in STATE["act_args"]:
+        text = text.replace("%s", str(arg), 1)
+    return text
+
+
+def _step_index():
+    """Posição da etapa atual no plano (-1 se ela não está no plano)."""
+    for i, s in enumerate(STATE["steps"]):
+        if s["key"] == STATE["step"]:
+            return i
+    return -1
 
 
 def _public_state():
@@ -234,7 +321,9 @@ def _public_state():
             "running": bool(STATE["running"]),
             "pct": int(STATE["pct"]),
             "label": _tr(STATE["label"]),
+            "act": _act_text(),
             "step": STATE["step"],
+            "idx": _step_index(),
             "steps": [{"pct": s["pct"], "label": _tr(s["key"])} for s in STATE["steps"]],
             "mode": STATE["mode"],
             "lang": _ui_lang,
@@ -349,66 +438,188 @@ def _plan_ensure(key, pct):
     return True
 
 
+def _progress_payload(pct=None):
+    """Evento de progresso: % do anel, etapa, atividade e índice da etapa."""
+    with _state_lock:
+        return {
+            "pct": int(STATE["pct"] if pct is None else pct),
+            "label": _tr(STATE["label"]),
+            "act": _act_text(),
+            "step": STATE["step"],
+            "idx": _step_index(),
+        }
+
+
+def _plan_reevaluate():
+    """Prepara o ritmo do anel para a etapa que acabou de começar.
+
+    Três coisas:
+      - base: onde o anel está. Ele nunca volta atrás: se a etapa começa com o
+        anel adiantado, a base é a posição real dele, não a do plano; e se ele
+        ficou para trás do previsto, a base sobe para o ponto do plano (é a
+        correção do Cronômetro, uma vez por etapa, e só quando ela acumulou).
+      - plan_w: o peso da etapa no plano, que é a fatia onde o progresso real
+        (bytes, %) é desenhado.
+      - span: o tempo que falta para o fim previsto da instalação. O anel
+        caminha de base a 100% nesse intervalo, então ele anda o tempo todo e
+        chega a 100% — mesmo se a etapa estourar o previsto, mesmo se as
+        etapas anteriores já tiverem comido a parte das seguintes.
+    """
+    with _state_lock:
+        steps = STATE["steps"]
+        idx = _step_index()
+        now = time.time()
+        if idx < 0:
+            # Etapa fora do plano (ou plano ainda não chegou): sem pesos para
+            # seguir, o anel só avança com progresso real.
+            _pace.update(base=float(STATE["pct"]), plan_w=0.0, span=1.0,
+                         at=now, real=None, real_at=0.0)
+            return
+
+        def weight(i):
+            if i + 1 < len(steps):
+                return float(steps[i + 1]["pct"] - steps[i]["pct"])
+            return max(0.0, 100.0 - float(steps[i]["pct"]))
+
+        start = float(STATE["started"]) or now
+        _pace.update(
+            # Atrás do previsto, o plano corrige; adiantado, quem manda é o anel.
+            base=max(float(STATE["pct"]), float(steps[idx]["pct"])),
+            plan_w=weight(idx),
+            # Tempo até o fim previsto. O piso evita que uma instalação muito
+            # mais lenta que o previsto faça o anel saltar de uma vez.
+            span=max(PACE_TOTAL_S * 0.15, start + PACE_TOTAL_S - now),
+            at=now, real=None, real_at=0.0)
+
+
+def _ring_apply(frac=None):
+    """Atualiza o anel e avisa os clientes (devolve a nova %, ou None).
+
+    Duas fontes, e o anel só anda para frente:
+      - o RITMO: caminha de base a 100% no tempo que a instalação inteira
+        deveria levar a partir da última troca de etapa. É o que garante que o
+        anel nunca congele e sempre termine em 100%.
+      - o REAL: quando o log, o pacman ou a contagem de bytes dizem quanto da
+        etapa já foi. Fica valendo por REAL_TTL segundos; depois disso volta a
+        valer só o ritmo, para o anel não travar se o download travar.
+    """
+    with _state_lock:
+        now = time.time()
+        if frac is not None:
+            _pace["real"] = min(max(frac, 0.0), 1.0)
+            _pace["real_at"] = now
+        base, span, at = _pace["base"], _pace["span"], _pace["at"]
+        pct = int(base + (100.0 - base) * min(max((now - at) / span, 0.0), 1.0))
+        real = _pace["real"]
+        if real is not None and now - _pace["real_at"] <= REAL_TTL:
+            # A verdade da etapa, quando ela é mais adiante que a estimativa.
+            pct = max(pct, int(base + _pace["plan_w"] * real))
+        pct = min(pct, PACE_MAX_RUNNING)
+        if pct <= int(STATE["pct"]):
+            return None
+        STATE["pct"] = pct
+        payload = _progress_payload(pct)
+    BROADCAST.push("progress", payload)
+    return pct
+
+
+def _pace_thread_loop():
+    """Anel: um tique por segundo, andando enquanto a instalação roda."""
+    while True:
+        time.sleep(PACE_INTERVAL)
+        with _state_lock:
+            if not STATE["running"] or STATE["done"]:
+                return
+        _ring_apply()
+
+
+def _start_pace():
+    """Sobe a thread do anel (uma por execução)."""
+    with _state_lock:
+        if _pace_thread["thread"] is not None and _pace_thread["thread"].is_alive():
+            return
+        _pace_thread["thread"] = threading.Thread(
+            target=_pace_thread_loop, name="nlinux-pace", daemon=True)
+    _pace_thread["thread"].start()
+
+
 def _set_step(key, pct, plan_changed=False):
     """Fixa a etapa atual e avisa os clientes (progresso + plano, se mudou)."""
     key = key.strip()
     with _state_lock:
         plan_changed = _plan_ensure(key, pct) or plan_changed
+        changed = STATE["step"] != key
         STATE["step"] = key
         STATE["label"] = key
-        STATE["pct"] = max(0, min(100, int(pct)))
-        _copying["on"] = key in COPY_STEPS
-        payload = {"pct": STATE["pct"], "label": _tr(key)}
-    BROADCAST.push("progress", payload)
+        # A atividade pertence à etapa anterior: some quando a próxima começa.
+        STATE["act_key"], STATE["act_args"] = "", []
+        # O anel não volta atrás: se a etapa começa com o anel adiantado (a
+        # anterior estourou o previsto), ele fica onde está.
+        STATE["pct"] = min(100, max(int(STATE["pct"]), int(pct)))
+        # O total de download pertence à etapa que começou agora.
+        _size_total["bytes"] = 0
+    if changed:
+        _plan_reevaluate()
+    BROADCAST.push("progress", _progress_payload())
     if plan_changed:
         _push_state()
 
 
-def _copy_range():
-    """Faixa de porcentagem da etapa de cópia atual (None se não for cópia).
-
-    O fim da faixa é a porcentagem da PRÓXIMA etapa do plano: o progresso real
-    do rsync/pacman nunca invade a etapa seguinte.
-    """
+def _set_act(key, *args):
+    """Fixa a atividade do momento (linha abaixo do anel) e avisa os clientes."""
     with _state_lock:
-        steps = STATE["steps"]
-        for i, s in enumerate(steps):
-            if s["key"] != STATE["step"]:
-                continue
-            if STATE["step"] not in COPY_STEPS:
-                return None
-            end = steps[i + 1]["pct"] if i + 1 < len(steps) else 100
-            return s["pct"], max(s["pct"] + 1, end)
-    return None
+        # O item é um nome (pacote, crate, arquivo), não uma frase: uma lista de
+        # AUR muito grande é cortada para a linha abaixo do anel não virar um
+        # parágrafo.
+        args = [(a if len(a) <= ACT_MAX_ITEM else a[:ACT_MAX_ITEM - 1].rstrip() + "…")
+                for a in (str(x) for x in args)]
+        if STATE["act_key"] == key and STATE["act_args"] == args:
+            return
+        STATE["act_key"], STATE["act_args"] = key, args
+        payload = _progress_payload()
+    BROADCAST.push("progress", payload)
+
+
+def _number(text):
+    """Número de ferramenta que formata no idioma do live (1.234 / 1,5 / 1234).
+
+    "1.234" e "1,234" podem ser milhar ou decimal; o que decide é o número de
+    casas depois do separador — três casas é milhar, qualquer outra é decimal.
+    """
+    raw = str(text).strip()
+    m = re.match(r"^(\d+)[.,](\d+)$", raw)
+    if m:
+        whole, frac = m.groups()
+        return float(whole + frac) if len(frac) == 3 else float(whole + "." + frac)
+    try:
+        return float(re.sub(r"[^\d.]", "", raw) or 0)
+    except ValueError:
+        return 0.0
 
 
 def _push_real_progress(seg):
-    """Interpola o progresso real (rsync progress2 ou N/M do pacman) na etapa
-    de cópia e emite um evento de progresso para o anel."""
-    rng = _copy_range()
-    if rng is None:
-        with _state_lock:
-            # Sem plano (install.sh antigo): usa a faixa padrão.
-            rng = COPY_SLICE if _copying["on"] else None
-    if rng is None:
-        return
-    base, end = rng
-    m = re.search(r"(\d+)%\s+.*to-chk=", seg)
+    """Progresso real da etapa em curso, lido da linha viva do log.
+
+    Só entram padrões que não dependem do idioma: o % do rsync
+    (--info=progress2) e o "(N/M) x%" do pacman. Sem TTY o pacman não escreve a
+    linha de progresso — e aí quem manda é a contagem de bytes do cache.
+    """
+    m = RE_RSYNC.search(seg)
     if m:
-        frac = min(float(m.group(1)), 100.0) / 100.0
-    else:
-        m = re.search(r"\(\s*(\d+)\s*/\s*(\d+)\s*\)\s*\d+%", seg)
-        if not m:
-            return
-        done, total = float(m.group(1)), float(m.group(2))
-        if total <= 0:
-            return
-        frac = min(done / total, 1.0)
-    pct = min(int(base + (end - base) * frac), end - 1)
-    with _state_lock:
-        label = _tr(STATE["label"])
-        STATE["pct"] = pct
-    BROADCAST.push("progress", {"pct": pct, "label": label})
+        _ring_apply(min(float(m.group(1)), 100.0) / 100.0)
+        # Cópia offline: o rsync diz quantos arquivos já copiaram e quantos
+        # ainda faltam — o mesmo detalhe que a etapa da AUR dá com o nome do
+        # pacote.
+        if m.group(4):
+            _set_act("web.act.files", m.group(2), m.group(4))
+        return
+    m = RE_PACMAN.match(seg)
+    if not m:
+        return
+    total = float(m.group(2))
+    if total <= 0:
+        return
+    _ring_apply(min(float(m.group(1)) / total, 1.0))
 
 
 def _on_plan(line):
@@ -431,6 +642,7 @@ def _on_plan(line):
         return
     with _state_lock:
         STATE["steps"] = steps
+    _plan_reevaluate()
     _push_state()
 
 
@@ -460,10 +672,17 @@ def _on_note(line):
     key = line.split("|", 1)[1].strip()
     with _state_lock:
         STATE["label"] = key
-        if key.startswith("stage.copy.") or key == "stage.pac.done":
-            _copying["on"] = False
-        pct = int(STATE["pct"])
-    BROADCAST.push("progress", {"pct": pct, "label": _tr(key)})
+    BROADCAST.push("progress", _progress_payload())
+
+
+def _on_act(line):
+    """NLACT|<chave>|<item>: atividade com nome ("Compilando umbriel-git").
+
+    É o install.sh dizendo o que está acontecendo AGORA dentro da etapa; o texto
+    final sai traduzido pelo servidor, com o <item> no %s da chave.
+    """
+    _, key, item = line.split("|", 2)
+    _set_act(key.strip(), item.strip())
 
 
 def _on_result(line):
@@ -473,6 +692,35 @@ def _on_result(line):
     except (IndexError, ValueError):
         code = 1
     _finish(code)
+
+
+def _log_activity(line):
+    """Atividade lida do log, para a linha abaixo do anel.
+
+    Só casam ferramentas que não traduzem a saída (cargo, meson, rsync) ou
+    padrões numéricos do pacman: casar com as palavras do pacman ("instalando",
+    "downloading") quebraria em qualquer idioma diferente do pt-BR.
+    """
+    m = RE_BUILD.match(line)
+    if m:
+        # cargo: "   Compiling proc-macro2 v1.0.103"
+        _set_act("web.act.build", m.group(1))
+        return
+    m = RE_MESON.match(line)
+    if m:
+        # meson: "Generating targets:  45%|########     | 18/40 (2 min)"
+        done, total = float(m.group(1)), float(m.group(2))
+        if total > 0:
+            _ring_apply(done / total)
+        return
+    m = RE_SIZE.search(line)
+    if m:
+        # "Tamanho total download:  1658,48 MiB" — o pacman diz quanto vai
+        # baixar antes de começar. A partir daí a etapa tem um total em bytes.
+        size = _number(m.group(1)) * SIZE_MULT.get(m.group(2).upper(), 1)
+        if size > 0:
+            with _state_lock:
+                _size_total["bytes"] += size
 
 
 def _finish(code, error=None):
@@ -487,7 +735,6 @@ def _finish(code, error=None):
         STATE["finished"] = time.time()
         if code == 0 and not error:
             STATE["pct"] = 100
-        _copying["on"] = False
     _state_save()
     if error:
         BROADCAST.push("error", {"message": error})
@@ -511,6 +758,8 @@ def _handle_line(raw, pending):
         _on_step(line)
     elif line.startswith("NLNOTE|"):
         _on_note(line)
+    elif line.startswith("NLACT|"):
+        _on_act(line)
     elif line.startswith("NLRESULT|"):
         _on_result(line)
     else:
@@ -519,6 +768,7 @@ def _handle_line(raw, pending):
             STATE["lines"].append(line)
             if len(STATE["lines"]) > LOG_MAX_LINES:
                 del STATE["lines"][:-LOG_MAX_LINES]
+        _log_activity(line)
 
 
 def _push_logs(pending):
@@ -600,7 +850,7 @@ def adopt_running_install():
     global _ui_lang
     with _state_lock:
         for key in ("pct", "label", "step", "mode", "done", "code", "error",
-                    "started", "finished", "log"):
+                    "started", "finished", "log", "act_key", "act_args"):
             if data.get(key) is not None:
                 STATE[key] = data[key]
         steps = data.get("steps")
@@ -641,6 +891,10 @@ def adopt_running_install():
         return
     threading.Thread(target=follow_log, args=(log,), daemon=True).start()
     threading.Thread(target=_watch_pid, args=(pid,), daemon=True).start()
+    # O anel volta a andar de onde parou: a etapa atual é a mesma, e o plano
+    # (que vem do checkpoint) é reaplicado para redistribuir o que falta.
+    _plan_reevaluate()
+    _start_pace()
     with _state_lock:
         online = STATE["mode"] == "online"
     if online:
@@ -858,9 +1112,10 @@ def _begin_run(mode="offline"):
             running=True, pid=None, pct=0, label="stage.start", step="",
             steps=[], mode=mode, lines=[],
             done=False, code=None, error=None, started=time.time(), finished=0.0,
-            log=LOG_PATH,
+            log=LOG_PATH, act_key="", act_args=[],
         )
-        _copying["on"] = False
+        _pace.update(base=0.0, plan_w=0.0, span=1.0, at=time.time(),
+                     real=None, real_at=0.0)
     _log_eof.clear()
     _reset_download()
     try:
@@ -870,6 +1125,7 @@ def _begin_run(mode="offline"):
             os.replace(LOG_PATH, LOG_PATH + ".1")
     except OSError:
         pass
+    _start_pace()
     _state_save()
 
 
@@ -888,7 +1144,7 @@ def run_install(config):
     mode = "offline" if offline else "online"
 
     _begin_run(mode)
-    BROADCAST.push("progress", {"pct": 2, "label": _tr("stage.start")})
+    BROADCAST.push("progress", _progress_payload())
     env = dict(os.environ)
     for k, v in config.items():
         env[str(k)] = str(v)

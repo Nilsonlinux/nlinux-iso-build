@@ -421,7 +421,10 @@ body {
 }
 #ring-pct { font-size: 2.9rem; font-weight: 800; }
 
-.stage-label { margin-top: 10px; font-size: 1.12rem; font-weight: 600; min-height: 1.4em; }
+/* Etapa + atividade ("Baixar e compilar pacotes da AUR · Compilando
+   umbriel-git"): o texto pode ficar longo nos idiomas compridos, então ele
+   quebra em duas linhas em vez de estourar a largura. */
+.stage-label { margin: 10px auto 0; max-width: 34em; font-size: 1.12rem; font-weight: 600; min-height: 1.4em; line-height: 1.35; text-wrap: balance; }
 
 .stages { display: inline-grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 6px 20px; text-align: left; margin: 16px auto 4px; width: 100%; }
 .stage-item { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: .9rem; opacity: .35; transition: opacity .3s ease; }

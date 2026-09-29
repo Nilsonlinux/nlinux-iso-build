@@ -25,10 +25,11 @@ GUI_DRIVEN="${GUI_DRIVEN:-0}"
 #   NLPROGRESS|<pct>|<chave>  etapa atual com a porcentagem
 #   NLSTEP|<chave>            etapa atual; a porcentagem vem do plano
 #   NLNOTE|<chave>            atividade temporária (não muda a etapa)
+#   NLACT|<chave>|<item>      atividade com nome ("Compilando <pacote>")
 #   NLRESULT|<rc>             resultado final (trap EXIT)
-# <chave> é uma chave de tradução; o web/server.py a traduz para o NLLANG.
-# Tudo só é emitido quando dirigido pela web, para não poluir o modo
-# standalone.
+# <chave> é uma chave de tradução (o <item> entra no %s dela); o
+# web/server.py traduz para o NLLANG. Tudo só é emitido quando dirigido pela
+# web, para não poluir o modo standalone.
 progress() {
   [[ "$GUI_DRIVEN" == "1" ]] || return 0
   printf 'NLPROGRESS|%s|%s\n' "$1" "$2"
@@ -37,36 +38,51 @@ note() {
   [[ "$GUI_DRIVEN" == "1" ]] || return 0
   printf 'NLNOTE|%s\n' "$1"
 }
+# Atividade com argumento: o texto final é a tradução da chave com %s trocado
+# pelo item ("Compilando umbriel-git"). É o que aparece junto da etapa no
+# painel, e é emitido pelo que realmente está acontecendo agora.
+act() {
+  [[ "$GUI_DRIVEN" == "1" ]] || return 0
+  printf 'NLACT|%s|%s\n' "$1" "$2"
+}
 
 # ---------------------------------------------------------------------------
 # Plano de etapas do instalador web
 # ---------------------------------------------------------------------------
-# Lista ordenada das etapas NA ORDEM em que o instalador realmente executa,
-# e diferentes entre o modo offline (cópia do pendrive) e o online
-# (pacstrap + AUR). É a fonte única: o plano é enviado ao navegador e a
-# porcentagem de cada etapa sai dele — assim a lista da tela não pode
-# divergir do que o script está fazendo.
+# Lista ordenada das etapas NA ORDEM em que o instalador realmente executa, e
+# diferentes entre o modo offline (cópia do pendrive) e o online (pacstrap +
+# AUR). É a fonte única: o plano é enviado ao navegador e a porcentagem de
+# cada etapa sai dele — assim a lista da tela não pode divergir do que o script
+# está fazendo.
+#
+# O número de cada etapa é o PONTO EM QUE ELA COMEÇA, e a distância entre duas
+# etapas é o PESO dela: quanto da instalação inteira aquela etapa deve ocupar.
+# O web/server.py usa essa distância para desenhar o progresso real da etapa
+# (bytes do cache, % do rsync) e o ritmo do anel entre uma etapa e outra — por
+# isso o anel anda o tempo todo e chega a 100%. Os pesos abaixo vieram de uma
+# instalação real: no online, a AUR é a etapa mais longa (compilar o yay em
+# Rust + os pacotes da AUR), e no offline a cópia do pendrive é quase tudo.
 PLAN=()
-plan_add() { PLAN+=("$1|$2"); }   # <chave>|<pct em que a etapa começa>
+plan_add() { PLAN+=("$1|$2"); }   # <chave>|<começo da etapa, em %>
 
 build_plan() {
   PLAN=()
-  plan_add stage.lang_key 8
-  plan_add stage.mirror 12
-  plan_add stage.disk 20
-  plan_add stage.fs 30
+  plan_add stage.lang_key 0       # 0 -> 2    teclado e idioma
+  plan_add stage.mirror 2         # 2 -> 4    espelho
+  plan_add stage.disk 4           # 4 -> 9    particionamento
+  plan_add stage.fs 9             # 9 -> 13   formatação
   if (( OFFLINE )); then
-    plan_add stage.copy.offline 35
-    plan_add stage.chroot.system 62
-    plan_add stage.chroot.desktop 76
+    plan_add stage.copy.offline 13  # 13 -> 72  cópia do pendrive (59)
+    plan_add stage.chroot.system 72 # 72 -> 85  boot, initramfs, usuário (13)
+    plan_add stage.chroot.desktop 85  # 85 -> 96  desktop e serviços (11)
   else
-    plan_add stage.pac.download 35
-    plan_add stage.chroot.system 62
-    plan_add stage.chroot.aur 70
-    plan_add stage.chroot.desktop 88
+    plan_add stage.pac.download 13  # 13 -> 38  pacstrap: baixar e instalar (25)
+    plan_add stage.chroot.system 38 # 38 -> 54  boot, initramfs, usuário (16)
+    plan_add stage.chroot.aur 54    # 54 -> 85  yay e pacotes da AUR (31)
+    plan_add stage.chroot.desktop 85  # 85 -> 96  desktop e serviços (11)
   fi
-  plan_add stage.boot 96
-  plan_add stage.final 100
+  plan_add stage.boot 96          # 96 -> 99   bootloader
+  plan_add stage.final 99         # 99 -> 100  finalizando
   local item out=""
   for item in "${PLAN[@]}"; do
     out+="${out:+,}${item#*|}:${item%%|*}"

@@ -60,43 +60,43 @@ O instalador:
    live via `nlinux-installer-gui`): o mesmo passo a passo abaixo roda no
    navegador; o `install.sh` é disparado pelo servidor web com `GUI_DRIVEN=1`.
    Os 10 passos correspondem às etapas do wizard (`web/static/app.js`):
-   - **1/10** Disco de destino (via `lsblk`; ignora `loop`/`zram`);
-   - **2/10** Sistema de arquivos: `ext4` ou `btrfs`;
-   - **3/10** **Idioma (locale)**: `pt_BR.UTF-8`, `en_US.UTF-8`, `pt_PT`, `es_ES`,
-     `fr_FR`, `de_DE`, `it_IT`, `ja_JP`;
-   - **4/10** **Layout do teclado (keymap)**: `br-abnt2`, `us`, `us-intl`, `pt`,
-     `de`, `fr`, `es`, `it`, `uk`, `no`;
-   - **5/10** **Espelho de repositórios**: UFSCar, UFRJ, UFMG, PoP-SC (RNP),
-     Kernel.org, CDN oficial (fastly) ou Auto/padrão;
+   - **1/10** **Idioma, teclado e fuso** (uma escolha define os três):
+     `pt_BR.UTF-8`, `en_US.UTF-8`, `pt_PT`, `en_GB`, `es_ES`, `fr_FR`, `de_DE`,
+     `it_IT`, `ja_JP` (keymap e zona derivam da escolha);
+   - **2/10** Disco de destino (via `lsblk`; ignora `loop`/`zram`);
+   - **3/10** Modo: **Apagar tudo** ou **Dual boot** (preserva a ESP e instala em
+     espaço livre, com redução opcional de uma partição NTFS do Windows);
+   - **4/10** Sistema de arquivos: `ext4` ou `btrfs`;
+   - **5/10** **Espelho de repositórios**: UFSCar, Leaseweb, Dogado, Kyoto ou
+     Automático (padrão);
    - **6/10** **Tipo de instalação**: **Rápida (offline)** — padrão, copia o
      sistema do pendrive para o disco, sem internet · **Completa (online)** —
      baixa e instala os pacotes do zero (`pacstrap` + AUR);
    - **7/10** Criptografia LUKS2: Não/Sim;
-   - **8/10** GPU: `intel` / `amd` / `nvidia` / `vm`;
-   - **9/10** **Nome de usuário** (digitado; minúsculas/números/`_`/`-`);
-   - **10/10** **Senha do usuário** (digitada e mascarada, com confirmação);
-   - **Resumo** com "Confirmar e iniciar" / "Recomeçar".
-   - Caixa **larga (até 118 colunas)** e textos que **não são cortados**:
-     sobre a largura da janela, entram com `…` quando necessário; itens com
-     muitos textos (localidades, espelhos, tipo de instalação) cabem sem corte.
+   - **8/10** GPU: `auto` / `amd` / `nvidia` / `intel`;
+   - **9/10** **Hostname, nome de usuário e senha** (usuário em minúsculas com
+     números/`_`/`-`, senha mascarada com confirmação; por padrão a mesma senha
+     vale também para o root);
+   - **10/10** **Resumo** com "Confirmar e iniciar" / "Recomeçar" (no dual boot,
+     a redução da partição NTFS é confirmada aqui).
    - **Após confirmar, a MESMA caixa vira o painel de instalação**: lista de
-     etapas (✓ concluída, ▸ atual, ○ pendente), **barra de progresso
-     `[███░░░] 45%`** e as duas últimas linhas de log (com o progresso real do
-     `rsync`/`pacstrap` ao vivo). O motor roda em subprocesso com
-     `GUI_DRIVEN=1` e sinaliza via `NLPROGRESS|<pct>|<etapa>`. Se a página
-     recarregar, a conexão cair ou o servidor morrer, o painel volta sozinho ao
-     ponto em que a instalação está — nada é reiniciado (ver
-     "Instalador web").
-   - Fontes maiores no live: instalador via menu abre o kitty com
-     `font_size 18`; no modo direto (tty) o console usa `ter-120b`.
-   - Navegação: **setas** ou **k/j** · **Enter** seleciona · **Backspace** apaga na
-     digitação · **Esc/q** cancela (saída `2`).
-   - Fixos: hostname `nlinux`, zona `America/Sao_Paulo`, senha LUKS `nlinux`; a
-     senha informada vale para o usuário **e** para o root.
-   - Ao confirmar grava `DISK`, `FS_TYPE`, `LOCALE`, `KEYMAP`, `MIRROR`,
-     `OFFLINE`, `USE_LUKS`, `GPU`, `INSTALL_USER`, `INSTALL_USER_PASS`,
-     `ROOT_PASS` via `--out arquivo` (sem `--out`, imprime no stdout). Sem tty
-     → sai com status `1`.
+     etapas (✓ concluída, ▸ atual, ○ pendente), **anel de progresso da
+     instalação inteira** com a % no centro, **relógio digital** e a linha de
+     *etapa · atividade* logo abaixo do anel (mais o log com o progresso real do
+     `rsync`/`pacstrap`/`cargo` ao vivo). O motor roda em subprocesso com
+     `GUI_DRIVEN=1` e sinaliza pelo protocolo `NL*` do log (ver
+     "Instalador web"). Se a página recarregar, a conexão cair ou o servidor
+     morrer, o painel volta sozinho ao ponto em que a instalação está — nada é
+     reiniciado.
+   - Ao confirmar, o servidor passa as escolhas ao `install.sh` por **variáveis
+     de ambiente** (`INSTALL_DISK`, `FS_TYPE`, `LOCALE`, `KEYMAP`, `ZONEINFO`,
+     `MIRROR`, `OFFLINE`, `INSTALL_MODE`, `USE_LUKS`, `GPU`, `HOSTNAME`,
+     `INSTALL_USER`, `INSTALL_USER_PASS`, `ROOT_PASS`, `NLLANG`, `GUI_DRIVEN=1`),
+     que são as mesmas aceitas na linha de comando (ver "Variáveis substituem o
+     menu"). A senha informada vale para o usuário **e** para o root; LUKS e
+     hostname têm padrão (`nlinux`).
+   - Navegação: **Enter** (ou o botão) avança; o painel não recua sozinho — ele
+     acompanha a instalação.
 - **Fallback (legado, não usado no boot)**: se `install.sh` for chamado
       manualmente num terminal sem o web, usa prompts de texto
       (`collect_options_prompt`) com confirmação de senhas (`read_secret`).
@@ -275,15 +275,18 @@ código de saída) fica no servidor, com checkpoint em
 
 | Evento SSE | Dados | Para que serve |
 |---|---|---|
-| `state` | `{pct, label, steps, mode, started, finished, download, lines, running, done, code, error, lang}` | Ressincroniza tudo a cada (re)conexão |
-| `progress` | `{pct, label}` | Anel/barra de progresso |
-| `step` | `{pct, label, index, total}` | Troca de etapa (o texto da lista é o do plano) |
-| `note` | `{label}` | Atividade temporária, sem trocar de etapa |
+| `state` | `{pct, label, act, step, idx, steps, mode, started, finished, download, lines, running, done, code, error, lang}` | Ressincroniza tudo a cada (re)conexão |
+| `progress` | `{pct, label, act, step, idx}` | Anel + linha de etapa/atividade |
 | `tail` | `{line}` | Última linha viva (progresso com `\r` do rsync/pacman) |
 | `log` | `{lines: [...]}` | Linhas do log, em lote (não um evento por linha) |
 | `download` | `{bytes, rate, files}` | MB baixados, velocidade e nº de pacotes (modo online) |
 | `done` | `{code}` | Fim da execução (o `state` final vem logo em seguida) |
 | `error` | `{message}` | Falha real do servidor/execução |
+
+Trocar de etapa, nota e atividade **não** têm evento próprio: as três coisas vão
+no `progress` (e no `state`), que é o único evento que mexe na tela do anel —
+assim uma troca de etapa nunca chega "solta" e o rótulo nunca pisca para um
+estado intermediário.
 
 | Endpoint | Uso |
 |---|---|
@@ -305,10 +308,11 @@ página. Só são emitidas com `GUI_DRIVEN=1`, para não poluir o modo standalon
 
 | Linha | Significado |
 |---|---|
-| `NLSTEPS\|<pct>:<chave>,…` | **Plano completo e ordenado** das etapas, enviado uma vez. A porcentagem de cada etapa está aqui. |
+| `NLSTEPS\|<pct>:<chave>,…` | **Plano completo e ordenado** das etapas, enviado uma vez. O número de cada etapa é o **ponto em que ela começa**; a distância entre duas etapas é o **peso** dela (ver abaixo). |
 | `NLPROGRESS\|<pct>\|<chave>` | Etapa atual com a porcentagem (uso pontual). |
 | `NLSTEP\|<chave>` | Etapa atual; a porcentagem sai do plano. É o que os scripts do chroot usam. |
-| `NLNOTE\|<chave>` | Atividade temporária dentro da etapa (salvar pacotes, montar/desmontar…), sem mudar a etapa. |
+| `NLNOTE\|<chave>` | Texto temporário dentro da etapa (salvar pacotes, montar/desmontar…), sem trocar de etapa. |
+| `NLACT\|<chave>\|<item>` | **Atividade do momento com nome** — o que está sendo feito agora: `Compilando umbriel-git`, `Compilando yay-bin`, `1.234 de 12.345 arquivos`. O `<item>` entra no `%s` da tradução, então o texto sai no idioma escolhido (e nunca em português hard-coded). |
 | `NLRESULT\|<rc>` | Resultado final, escrito pelo `trap … EXIT`. **Sempre a última linha do log**, o que permite a uma execução *reanexada* (servidor que caiu no meio) reportar o fim. |
 
 `NLLANG=<idioma>` fixa o idioma das etapas.
@@ -318,34 +322,86 @@ página. Só são emitidas com `GUI_DRIVEN=1`, para não poluir o modo standalon
 A lista de etapas da tela **não é uma constante do navegador**: é o plano do
 `install.sh` (`build_plan` em `install.sh`), que é montado conforme o modo e
 enviado no primeiro `NLSTEPS`. Os dois modos instalam coisas diferentes, então
-também têm planos diferentes:
+também têm planos diferentes. O número é o **começo** da etapa — a distância
+entre duas é o quanto ela pesa na instalação inteira (esses pesos vieram de uma
+instalação real):
 
-| % | Online (pacstrap + AUR) | Offline (cópia do pendrive) |
-|---|---|---|
-| 8 | Idioma e layout de teclado | Idioma e layout de teclado |
-| 12 | espelho (mirror) | espelho (mirror) |
-| 20 | Particionar o disco | Particionar o disco |
-| 30 | Formatar e montar | Formatar e montar |
-| 35 | **Baixar / instalar pacotes** | **Copiar o sistema do pendrive** |
-| 62 | Sistema no chroot (locale, keymap, usuários, zram, bootloader) | idem |
-| 70 | **Compilar pacotes AUR (yay)** | — |
-| 88 | Área de trabalho, greeter, serviços e dotfiles | idem |
-| 96 | Bootloader | Bootloader |
-| 100 | Finalização (desmontar, sincronizar) | idem |
+| Começo (%) | Peso | Online (pacstrap + AUR) | Offline (cópia do pendrive) |
+|---|---|---|---|
+| 0 | 2 | Idioma e layout de teclado | Idioma e layout de teclado |
+| 2 | 2 | espelho (mirror) | espelho (mirror) |
+| 4 | 5 | Particionar o disco | Particionar o disco |
+| 9 | 4 | Formatar e montar | Formatar e montar |
+| 13 | 25 / **59** | **Baixar / instalar pacotes** (`pacstrap`) | **Copiar o sistema do pendrive** (rsync) |
+| 38 / 72 | 16 / 13 | Sistema no chroot (locale, keymap, usuários, zram) | Sistema no chroot (locale, keymap, usuários, zram) |
+| 54 | **31** | **Compilar pacotes AUR (yay)** | — |
+| 85 | 11 | Área de trabalho, greeter, serviços e dotfiles | idem |
+| 96 | 3 | Bootloader | Bootloader |
+| 99 | 1 | Finalização (desmontar, sincronizar) | idem |
 
-Os scripts do chroot anunciam as suas etapas com `cstage`/`cnote`
+Ou seja: no online a AUR é a etapa mais pesada (compilar o yay em Rust + os
+pacotes da AUR) e no offline a cópia do pendrive é quase tudo.
+
+Os scripts do chroot anunciam as suas etapas com `cstage`/`cnote`/`cact`
 (`install/chroot/helpers.sh`, chamadas de `all.sh` e `20-aur.sh`) — por isso
 "compilar os pacotes AUR" aparece como etapa própria em vez de ficar escondido
 em "bootloader e finalização". A saída do `yay` deixou de ir para `/dev/null` e
 passa a aparecer no log da tela.
 
-O progresso real de dentro da etapa de cópia (rsync/pacman) continua sendo
-lido do log e é **interpolado dentro da faixa da etapa** (35 % até 1 % antes
-da seguinte), então o anel nunca "anda" durante uma etapa e depois volta.
-
 Se o `install.sh` for uma versão antiga (sem `NLSTEPS`), o servidor monta a
 lista pela ordem das porcentagens das etapas que aparecerem no log, e o
-navegador tem um plano reserva por modo — a tela nunca fica vazia.
+navegador tem um plano reserva por modo (`FALLBACK_STEPS` em
+`web/static/app.js`) — a tela nunca fica vazia.
+
+#### O anel: porcentagem real da instalação inteira
+
+O anel mostra a **porcentagem do todo**, e ela anda o tempo todo — nunca congela
+entre uma etapa e outra e nunca anda para trás. Duas fontes, combinadas em
+`web/server.py` (`_ring_apply`):
+
+1. **O ritmo** — a cada troca de etapa o anel se sincroniza com o ponto do
+   plano e volta a caminhar de onde está até 100% no tempo que falta para o fim
+   previsto da instalação (`PACE_TOTAL_S`, ~25 min, perto da mediana de uma
+   instalação real). É o que garante que o anel sempre termine em 100%, mesmo
+   quando uma etapa estoura o previsto: o que sobrou é repartido pelas
+   seguintes. Se a instalação atrasar muito, o passo tem um piso
+   (`PACE_TOTAL_S * 0.15`) para o anel ficar lento em vez de dar um salto.
+2. **O progresso real** — onde o log, o pacman ou a contagem de bytes dizem
+   quanto da etapa já foi, essa fração é desenhada na fatia da etapa (`plan_w`):
+   `Tamanho total download:` do pacman + os bytes do cache (funciona em qualquer
+   idioma), o `N/M` do pacman, o `%`/`xfr#` do `rsync --info=progress2` e o
+   `NN%|…| n/m` do meson. O real só vale por `REAL_TTL` (20 s): depois disso a
+   estimativa assume de volta, para o anel não travar se o download travar.
+
+O anel é limitado a `PACE_MAX_RUNNING = 99` durante a execução: **100% só
+quando a instalação termina com sucesso**.
+
+#### A linha abaixo do anel: etapa · atividade
+
+A linha mostra a etapa (ou a nota dela) **e o que está acontecendo agora**,
+separados por `·`:
+
+```
+Baixar e compilar pacotes da AUR · Compilando umbriel-git
+Copiando o sistema do pendrive (modo rápido, sem internet) · 3.120 de 48.902 arquivos
+Habilitando serviços do sistema
+```
+
+A atividade vem de duas fontes, sempre traduzidas pelo servidor:
+
+- **`NLACT`** do instalador — o que ele sabe: `Compilando yay-bin`,
+  `Compilando umbriel-git, whatsapp-linux-desktop-bin`, o grupo inteiro de AUR de
+  uma vez (o `yay` resolve o grupo numa transação só).
+- **linhas do log** que são inequívocas e **não traduzidas** pelo programa que
+  as escreve: `Compiling <crate>` do cargo, `NN%|#### | n/m` do meson e o
+  `xfr#`/`to-chk` do rsync (que também dão o progresso real da cópia). O log do
+  pacman é de propósito ignorado aqui: as palavras dele vêm traduzidas, e o
+  `NLPROGRESS`/`Tamanho total` já cuidam da etapa.
+
+A atividade **pertence à etapa**: quando a próxima etapa começa, ela some (e o
+item longo é cortado para a linha não virar um parágrafo). A lista de etapas é
+destacada pelo `idx` que o servidor manda, e não pela porcentagem — senão o
+anel, que anda dentro da etapa, passaria à frente da lista.
 
 #### Relógio e download no painel
 
@@ -398,7 +454,7 @@ Roteiro: `install.sh` → `install/chroot/all.sh` → cada etapa abaixo.
 
 No painel web essas etapas viram os blocos "Sistema no chroot", "Compilar
 pacotes AUR" (só no online) e "Área de trabalho" da lista de progresso: quem
-avisa é o `all.sh`, com `cstage`/`cnote` (ver
+avisa é o `all.sh`, com `cstage`/`cnote`/`cact` (ver
 [Conversa entre o servidor e o `install.sh`](#conversa-entre-o-servidor-e-o-installsh)).
 
 | Etapa | Arquivo | Função |

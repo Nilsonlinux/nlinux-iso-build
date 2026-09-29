@@ -16,7 +16,9 @@ echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/10-noctalia-builder
 chmod 440 /etc/sudoers.d/10-noctalia-builder
 
 log "Instalando yay (yay-bin) via makepkg"
-cnote stage.note.yay
+# A atividade vale mais que a nota "Instalando o yay": ela diz também o que está
+# sendo compilado agora (e o log refina para o crate/arquivo em andamento).
+cact web.act.build yay-bin
 as_user builder bash -c '
   git clone --depth 1 https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
   cd /tmp/yay-bin
@@ -39,6 +41,10 @@ done < <(awk 'NF && $1 !~ /^#/ { print $1 }' "$aur_package_file")
 install_aur_packages() {
   # Sem >/dev/null: o download e a compilação da AUR aparecem no log do
   # instalador web (é a etapa mais longa e a que mais parece travada).
+  # O painel é avisado do que está sendo compilado: sem isso a etiqueta ficaria
+  # presa no nome da etapa durante 20 minutos de compilação em Rust/Meson.
+  # A lista vem inteira porque o yay resolve o grupo numa transação só.
+  cact web.act.build "$(IFS=', '; echo "${*}")"
   as_user builder bash -c '
   export GOCACHE=/tmp/gocache CARGO_HOME=/tmp/cargo
   yay -S --noconfirm --needed \
