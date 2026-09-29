@@ -173,8 +173,173 @@ fresh(m, ONLINE_PLAN)
 feed(m, "NLPROGRESS|38|stage.chroot.system")
 m.STATE["step"] = "stage.desconhecida"
 m._plan_reevaluate()
-check("etapa fora do plano não tem ritmo", m._pace["span"] == 1.0, m._pace["span"])
+check("etapa fora do plano não tem ritmo", m._pace["span"] == 0.0, m._pace["span"])
 check("anel parado sem plano e sem real", m._ring_apply() is None)
+
+# ---------------------------------------------------------------------------
+# O começo da execução, com o relógio de verdade.
+#
+# Foi aqui que o anel apareceu em 99%: o install.sh manda o plano (NLSTEPS)
+# antes de mandar a primeira etapa, e a espera por essa etapa usava span=1.0
+# como "sem ritmo" — que na verdade é "de 0 a 100% em um segundo". Um segundo
+# depois o anel já estava em 99% e nunca mais voltava, porque o anel não anda
+# para trás. Estes testes usam o relógio de verdade (e um tique curto) porque
+# é exatamente o relógio que denuncia esse tipo de defeito.
+# ---------------------------------------------------------------------------
+print("== anel: os primeiros segundos (relógio de verdade) ==")
+
+
+def primeiros_segundos(plan, feed_step, segundos=0.4):
+    """Rode como o POST /api/install: começa e deixa a thread do anel trabalhar."""
+    m = load()
+    m.PACE_TOTAL_S, m.PACE_INTERVAL = 1500.0, 0.02
+    m._begin_run("online")
+    m._start_pace()
+    if plan:
+        feed(m, plan)
+    if feed_step:
+        feed(m, feed_step)
+    time.sleep(segundos)
+    return m
+
+
+m = primeiros_segundos(None, None)
+check("anel começa em 0%, sem o plano", m.STATE["pct"] == 0, m.STATE["pct"])
+check("sem plano o anel não tem ritmo", m._pace["span"] == 0.0, m._pace["span"])
+
+m = primeiros_segundos(ONLINE_PLAN, None)
+check("anel continua em 0% depois do plano", m.STATE["pct"] == 0, m.STATE["pct"])
+check("etapa ainda vazia", m.STATE["step"] == "", m.STATE["step"])
+
+m = primeiros_segundos(ONLINE_PLAN, "NLSTEP|stage.lang_key")
+check("primeira etapa não dispara o anel", m.STATE["pct"] == 0, m.STATE["pct"])
+check("a primeira etapa dá o ritmo", m._pace["span"] > 1000, m._pace["span"])
+time.sleep(1.2)
+# 1% leva uns 15 s (a primeira etapa vale 2% de uma instalação de 25 min), o
+# que importa é não ter pulado para a frente.
+check("anel segue devagar no começo", 0 <= m.STATE["pct"] <= 2, m.STATE["pct"])
+
+# O mesmo no offline: a diferença entre os modos não pode mudar o começo.
+m = load()
+m.PACE_TOTAL_S, m.PACE_INTERVAL = 1500.0, 0.02
+m._begin_run("offline")
+m._start_pace()
+feed(m, OFFLINE_PLAN)
+time.sleep(0.4)
+check("offline também começa em 0%", m.STATE["pct"] == 0, m.STATE["pct"])
+feed(m, "NLSTEP|stage.lang_key")
+time.sleep(0.4)
+check("offline não dispara o anel", m.STATE["pct"] == 0, m.STATE["pct"])
+
+# ---------------------------------------------------------------------------
+print("== anel: a instalação inteira em tempo simulado ==")
+
+
+class relog:
+    """Relógio controlado: a instalação inteira roda em tempo simulado.
+
+    Substitui time.time() (só dentro do `with`) e dá um tique do anel por
+    segundo simulado. É determinístico e instantâneo, ao contrário de dormir
+    os 25 minutos de uma instalação de verdade.
+    """
+
+    def __init__(self):
+        self._real = time.time
+        self.base = self._real()
+        self.advance = 0.0
+
+    def __enter__(self):
+        relog.time = self
+        time.time = self.now
+        return self
+
+    def __exit__(self, *exc):
+        time.time = self._real
+        return False
+
+    def now(self):
+        return self.base + self.advance
+
+    def passa(self, segundos, mod):
+        """Avança o relógio, um tique de anel por segundo."""
+        for _ in range(int(segundos)):
+            self.advance += 1.0
+            mod._ring_apply()
+
+
+# Os tempos de cada etapa saem dos PESOS do próprio plano: o peso é a fatia da
+# instalação, então a etapa que pesa 31 dura 31% do tempo. Assim a simulação
+# mede o modelo do anel em vez de uma lista de tempos que o contradizia.
+TOTAL_S = 1500.0
+
+
+def tempos_do_plano(plan):
+    """[(chave, % do plano, segundo em que a etapa começa)] tirados do plano."""
+    itens = [(k, int(p)) for p, k in
+             (par.split(":") for par in plan[len("NLSTEPS|"):].split(","))]
+    out, t = [], 0.0
+    for i, (chave, pct) in enumerate(itens):
+        out.append((chave, pct, t))
+        fim = itens[i + 1][1] if i + 1 < len(itens) else 100
+        t += TOTAL_S * (fim - pct) / 100.0
+    return out
+
+
+def simula(plan, reais=()):
+    """Roda a instalação inteira simulada; devolve (curva, erro).
+
+    Cada etapa é anunciada no segundo que o plano diz, como o install.sh faz.
+    """
+    m = load()
+    m.PACE_TOTAL_S, m.PACE_INTERVAL = TOTAL_S, 3600.0   # tiques à mão
+    curva, anterior, t = [], -1, 0.0
+    with relog() as rel:
+        m._begin_run("online" if plan == ONLINE_PLAN else "offline")
+        feed(m, plan)
+        for i, (chave, pct, quando_i) in enumerate(tempos_do_plano(plan)):
+            rel.passa(max(0, round(quando_i - t)), m)
+            t = rel.advance
+            feed(m, "NLSTEP|" + chave)
+            if m.STATE["pct"] < anterior:
+                return None, "anel voltou de %d para %d na %s" % (
+                    anterior, m.STATE["pct"], chave)
+            anterior = m.STATE["pct"]
+            curva.append((quando_i, m.STATE["pct"], pct))
+            if chave in reais:
+                # Etapas com progresso real de verdade: a fração anda de 10 em
+                # 10 por cento dentro da etapa.
+                for k in range(1, 11):
+                    m._ring_apply(k / 10.0)
+                    curva.append((quando_i, m.STATE["pct"], None))
+        rel.passa(int(TOTAL_S - t) + 1, m)
+    return curva, None
+
+
+for nome, plan, reais, tol in (
+        ("online", ONLINE_PLAN, ("stage.pac.download", "stage.chroot.aur"), 6),
+        ("offline", OFFLINE_PLAN, ("stage.copy.offline",), 6)):
+    curva, erro = simula(plan, reais)
+    check("%s: o anel não volta atrás na instalação inteira" % nome, erro is None, erro)
+    if not curva:
+        continue
+    # A cada troca de etapa o anel tem que estar perto do ponto do plano: é
+    # isso que faz a % ser crível (e o que denuncia um peso errado).
+    fora = [(t, a, p) for t, a, p in curva if p is not None and abs(a - p) > tol]
+    check("%s: o anel bate com o plano em cada etapa (tolerância %d)" % (nome, tol),
+          not fora, fora)
+    # E nunca sai de 99% antes do fim, para 100% significar "terminou".
+    check("%s: nunca passa de 99%% antes do fim" % nome,
+          max(a for _, a, _ in curva) <= 99, max(a for _, a, _ in curva))
+    # A curva anda: entre duas etapas o anel sempre avançou.
+    marcas = [a for _, a, p in curva if p is not None]
+    check("%s: o anel cresce etapa a etapa" % nome,
+          all(b >= a for a, b in zip(marcas, marcas[1:])), marcas)
+    fim = curva[-1][1]
+    check("%s: chega em 99%% no fim previsto" % nome, fim == 99, fim)
+    # Antes da primeira etapa não acontece nada (foi o defeito do 99% cedo).
+    comecou = [a for t, a, _ in curva if t == 0.0]
+    check("%s: no primeiro segundo o anel está em 0%%" % nome,
+          comecou and comecou[0] == 0, comecou)
 
 # ---------------------------------------------------------------------------
 print("== anel: progresso real manda ==")

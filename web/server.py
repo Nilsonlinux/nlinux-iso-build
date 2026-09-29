@@ -202,10 +202,11 @@ STATE = {
 # Ritmo do anel (ver PACE_*):
 #   base   = onde o anel está quando a etapa começou (nunca volta atrás disso)
 #   plan_w = peso da etapa no plano (a fatia onde o progresso REAL é desenhado)
-#   span   = segundos que a etapa deveria durar até a instalação acabar
+#   span   = segundos que falta para o fim previsto; 0 = SEM RITMO, o anel
+#            espera parado (antes de o plano chegar) em vez de adivinhar
 #   at     = quando a etapa começou
 #   real   = fração real da etapa, quando dá para medir (bytes, % do rsync…)
-_pace = {"base": 0.0, "plan_w": 0.0, "span": 1.0, "at": 0.0,
+_pace = {"base": 0.0, "plan_w": 0.0, "span": 0.0, "at": 0.0,
          "real": None, "real_at": 0.0}
 _pace_thread = {"thread": None}
 
@@ -463,7 +464,9 @@ def _plan_reevaluate():
       - span: o tempo que falta para o fim previsto da instalação. O anel
         caminha de base a 100% nesse intervalo, então ele anda o tempo todo e
         chega a 100% — mesmo se a etapa estourar o previsto, mesmo se as
-        etapas anteriores já tiverem comido a parte das seguintes.
+        etapas anteriores já tiverem comido a parte das seguintes. Sem plano
+        não dá para estimar nada: span=0 deixa o anel parado até o plano
+        chegar (é o que acontece no primeiro segundo da execução).
     """
     with _state_lock:
         steps = STATE["steps"]
@@ -471,8 +474,10 @@ def _plan_reevaluate():
         now = time.time()
         if idx < 0:
             # Etapa fora do plano (ou plano ainda não chegou): sem pesos para
-            # seguir, o anel só avança com progresso real.
-            _pace.update(base=float(STATE["pct"]), plan_w=0.0, span=1.0,
+            # seguir, o anel ESPERA PARADO, onde está. Ritmo aqui seria
+            # adivinhação — e adivinhando, o anel chegava a 99% em um segundo e
+            # ficava lá, porque nunca volta atrás.
+            _pace.update(base=float(STATE["pct"]), plan_w=0.0, span=0.0,
                          at=now, real=None, real_at=0.0)
             return
 
@@ -498,7 +503,9 @@ def _ring_apply(frac=None):
     Duas fontes, e o anel só anda para frente:
       - o RITMO: caminha de base a 100% no tempo que a instalação inteira
         deveria levar a partir da última troca de etapa. É o que garante que o
-        anel nunca congele e sempre termine em 100%.
+        anel nunca congele e sempre termine em 100%. Sem plano (span == 0) não
+        há ritmo: o anel fica parado onde está, esperando o install.sh mandar o
+        plano, e só o progresso real o move.
       - o REAL: quando o log, o pacman ou a contagem de bytes dizem quanto da
         etapa já foi. Fica valendo por REAL_TTL segundos; depois disso volta a
         valer só o ritmo, para o anel não travar se o download travar.
@@ -509,7 +516,10 @@ def _ring_apply(frac=None):
             _pace["real"] = min(max(frac, 0.0), 1.0)
             _pace["real_at"] = now
         base, span, at = _pace["base"], _pace["span"], _pace["at"]
-        pct = int(base + (100.0 - base) * min(max((now - at) / span, 0.0), 1.0))
+        if span > 0.0:
+            pct = int(base + (100.0 - base) * min(max((now - at) / span, 0.0), 1.0))
+        else:
+            pct = int(base)
         real = _pace["real"]
         if real is not None and now - _pace["real_at"] <= REAL_TTL:
             # A verdade da etapa, quando ela é mais adiante que a estimativa.
@@ -1114,7 +1124,9 @@ def _begin_run(mode="offline"):
             done=False, code=None, error=None, started=time.time(), finished=0.0,
             log=LOG_PATH, act_key="", act_args=[],
         )
-        _pace.update(base=0.0, plan_w=0.0, span=1.0, at=time.time(),
+        # span=0: sem plano não há ritmo, o anel espera em 0% até o install.sh
+        # mandar o plano e a primeira etapa.
+        _pace.update(base=0.0, plan_w=0.0, span=0.0, at=time.time(),
                      real=None, real_at=0.0)
     _log_eof.clear()
     _reset_download()

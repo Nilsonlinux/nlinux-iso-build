@@ -55,6 +55,20 @@ Cada suíte imprime `ok`/`FAIL` por checagem e sai com status 1 se alguma falhar
   (100% é só no fim); o plano corrige o anel atrasado; o anel adiantado não
   volta; o piso do ritmo evita o salto quando a instalação atrasa muito; a
   etapa fora do plano não tem ritmo e o anel para.
+- **anel: os primeiros segundos (relógio de verdade)** — o começo da execução,
+  com a thread do anel de verdade e o relógio de verdade, online e offline: sem
+  plano, só com o plano e ainda sem a primeira etapa, e com a primeira etapa. O
+  anel tem que ficar em 0% e depois andar devagar. É o grupo que pegou o
+  defeito do "99% logo no começo": o instalador manda `NLSTEPS` antes da
+  primeira etapa, e a espera por essa etapa estava tratando "sem plano" como
+  "faça a instalação inteira em 1 segundo".
+- **anel: a instalação inteira em tempo simulado** — os tempos de cada etapa
+  saem dos pesos do próprio plano (o peso é a fatia da instalação, logo é
+  também a fatia do tempo), e a instalação inteira roda com o relógio
+  controlado: o anel não volta atrás, bate com o plano em cada troca de etapa
+  (tolerância de 6 pontos), cresce etapa a etapa, passa pelo progresso real
+  dentro da etapa de download/cópia/compilação, nunca sai de 99% antes do fim
+  e chega em 99% no fim previsto — nos dois modos.
 - **anel: progresso real manda** — o total que o pacman diz que vai baixar
   (nos dois formatos de número, com e sem separador de milhar) alimenta a
   fração real; a fração não regride a cada tique e expira depois de `REAL_TTL`;

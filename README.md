@@ -374,7 +374,10 @@ entre uma etapa e outra e nunca anda para trás. Duas fontes, combinadas em
    estimativa assume de volta, para o anel não travar se o download travar.
 
 O anel é limitado a `PACE_MAX_RUNNING = 99` durante a execução: **100% só
-quando a instalação termina com sucesso**.
+quando a instalação termina com sucesso**. E, no primeiro segundo — antes de o
+instalador mandar o plano e a primeira etapa — o anel fica parado em 0%: sem
+plano não há como estimar quanto da instalação já foi, e estimar errado era o
+que fazia o anel aparecer em 99% logo no começo.
 
 #### A linha abaixo do anel: etapa · atividade
 
