@@ -594,8 +594,18 @@ Aplicados ao usuário do **live** (`~/home/nlinux`) e do **sistema instalado**
 
 `nlinux-software/` é a cópia do build publicado da loja
 (`github.com/Nilsonlinux/nlinux-software`) que o `build-iso.sh` embute em
-`/opt/nlinux-software`. Para atualizar, gere a nova versão pela curadoria
-(ela já publica no GitHub) e substitua o conteúdo:
+`/opt/nlinux-software` dentro da imagem.
+
+**Não é preciso fazer isso à mão.** A curadoria sincroniza esta pasta sozinha: ao
+gerar a versão da loja, o passo 8 do build (`sync_iso_store`) apaga e recopla
+`nlinux-software/` a partir do build recém-gerado, antes de publicar. Basta:
+
+1. abrir a curadoria e clicar em **"Gerar versão da loja"**;
+2. conferir a revisão: `grep revision nlinux-software/catalog-head.json`;
+3. commitar aqui no repositório da ISO, para a imagem ser reproduzível.
+
+Se a pasta estiver vazia ou a curadoria falhar ao espelhar (ela avisa no
+stdout), o caminho manual continua valendo:
 
 ```bash
 cd /home/nilsonlinux/nlinux-iso-build
@@ -609,6 +619,9 @@ Confirme com `cat nlinux-software/catalog-head.json` (a revisão tem que ser a
 mais recente) e conferindo que a assinatura bate:
 `gpg --verify nlinux-software/nlinux-software-v<N>.tar.gz.asc nlinux-software/nlinux-software-v<N>.tar.gz`
 (precisa do `.tar.gz`, que só existe no repositório, não na pasta embute).
+
+> A pasta é apagada antes de recoplar. É o que impede programs removidos do
+> catálogo de continuarem embarcados na imagem por causa de um espelho parcial.
 
 Desde a v117 o app **não grava mais dentro do `/opt`**: o catálogo e a mídia
 vão para `~/.local/share/nlinux/store/apps` e o `/opt` é só a semente. Por
