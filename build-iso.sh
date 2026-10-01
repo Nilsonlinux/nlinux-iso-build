@@ -13,12 +13,58 @@ CLEANUP_ATTEMPTED=0
 
 die() { echo -e "\e[31m[erro]\e[0m $*" >&2; exit 1; }
 info() { echo -e "\e[36m[iso]\e[0m $*"; }
+warn() { echo -e "\e[33m[iso] aviso:\e[0m $*" >&2; }
 
 run_root() {
   if (( EUID == 0 )); then
     "$@"
   else
     sudo "$@"
+  fi
+}
+
+catalog_rev() {
+  # Revisão gravada no catalog-head.json de um build da loja, ou vazio.
+  local head="$1" rev=""
+  [[ -f "$head" ]] && rev="$(grep -o '"revision"[[:space:]]*:[[:space:]]*[0-9]\+' "$head" \
+    | grep -o '[0-9]\+' | head -n1)"
+  printf '%s' "$rev"
+}
+
+# A loja embarcada é conteúdo versionado: nada garante que a pasta
+# nlinux-software/ esteja na revisão mais recente publicada, e a imagem sai
+# com ela sem mais questionamento. Já aconteceu: a pasta ficou na v198 enquanto
+# a publicada era v211, e a ISO embarcaria uma loja velha — com programas já
+# removidos do catálogo — sem nenhum aviso.
+check_store_up_to_date() {
+  local store="$1" local_rev remote_rev url
+  local_rev="$(catalog_rev "$store/catalog-head.json")"
+  if [[ -z "$local_rev" ]]; then
+    warn "nlinux-software/catalog-head.json ausente ou ilegível; não dá para conferir a revisão da loja."
+    return 0
+  fi
+  url="https://raw.githubusercontent.com/Nilsonlinux/nlinux-software/main/catalog-head.json"
+  if ! command -v curl >/dev/null 2>&1; then
+    info "curl ausente; pulando a conferência da revisão da loja."
+    return 0
+  fi
+  if ! remote_rev="$(curl -fsSL --max-time 15 "$url" 2>/dev/null)" \
+     || [[ -z "$remote_rev" ]]; then
+    # Sem rede, ou CDN fora: a conferência é um extra, nunca um bloqueio.
+    info "não consegui ler o catálogo publicado; seguindo com a revisão $local_rev."
+    return 0
+  fi
+  remote_rev="$(catalog_rev /dev/stdin <<<"$remote_rev")"
+  [[ -z "$remote_rev" ]] && return 0
+  if (( remote_rev > local_rev )); then
+    warn "a loja embarcada está na revisão $local_rev, mas a publicada é $remote_rev."
+    warn "a imagem vai sair com a loja velha. Gere a versão pela curadoria"
+    warn "(ela espelha e commita nlinux-software/) e rode de novo:"
+    warn "  grep revision $store/catalog-head.json"
+  elif (( remote_rev < local_rev )); then
+    info "a loja embarcada (v$local_rev) está à frente da publicada (v$remote_rev); prosseguindo."
+  else
+    info "loja embarcada em dia com a publicada (v$local_rev)."
   fi
 }
 
@@ -119,6 +165,7 @@ else
   SOFT_SRC=""
 fi
 if [[ -n "$SOFT_SRC" ]]; then
+  check_store_up_to_date "$SOFT_SRC"
   SOFT_DST="$PROFILE_DIR/airootfs/opt/nlinux-software"
   mkdir -p "$SOFT_DST"
   cp -a "$SOFT_SRC/." "$SOFT_DST/"
