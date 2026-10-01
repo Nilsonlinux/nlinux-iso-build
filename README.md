@@ -13,7 +13,7 @@ Resultado instalado / ao vivo:
 - **greetd** + **noctalia-greeter** — tela de login Wayland (AUR)
 - **systemd-boot**, **LUKS2 opcional**, **ext4 ou btrfs** (subvolumes `@`, `@home`, `@log`, `@pkg`)
 - **Shell padrão do usuário: fish**; terminal padrão: **kitty** (`Mod+T` / `Mod+Shift+T`)
-- **App Center do GNOME** (gnome-software com PackageKit + metadados AppStream + Flathub)
+- **NLinux Software** (nlinux-software com PackageKit + metadados AppStream)
 - **Boas-vindas no primeiro login** do sistema instalado (janela única, `zenity`)
 - **fastfetch** mostra a logo do NLinux (PNG via protocolo kitty em `config/.config/fastfetch/img/nlinux.png`) + especificações do sistema em pt-BR
 - **Desktop no live** com os mesmos apps da instalação (Firefox, kitty, Gnome Software…)
