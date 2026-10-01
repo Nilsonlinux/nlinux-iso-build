@@ -791,9 +791,12 @@ function openSysUpdatesModal() {
 
 async function startSysUpdate() {
   if (state.busy) { toast(tr("toast.busyInstall"), "info"); return; }
+
+  $("#modal").hidden = true;
   
   state.busy = true;
   setBusy(true);
+  renderSysUpdateProgress(null);
   
   statusCard(`${tr("status.updating").replace(/…$/, "")}…`, tr("status.waiting"), "");
   
@@ -807,6 +810,7 @@ async function startSysUpdate() {
   } catch (e) {
     state.busy = false;
     setBusy(false);
+    renderSysUpdates(state.updates || {});
     toast(tr("toast.startFailUpdate"), "err");
     return;
   }
@@ -815,6 +819,7 @@ async function startSysUpdate() {
   (async function poll() {
     const st = await api("/api/status?id=" + job.id).catch(() => null);
     if (!st) {
+      renderSysUpdateProgress(currentProgress);
       statusCard(`${tr("status.updating").replace(/…$/, "")}…`, tr("status.checking"), "", currentProgress);
       setTimeout(poll, 1400);
     }
@@ -822,6 +827,7 @@ async function startSysUpdate() {
       currentProgress = Number.isFinite(st.progress)
         ? Math.max(currentProgress ?? 0, Math.min(99, st.progress))
         : null;
+      renderSysUpdateProgress(currentProgress);
       const waiting = st.lines.length <= 1;
       const last = waiting
         ? tr("status.waiting")
@@ -832,6 +838,7 @@ async function startSysUpdate() {
       const ok = st.done && st.success;
       state.busy = false;
       setBusy(false);
+      renderSysUpdates(state.updates || {});
       if (ok) {
         const last = st.lines[st.lines.length - 1] || "";
         statusCard(tr("status.updated"), last, "done");
@@ -839,9 +846,8 @@ async function startSysUpdate() {
         setTimeout(() => { 
           $("#install-status").hidden = true;
           $("#modal").hidden = true;
-          // Atualizar a lista de atualizações
-          checkSystemUpdates();
         }, 4200);
+        checkSystemUpdates();
       } else {
         const last = st.lines[st.lines.length - 1] || "";
         statusCard(tr("status.failUpdate"), last, "error");
@@ -1172,6 +1178,21 @@ function renderSysUpdates(d) {
     `<i class="ti ti-refresh"></i><span class="su-n">${total}</span>` +
     (completo ? `<span class="su-b">${esc(fmtBytes(d.total_bytes))}</span>` : "");
   el.dataset.tip = tip;
+  el.hidden = false;
+}
+
+function renderSysUpdateProgress(progress) {
+  const el = $("#sysupd-badge");
+  if (!el) return;
+  const label = Number.isFinite(progress)
+    ? tr("sysupd.progress", progress)
+    : tr("status.updating");
+  const icon = document.createElement("i");
+  icon.className = "ti ti-refresh";
+  const text = document.createElement("span");
+  text.textContent = label;
+  el.replaceChildren(icon, text);
+  el.dataset.tip = label;
   el.hidden = false;
 }
 
