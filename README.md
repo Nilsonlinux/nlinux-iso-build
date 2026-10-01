@@ -613,6 +613,12 @@ grep revision nlinux-software/catalog-head.json
 git log -1 --oneline
 ```
 
+O próprio `build-iso.sh` faz essa conferência antes de embutir a loja: ele
+compara a revisão do `catalog-head.json` embarcado com a publicação no
+GitHub. Se a publicada for maior, sai um aviso em amarelo dizendo que a imagem
+vai ficar com a loja velha. Sem `curl` ou sem rede, ele avisa e segue — a
+conferência nunca segura o build.
+
 Se a curadoria falhar ao espelhar (ela avisa no stdout, e o build continua —
 o pacote já foi publicado), o caminho manual continua valendo:
 

@@ -26,8 +26,10 @@ run_root() {
 catalog_rev() {
   # Revisão gravada no catalog-head.json de um build da loja, ou vazio.
   local head="$1" rev=""
-  [[ -f "$head" ]] && rev="$(grep -o '"revision"[[:space:]]*:[[:space:]]*[0-9]\+' "$head" \
-    | grep -o '[0-9]\+' | head -n1)"
+  if [[ -f "$head" ]]; then
+    rev="$(grep -o '"revision"[[:space:]]*:[[:space:]]*[0-9]\+' "$head" \
+      | grep -o '[0-9]\+' | head -n1)"
+  fi
   printf '%s' "$rev"
 }
 
@@ -54,7 +56,11 @@ check_store_up_to_date() {
     info "não consegui ler o catálogo publicado; seguindo com a revisão $local_rev."
     return 0
   fi
-  remote_rev="$(catalog_rev /dev/stdin <<<"$remote_rev")"
+  # Não passa por arquivo: [[ -f /dev/stdin ]] é falso quando o here-string
+  # alimenta o pipe, e a revisão sairia vazia — a conferência passaria a ser
+  # silenciosamente inútil.
+  remote_rev="$(grep -o '"revision"[[:space:]]*:[[:space:]]*[0-9]\+' <<<"$remote_rev" \
+    | grep -o '[0-9]\+' | head -n1)"
   [[ -z "$remote_rev" ]] && return 0
   if (( remote_rev > local_rev )); then
     warn "a loja embarcada está na revisão $local_rev, mas a publicada é $remote_rev."
