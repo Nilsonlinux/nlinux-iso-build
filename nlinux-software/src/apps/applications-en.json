@@ -481,50 +481,6 @@
       "alternate-to": null,
       "listed": true
     },
-    "nexuiz": {
-      "name": "Nexuiz Classic",
-      "summary": "3D Deathmatch game heavily inspired by the original Quake games",
-      "description": "A fast-paced 3D deathmatch game with high-end and complex graphics effects. It is intended to be played over the Internet or over a local network. Several different game types, such as classic deathmatch, team deathmatch and capture the flag are available. It also supports a single-player mode and playing against the computer. The game brings deathmatch back to the basics, with perfect weapon balancing and fast paced action, keeping itself away from the current trend of realistic shooters. ",
-      "icon": "assets/nexuiz.png",
-      "screenshots": [],
-      "developer-name": "Nexuiz Team and Contributors",
-      "developer-url": "http://www.alientrap.com/games/nexuiz/",
-      "urls": {
-        "info": "http://www.alientrap.org/games/nexuiz",
-        "android-app": null,
-        "ios-app": null
-      },
-      "launch-cmd": "nexuiz",
-      "arch": [
-        "i686",
-        "x86_64"
-      ],
-      "releases": [
-        "rolling"
-      ],
-      "methods": [
-        "pacman"
-      ],
-      "pacman": {
-        "default": {
-          "source": "arch",
-          "main-package": "nexuiz",
-          "install-packages": [
-            "nexuiz",
-            "nexuiz-data",
-            "nexuiz-music"
-          ],
-          "remove-packages": [
-            "nexuiz",
-            "nexuiz-data",
-            "nexuiz-music"
-          ]
-        }
-      },
-      "proprietary": false,
-      "alternate-to": null,
-      "listed": true
-    },
     "pysolfc": {
       "name": "PySolFC",
       "summary": "A collection of more than 1000 solitaire card games",
@@ -2330,48 +2286,6 @@
       "listed": true
     }
   },
-  "server": {
-    "minecraft-server": {
-      "name": "Minecraft Server",
-      "summary": "The official server for creating multi-player Minecraft worlds.",
-      "description": "Installs the official server so you can create your own multi-player world to play with family and friends. <br><br>When installed, run <code>minecraft-server</code> in the folder used for the server <br>To learn more on setting up, see the <a onclick=\"cmd(&#8217;link?http://minecraft.gamepedia.com/Setting_up_a_server&#8217;)\"> Minecraft Wiki </A>. ",
-      "icon": "assets/minecraft-server.png",
-      "screenshots": [],
-      "developer-name": "Mojang",
-      "developer-url": "https://www.mojang.com",
-      "urls": {
-        "info": "http://minecraft.gamepedia.com/Setting_up_a_server",
-        "android-app": null,
-        "ios-app": null
-      },
-      "launch-cmd": null,
-      "arch": [
-        "i686",
-        "x86_64"
-      ],
-      "releases": [
-        "rolling"
-      ],
-      "methods": [
-        "pacman"
-      ],
-      "pacman": {
-        "default": {
-          "source": "aur",
-          "main-package": "minecraft-server-installer",
-          "install-packages": [
-            "minecraft-server-installer"
-          ],
-          "remove-packages": [
-            "minecraft-server-installer"
-          ]
-        }
-      },
-      "proprietary": true,
-      "alternate-to": null,
-      "listed": true
-    }
-  },
   "system": {
     "btop": {
       "name": "btop",
@@ -2500,10 +2414,10 @@
   },
   "stats": {
     "version": 7,
-    "revision": 269,
-    "compiled": 1790873909,
-    "apps": 58,
-    "categories": 11
+    "revision": 271,
+    "compiled": 1790872818,
+    "apps": 56,
+    "categories": 10
   },
   "distro": {
     "name": "NLinux",

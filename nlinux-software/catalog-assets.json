@@ -56,11 +56,9 @@
     "assets/lutris.png": "423a94160a7109ab67f0b7e3ec0fb7381e44d905a7dee8d35dd3266a736d410b",
     "assets/minecraft-1.jpg": "f6bfa7d38559cec896a0a3cbfd185d6165ead981e56eb91c087cdcb324bfc1cf",
     "assets/minecraft-2.jpg": "189bd00190775e74a16a59fb6fcb89a510c420a5502ee0ce98a2fbb74321b226",
-    "assets/minecraft-server.png": "b00fa3e613bb984640c907b4e44a9d2bb6e41054c94614932a1c6b720be4a21b",
     "assets/minecraft.png": "b00fa3e613bb984640c907b4e44a9d2bb6e41054c94614932a1c6b720be4a21b",
     "assets/neverball.png": "1c95dd7719451972e8c675f088a72ca01dc07efa1eed29a725a927bb0b9bd823",
     "assets/neverputt.png": "c2f52127c18effcdd82ec809a2d3a04941d75fb69082336f40743e165c98cd96",
-    "assets/nexuiz.png": "2a21741b5afdf60a7627278ba5173da774a043988739b351bc9ef822a6cdf5a8",
     "assets/obs-studio-1.jpg": "6d4ce3eb941e8de4594679ff949808f544de643ad6f2f489e4aaf4a0e4c44b9a",
     "assets/obs-studio.png": "3381a5840c3d12f1ef6b960176d3c1e8f5e604893c02b7c4004f85f7986d5ac8",
     "assets/opera-browser-1.jpg": "67901bf2d9be348f65161344f5790a8a133120da9c4fe04f2c2c28aa2998fca2",
@@ -107,5 +105,5 @@
     "assets/zenmap-1.jpg": "136b7f268bd14d829843cb878c4f57db3fae8b4f551b392823e50d27d83efaa8",
     "assets/zenmap.png": "a18cd769f13f92d7ee70983893c977eaac5cce11f418314d337bf468ee745c17"
   },
-  "revision": 269
+  "revision": 271
 }
