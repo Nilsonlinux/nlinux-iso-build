@@ -597,15 +597,24 @@ Aplicados ao usuário do **live** (`~/home/nlinux`) e do **sistema instalado**
 `/opt/nlinux-software` dentro da imagem.
 
 **Não é preciso fazer isso à mão.** A curadoria sincroniza esta pasta sozinha: ao
-gerar a versão da loja, o passo 8 do build (`sync_iso_store`) apaga e recopla
-`nlinux-software/` a partir do build recém-gerado, antes de publicar. Basta:
+gerar a versão da loja, o passo 8 do build (`sync_iso_store`) apaga, recopla e
+**commita** `nlinux-software/` a partir do build recém-gerado, antes de publicar.
+Basta abrir a curadoria e clicar em **"Gerar versão da loja"**.
 
-1. abrir a curadoria e clicar em **"Gerar versão da loja"**;
-2. conferir a revisão: `grep revision nlinux-software/catalog-head.json`;
-3. commitar aqui no repositório da ISO, para a imagem ser reproduzível.
+O commit importa: o `build-iso.sh` monta a imagem a partir do que está
+commitado, então uma pasta modificada faria a ISO usar uma loja diferente da
+que está no repositório. Só a subpasta da loja entra no commit — se você estiver
+editando outras coisas do projeto da ISO, elas ficam pendentes, intactas.
 
-Se a pasta estiver vazia ou a curadoria falhar ao espelhar (ela avisa no
-stdout), o caminho manual continua valendo:
+Confira depois, se quiser:
+
+```bash
+grep revision nlinux-software/catalog-head.json
+git log -1 --oneline
+```
+
+Se a curadoria falhar ao espelhar (ela avisa no stdout, e o build continua —
+o pacote já foi publicado), o caminho manual continua valendo:
 
 ```bash
 cd /home/nilsonlinux/nlinux-iso-build
