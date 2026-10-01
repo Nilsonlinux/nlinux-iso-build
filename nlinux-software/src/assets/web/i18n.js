@@ -6,6 +6,10 @@
 // var (não const): precisa aparecer como window.STORE_I18N para o app.js.
 var STORE_I18N = {
   pt: {
+        "sysupd.progress": "Atualizando {0}%",
+      "sysupd.modal.logs": "Registro da atualização",
+      "sysupd.modal.reply": "Resposta solicitada pelo pacman",
+      "sysupd.modal.send": "Enviar resposta",
     dateLocale: "pt-BR",
     "ui.title": "Loja de Software NLinux",
     "brand.sub": "Loja de Software",
@@ -77,7 +81,6 @@ var STORE_I18N = {
     "sysupd.modal.button": "Instalar Atualizações",
     "sysupd.modal.size": "Tamanho total",
     "sysupd.modal.restart": "Sistema vai precisar ser reiniciado",
-    "sysupd.progress": "Atualizando {0}%",
     "status.updating": "Atualizando…",
     "status.updated": "Sistema atualizado",
     "status.failUpdate": "Falha ao atualizar o sistema",
@@ -160,6 +163,10 @@ var STORE_I18N = {
   },
 
   en: {
+        "sysupd.progress": "Updating {0}%",
+      "sysupd.modal.logs": "Update log",
+      "sysupd.modal.reply": "Response requested by pacman",
+      "sysupd.modal.send": "Send response",
     dateLocale: "en-US",
     "ui.title": "NLinux Software Store",
     "brand.sub": "Software Store",
@@ -231,7 +238,6 @@ var STORE_I18N = {
     "sysupd.modal.button": "Install Updates",
     "sysupd.modal.size": "Total size",
     "sysupd.modal.restart": "System will need to be restarted",
-    "sysupd.progress": "Updating {0}%",
     "status.updating": "Updating…",
     "status.updated": "System updated",
     "status.failUpdate": "System update failed",
@@ -314,6 +320,10 @@ var STORE_I18N = {
   },
 
   es: {
+        "sysupd.progress": "Actualizando {0}%",
+      "sysupd.modal.logs": "Registro de actualización",
+      "sysupd.modal.reply": "Respuesta solicitada por pacman",
+      "sysupd.modal.send": "Enviar respuesta",
     dateLocale: "es-ES",
     "ui.title": "Tienda de software NLinux",
     "brand.sub": "Tienda de software",
@@ -385,7 +395,6 @@ var STORE_I18N = {
     "sysupd.modal.button": "Instalar Actualizaciones",
     "sysupd.modal.size": "Tamaño total",
     "sysupd.modal.restart": "El sistema necesitará ser reiniciado",
-    "sysupd.progress": "Actualizando {0}%",
     "status.updating": "Actualizando…",
     "status.updated": "Sistema actualizado",
     "status.failUpdate": "Error al actualizar el sistema",
@@ -468,6 +477,10 @@ var STORE_I18N = {
   },
 
   fr: {
+        "sysupd.progress": "Mise à jour {0}%",
+      "sysupd.modal.logs": "Journal de mise à jour",
+      "sysupd.modal.reply": "Réponse demandée par pacman",
+      "sysupd.modal.send": "Envoyer la réponse",
     dateLocale: "fr-FR",
     "ui.title": "Boutique de logiciels NLinux",
     "brand.sub": "Boutique de logiciels",
@@ -539,7 +552,6 @@ var STORE_I18N = {
     "sysupd.modal.button": "Installer les Mises à Jour",
     "sysupd.modal.size": "Taille totale",
     "sysupd.modal.restart": "Le système devra être redémarré",
-    "sysupd.progress": "Mise à jour {0}%",
     "status.updating": "Mise à jour…",
     "status.updated": "Système mis à jour",
     "status.failUpdate": "Erreur lors de la mise à jour du système",
@@ -622,6 +634,10 @@ var STORE_I18N = {
   },
 
   de: {
+        "sysupd.progress": "Aktualisierung {0}%",
+      "sysupd.modal.logs": "Aktualisierungsprotokoll",
+      "sysupd.modal.reply": "Von pacman angeforderte Antwort",
+      "sysupd.modal.send": "Antwort senden",
     dateLocale: "de-DE",
     "ui.title": "NLinux-Software-Shop",
     "brand.sub": "Software-Shop",
@@ -693,7 +709,6 @@ var STORE_I18N = {
     "sysupd.modal.button": "Aktualisierungen Installieren",
     "sysupd.modal.size": "Gesamtgröße",
     "sysupd.modal.restart": "Das System muss neu gestartet werden",
-    "sysupd.progress": "Aktualisierung {0}%",
     "status.updating": "Wird aktualisiert…",
     "status.updated": "System aktualisiert",
     "status.failUpdate": "Fehler beim Aktualisieren des Systems",
@@ -776,6 +791,10 @@ var STORE_I18N = {
   },
 
   it: {
+        "sysupd.progress": "Aggiornamento {0}%",
+      "sysupd.modal.logs": "Registro degli aggiornamenti",
+      "sysupd.modal.reply": "Risposta richiesta da pacman",
+      "sysupd.modal.send": "Invia risposta",
     dateLocale: "it-IT",
     "ui.title": "Negozio software NLinux",
     "brand.sub": "Negozio software",
@@ -847,7 +866,6 @@ var STORE_I18N = {
     "sysupd.modal.button": "Installa Aggiornamenti",
     "sysupd.modal.size": "Dimensione totale",
     "sysupd.modal.restart": "Il sistema deve essere riavviato",
-    "sysupd.progress": "Aggiornamento {0}%",
     "status.updating": "Aggiornamento…",
     "status.updated": "Sistema aggiornato",
     "status.failUpdate": "Errore durante l'aggiornamento del sistema",
@@ -930,6 +948,10 @@ var STORE_I18N = {
   },
 
   ja: {
+        "sysupd.progress": "更新中 {0}%",
+      "sysupd.modal.logs": "更新ログ",
+      "sysupd.modal.reply": "pacman が求めている応答",
+      "sysupd.modal.send": "応答を送信",
     dateLocale: "ja-JP",
     "ui.title": "NLinux ソフトウェアストア",
     "brand.sub": "ソフトウェアストア",
@@ -1001,7 +1023,6 @@ var STORE_I18N = {
     "sysupd.modal.button": "更新をインストール",
     "sysupd.modal.size": "合計サイズ",
     "sysupd.modal.restart": "システムの再起動が必要です",
-    "sysupd.progress": "更新中 {0}%",
     "status.updating": "更新中…",
     "status.updated": "システムを更新しました",
     "status.failUpdate": "システムの更新に失敗しました",
