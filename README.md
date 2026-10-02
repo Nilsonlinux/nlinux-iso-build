@@ -269,11 +269,17 @@ sudo dd if=iso/out/*.iso of=/dev/sdX bs=4M status=progress conv=fsync
   prompt de instalação no console. Login do live: usuário **`nlinux`**, senha
   **`nlinux`**. Traz NetworkManager, PipeWire e cursor Bibata.
 - **Som de interface**: o Noctalia só dispara os eventos do shell (volume,
-  notificação) se encontrar um tema de som. Os dois eventos que ele usa —
-  `audio-volume-change` e `message-new-instant` — vêm do pacote
+  notificação) se encontrar um tema de som. Os dois eventos que ele usa são
+  `audio-volume-change` e `message-new-instant`. Vem o tema **`nlinux`**
+  (`config/.local/share/sounds/nlinux/`, com o som de notificação do NLinux) e
+  ele herda o resto por `Inherits=freedesktop` — do pacote
   **sound-theme-freedesktop**, que é sem dependências e por isso nunca entrava
-  sozinho. O tema vem apontado em `config.toml`
-  (`[audio] sound_theme = "freedesktop"`), não no `settings.toml` de estado:
+  sozinho. O pacote continua obrigatório justamente por causa do bip de volume:
+  o `audio-volume-change.oga` dele é CC-BY-SA e por isso não foi copiado para o
+  repositório, só apontado. O Noctalia só resolve `.oga`/`.ogg`/`.wav`, nunca
+  `.mp3`, então o arquivo do NLinux foi convertido para ogg/vorbis a 48 kHz.
+  O tema vem apontado em `config.toml`
+  (`[audio] sound_theme = "nlinux"`), não no `settings.toml` de estado:
   assim o usuário continua podendo trocar o tema pela interface.
 - **Instalar** (somente pelo live): atalho **Instalar NLinux** do desktop/menu
   (roda `/usr/local/bin/nlinux-installer-gui`) abre o Firefox em kiosk apontando
@@ -638,6 +644,7 @@ Aplicados ao usuário do **live** (`~/home/nlinux`) e do **sistema instalado**
 - `config/.config/fastfetch/config.jsonc` + `img/nlinux.png` (logo via protocolo kitty; fallback ANSI em `config/.local/share/fastfetch/logos/nlinux.txt`)
 - `config/.config/umbriel/…` (`config.toml`, `noctalia.toml`, `src/*`)
 - `config/.local/share/icons/Bibata-Modern-{Ice,Amber,Classic}` (cursor; Ice é o padrão via `/etc/environment`)
+- `config/.local/share/sounds/nlinux/` (`index.theme` + `stereo/message-new-instant.oga`) — tema de som próprio, herda o resto de `freedesktop`
 
 > Arquivo com sufixo `.tpl` é template: `__KEYBOARD_LAYOUT__` é substituído pelo
 > layout derivado do keymap escolhido (`br-abnt2` → `br`, `us` → `us`, …).

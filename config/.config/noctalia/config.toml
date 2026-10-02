@@ -1,8 +1,15 @@
-# Sons de interface. O Noctalia só procura tema de som em ~/.local/share/sounds,
-# /usr/local/share/sounds e /usr/share/sounds; sem o pacote sound-theme-freedesktop
-# não existe nenhum arquivo para os eventos do shell tocar (volume, notificação),
-# e o `sound_theme` fica vazio porque não há tema instalado para escolher.
-# A tecla é o evento, não o nome do arquivo: volume = audio-volume-change.
+# Sons de interface. Dois temas entram em cena:
+#
+#   - "nlinux" (em ~/.local/share/sounds/nlinux, via config/.local) troca só o
+#     som de notificação pelo arquivo do NLinux. O resto vem por
+#     `Inherits=freedesktop` no index.theme, e é por isso que o pacote
+#     sound-theme-freedesktop continua obrigatório: ele fornece o bip de volume
+#     (audio-volume-change), que é CC-BY-SA e não entra no repositório. O
+#     Noctalia só resolve .oga/.ogg/.wav, nunca .mp3 -- o arquivo foi convertido
+#     para ogg/vorbis a 48 kHz.
+#   - os diretórios de busca, em ordem: ~/.local/share/sounds, $XDG_DATA_DIRS,
+#     /usr/local/share/sounds e /usr/share/sounds. É por isso que o tema do
+#     usuário vence o do sistema.
 #
 # As quatro chaves são fixadas aqui de propósito, em vez de confiar no padrão
 # interno do app: `noctalia config export` com a config vazia não emite NENHUMA
@@ -13,7 +20,7 @@
 [audio]
 enable_overdrive = true
 enable_sounds = true
-sound_theme = "freedesktop"
+sound_theme = "nlinux"
 sound_volume = 0.99999997764825821
 
 [shell]
