@@ -31,6 +31,7 @@ brightnessctl
 
 polkit
 dbus
+rtkit
 
 cryptsetup
 lvm2

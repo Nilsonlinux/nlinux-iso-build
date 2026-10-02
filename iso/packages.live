@@ -65,9 +65,12 @@ swayidle
 
 # Áudio no live (PipeWire + WirePlumber; serviços habilitados no
 # customize_airootfs.sh para o usuário live)
+# rtkit: sem ele o PipeWire/WirePlumber abrem mão da prioridade realtime e o
+# xdg-desktop-portal reclama na sessão. Não é dependência do wireplumber no Arch.
 pipewire
 pipewire-pulse
 wireplumber
+rtkit
 pamixer
 
 noto-fonts

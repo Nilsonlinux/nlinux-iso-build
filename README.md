@@ -597,7 +597,7 @@ avisa é o `all.sh`, com `cstage`/`cnote`/`cact` (ver
 | 3 | `30-greetd.sh` | `/etc/greetd/config.toml` com o **noctalia-greeter** (sessão padrão `umbriel`) + setup do pacote |
 | 4 | `40-user-config.sh` | copia `config/.config` → `~/.config` do usuário (`.tpl` resolvidos com `__KEYBOARD_LAYOUT__` derivado do keymap) e `config/.local` → `~/.local` (ícones/cursor Bibata, logo do fastfetch), delega ao usuário |
 | 5 | `41-welcome.sh` | marca `/etc/nlinux-installed` e instala `/usr/local/bin/nlinux-welcome` (janela de boas-vindas única no 1º login; no live é inócuo) — acionado pelo autostart do Umbriel |
-| 6 | `50-services.sh` | habilita NetworkManager, bluetooth, greetd, accounts-daemon, **packagekit**; adiciona o **Flathub** para o usuário (App Center); **`appstreamcli refresh --force`** (metadados para a loja); `/etc/environment` (Wayland + `XCURSOR_THEME=Bibata-Modern-Ice`); NTP (`systemd-timesyncd`) |
+| 6 | `50-services.sh` | habilita NetworkManager, bluetooth, greetd, accounts-daemon, **packagekit**, **rtkit-daemon**; **desabilita o `systemd-networkd`** e confere que só o NetworkManager ficou de gerente (o preset do Arch habilita os dois, e eles disputam o link); adiciona o **Flathub** para o usuário (App Center); **`appstreamcli refresh --force`** (metadados para a loja); `/etc/environment` (Wayland + `XCURSOR_THEME=Bibata-Modern-Ice`); NTP (`systemd-timesyncd`) |
 
 ---
 
