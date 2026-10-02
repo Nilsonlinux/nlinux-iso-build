@@ -144,6 +144,16 @@ apaga toda entrada que aponte para o systemd-boot **exceto a "NLinux"** — é o
 que evita a firmware mostrar o mesmo disco duas vezes. Entradas antigas de
 instalações anteriores são removidas junto. O "Windows Boot Manager" nunca é
 tocado (não é systemd-boot).
+
+A criação da entrada tenta três formas, nessa ordem, porque nem toda firmware
+aceita as duas primeiras: `efibootmgr --create --disk/--part` (a forma clássica,
+que é a que a maioria aceita), a mesma com `--esp-path`, e por último com a ESP
+exposta em `/boot` por bind mount (onde as versões antigas do efibootmgr a
+procuram). Cada tentativa e o dump completo da NVRAM vão para o log, com a
+mensagem de erro do `efibootmgr` — nada é engolido em `/dev/null`. Se as três
+falharem, o instalador **mantém a entrada do `bootctl`** (é melhor um rótulo
+impessoal do que uma máquina sem entrada alguma além do fallback) e avisa qual
+foi o erro; para investigar, ver `/var/log/nlinux-install.log`.
 4. **Sistema de arquivos**: LUKS2 (mapeador `cryptroot`) quando escolhido; btrfs
    com subvolumes `@`, `@home`, `@log`, `@pkg`, ou ext4. O nome da partição no
    GPT e o label do filesystem são `NLinux`.
@@ -278,6 +288,7 @@ código de saída) fica no servidor, com checkpoint em
 | Formulário enviado duas vezes | `POST /api/install` devolve **409** com o estado atual e a página volta ao painel: ninguém apaga o disco por cima da instalação que roda. |
 | `install.sh` morre sem escrever o resultado (morto por sinal/OOM) | Watchdog da execução reanexada encerra o painel como falha explícita, em vez de girar para sempre. |
 | Erro de verdade na instalação | `die` no `install.sh` → `_save_error_marker` grava `/var/log/install-error.log` **no disco instalado** (com as últimas 150 linhas do log) antes de desmontar. |
+| Instalação termina mas algo no boot ficou errado | O log inteiro é copiado para `/var/log/nlinux-install.log` no sistema instalado (`_save_install_log`). O log do live vive em `/tmp`, que é tmpfs e morre no reboot — por isso a cópia é feita **também no caminho de sucesso**, não só no de falha. |
 | Falha de espelho no modo online | `pacstrap` tenta até 3 vezes (o pacman reaproveita o cache) antes de abortar com dica de rede/mirror. |
 
 ### Protocolo (SSE) e API
@@ -493,6 +504,7 @@ ISO.
 | `/tmp/nlinux-install-state.json` | checkpoint do estado (reanexação após queda do servidor) |
 | `/tmp/nlinux-web.log` | stdout/stderr do servidor, com marcador de cada reinício do supervisor |
 | `/var/log/install-error.log` (instalado) | resumo da falha + últimas linhas do log, para ler depois sem o live |
+| `/var/log/nlinux-install.log` (instalado) | o log completo, inclusive quando a instalação deu certo |
 
 Variáveis de ambiente do servidor: `NLINUX_WEB_PORT` (padrão `8765`),
 `NLINUX_LOG_PATH` e `NLINUX_STATE_PATH` (útil para testar fora do live),

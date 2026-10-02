@@ -1018,6 +1018,34 @@ stage_software_store() {
   fi
 }
 
+# Despeja a NVRAM no log. Sem isso não há como descobrir, depois do reboot,
+# por que a entrada não ficou com o rótulo NLinux — o efibootmgr só fala o
+# erro no stderr, e stderr sumia em /dev/null.
+_efivars_dump() {
+  local quando="$1" saida
+  command -v efibootmgr >/dev/null 2>&1 || return 0
+  saida="$(efibootmgr -v 2>&1)"
+  info "NVRAM $quando:"
+  while IFS= read -r linha; do
+    [[ -n "$linha" ]] && info "  | $linha"
+  done <<< "$saida"
+}
+
+# Roda o efibootmgr --create e registra o motivo da falha, em vez de engolir.
+# A ordem das tentativas importa: --esp-path junto de --disk/--part não é
+# aceito por todo efibootmgr, então a forma clássica vem primeiro.
+_efibootmgr_create() {
+  local desc="$1"; shift
+  local err rc
+  err="$(efibootmgr "$@" 2>&1)"; rc=$?
+  if (( rc == 0 )); then
+    info "efibootmgr --create [$desc]: ok"
+    return 0
+  fi
+  info "efibootmgr --create [$desc] falhou (rc=$rc): ${err:-o efibootmgr não disse nada}"
+  return 1
+}
+
 # ---------------------------------------------------------------------------
 # Boot UEFI: instala o systemd-boot, garante o fallback /EFI/BOOT e deixa
 # exatamente UMA entrada systemd-boot na NVRAM, com o rótulo "NLinux".
@@ -1035,6 +1063,10 @@ register_uefi() {
   mkdir -p "$MNT/boot/EFI/BOOT"
   cp -f "$MNT/boot/EFI/systemd/systemd-bootx64.efi" "$MNT/boot/EFI/BOOT/BOOTX64.EFI" 2>/dev/null || true
 
+  # Despeja a NVRAM no log. Sem isso não há como descobrir, depois do reboot,
+  # por que a entrada não ficou com o rótulo NLinux.
+  _efivars_dump "antes de criar a entrada"
+
   if ! command -v efibootmgr >/dev/null 2>&1; then
     warn "efibootmgr ausente; a firmware mostrará 'Linux Boot Manager' (entrada do bootctl)."
     return 0
@@ -1049,17 +1081,13 @@ register_uefi() {
     return 0
   fi
 
-  # O efibootmgr procura a ESP montada; versões novas aceitam --esp-path, as
-  # antigas não. Nas antigas usamos um bind mount temporário em /boot/efi,
-  # senão a criação da entrada falha e sobra só a do bootctl.
-  local esp_opt=() bind_montado=0
-  if efibootmgr --help 2>&1 | grep -q -- '--esp-path'; then
-    esp_opt=(--esp-path "$MNT/boot")
-  elif mkdir -p /boot/efi 2>/dev/null && ! mountpoint -q /boot/efi \
-       && mount --bind "$MNT/boot" /boot/efi 2>/dev/null; then
-    bind_montado=1
+  # Caminho do loader gravado na NVRAM. Tem que bater com o que está em disco,
+  # porque nem toda firmware é insensível a maiúsculas/minúsculas no caminho.
+  local loader
+  if [[ -f "$MNT/boot/EFI/systemd/systemd-bootaa64.efi" ]]; then
+    loader='\EFI\systemd\systemd-bootaa64.efi'
   else
-    warn "Não consegui expor a ESP ao efibootmgr (/boot/efi indisponível); a entrada do bootctl pode sobrar."
+    loader='\EFI\systemd\systemd-bootx64.efi'
   fi
 
   # Números das entradas que já existiam. Serve para distinguir a entrada que
@@ -1067,12 +1095,40 @@ register_uefi() {
   local antes
   antes="$(efibootmgr -v 2>/dev/null | awk '/^Boot[0-9A-Fa-f]/ {n=$1; sub(/^Boot/,"",n); sub(/\*$/,"",n); print n}')"
 
-  if efibootmgr "${esp_opt[@]}" --create --disk "$edev" --part "$en" \
-      --label "NLinux" \
-      --loader '\EFI\systemd\systemd-bootx64.efi' >/dev/null 2>&1; then
+  # Cria a entrada. Tenta na ordem em que as firmwares costumam aceitar: primeiro
+  # a forma clássica (--disk/--part, sem --esp-path, que é o que toda wiki de
+  # Arch usa), depois com --esp-path, e por último expondo a ESP em /boot, que é
+  # onde as versões antigas do efibootmgr a procuram. A mensagem de erro do
+  # efibootmgr vai para o log: antes ela ia para /dev/null e não dava para
+  # saber por que a entrada não era criada.
+  local bind_montado=0 criou=0
+  _efibootmgr_create "disco/partição" --create --disk "$edev" --part "$en" \
+      --label "NLinux" --loader "$loader" && criou=1
+
+  if (( ! criou )) && efibootmgr --help 2>&1 | grep -q -- '--esp-path'; then
+    _efibootmgr_create "com --esp-path" --esp-path "$MNT/boot" --create \
+        --disk "$edev" --part "$en" --label "NLinux" --loader "$loader" && criou=1
+  fi
+
+  if (( ! criou )) && mkdir -p /boot 2>/dev/null && ! mountpoint -q /boot \
+       && mount --bind "$MNT/boot" /boot 2>/dev/null; then
+    bind_montado=1
+    _efibootmgr_create "ESP em /boot (bind mount)" --create --disk "$edev" --part "$en" \
+        --label "NLinux" --loader "$loader" && criou=1
+  fi
+
+  if (( bind_montado )); then
+    umount /boot 2>/dev/null || true
+    rmdir /boot 2>/dev/null || true
+    bind_montado=0
+  fi
+
+  if (( criou )); then
     ok "Entrada 'NLinux' criada na lista de boot UEFI."
   else
-    warn "Falha ao criar a entrada 'NLinux' (disco $edev part $en); a entrada do bootctl foi mantida."
+    warn "Nenhuma tentativa de criar a entrada 'NLinux' funcionou (disco $edev, part $en, loader $loader)."
+    warn "A entrada do bootctl foi mantida: a firmware vai mostrar 'Linux Boot Manager'."
+    warn "A NVRAM completa está no log: /var/log/nlinux-install.log no sistema instalado."
   fi
 
   # Qual é o número da entrada que acabamos de criar? A que não estava na
@@ -1088,9 +1144,10 @@ register_uefi() {
   # entrada nenhuma além do fallback /EFI/BOOT.
   if [[ -z "$meu" ]]; then
     warn "A entrada 'NLinux' não apareceu na NVRAM; a do bootctl foi mantida."
-    (( bind_montado )) && umount /boot/efi 2>/dev/null
     return 0
   fi
+
+  _efivars_dump "depois de criar a entrada"
 
   # Apaga todo o resto que aponta para o systemd-boot (o "Linux Boot Manager"
   # do bootctl e sobras de instalações antigas), preservando a nossa e a do
@@ -1112,7 +1169,7 @@ register_uefi() {
         print n "\t" rotulo;
     }')
 
-  (( bind_montado )) && umount /boot/efi 2>/dev/null
+  _efivars_dump "final (depois de remover as duplicatas)"
   return 0
 }
 
@@ -1129,6 +1186,16 @@ _save_error_marker() {
   [[ -f /tmp/nlinux-install.log ]] \
     && tail -n 150 /tmp/nlinux-install.log >> "$MNT/var/log/install-error.log" 2>/dev/null || true
   warn "Erro da instalação salvo em: $MNT/var/log/install-error.log"
+}
+
+# O log vive em /tmp do live, que é tmpfs: morre no reboot. Só a falha era
+# copiada, o que impedia investigar uma instalação que deu certo no painel mas
+# ficou errada no boot (o rótulo da entrada UEFI, por exemplo).
+_save_install_log() {
+  [[ -f /tmp/nlinux-install.log ]] || return 0
+  mkdir -p "$MNT/var/log" 2>/dev/null || return 0
+  cp -f /tmp/nlinux-install.log "$MNT/var/log/nlinux-install.log" 2>/dev/null || return 0
+  ok "Log da instalação em /var/log/nlinux-install.log"
 }
 
 umount_all() {
@@ -1204,6 +1271,7 @@ main() {
   fi
 
   stage stage.final
+  _save_install_log
   ok "Instalação concluída com sucesso. Desmonte é feito automaticamente."
   ok "Remova o pendrive e reinicie: reboot"
 }
