@@ -25,6 +25,9 @@ pipewire
 pipewire-pulse
 pipewire-jack
 wireplumber
+# Sons de interface do Noctalia: sem um tema freedesktop não existe nenhum
+# arquivo de áudio para os eventos do shell tocar (volume, notificação).
+sound-theme-freedesktop
 alsa-utils
 pamixer
 brightnessctl

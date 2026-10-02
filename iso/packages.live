@@ -71,6 +71,8 @@ pipewire
 pipewire-pulse
 wireplumber
 rtkit
+# Sons de interface do Noctalia no live também (eventos de volume/notificação).
+sound-theme-freedesktop
 pamixer
 
 noto-fonts

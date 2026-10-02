@@ -268,6 +268,13 @@ sudo dd if=iso/out/*.iso of=/dev/sdX bs=4M status=progress conv=fsync
   root no tty1 inicia o greetd (vt7) + noctalia-greeter + Umbriel/Noctalia, sem
   prompt de instalação no console. Login do live: usuário **`nlinux`**, senha
   **`nlinux`**. Traz NetworkManager, PipeWire e cursor Bibata.
+- **Som de interface**: o Noctalia só dispara os eventos do shell (volume,
+  notificação) se encontrar um tema de som. Os dois eventos que ele usa —
+  `audio-volume-change` e `message-new-instant` — vêm do pacote
+  **sound-theme-freedesktop**, que é sem dependências e por isso nunca entrava
+  sozinho. O tema vem apontado em `config.toml`
+  (`[audio] sound_theme = "freedesktop"`), não no `settings.toml` de estado:
+  assim o usuário continua podendo trocar o tema pela interface.
 - **Instalar** (somente pelo live): atalho **Instalar NLinux** do desktop/menu
   (roda `/usr/local/bin/nlinux-installer-gui`) abre o Firefox em kiosk apontando
   para o servidor web local (`http://127.0.0.1:8765`, root via sudo). Não há
@@ -605,7 +612,7 @@ avisa é o `all.sh`, com `cstage`/`cnote`/`cact` (ver
 
 | Lista | Conteúdo |
 |---|---|
-| `packages/base.packages` | kernel, firmware, rede, áudio (PipeWire), ferramentas (fzf/ripgrep/starship…), `cryptsetup`, fontes |
+| `packages/base.packages` | kernel, firmware, rede, áudio (PipeWire + **sound-theme-freedesktop**), ferramentas (fzf/ripgrep/starship…), `cryptsetup`, fontes |
 | `packages/desktop.packages` | stack Noctalia + apps: firefox, **kitty** e fish, starship, fastfetch, nautilus, gnome-text-editor, **gnome-software** (App Center: PackageKit + AppStream + Flatpak + **zenity** [boas-vindas]), spotify-launcher, discord, telegram-desktop, gpu-screen-recorder, eartag, swaylock/idle, zram-generator, mpv/ffmpeg/imagemagick |
 | `packages/aur.packages` | `umbriel-git`, `noctalia-greeter`, `xwayland-satellite-git` (X11 no Umbriel), `whatsapp-linux-desktop-bin` — via `yay` no chroot |
 | `iso/packages.live` | ferramentas do instalador (cryptsetup/gdisk/btrfs-progs/parted/python…), `noctalia`, `greetd`, NetworkManager, e os mesmos apps do desktop + Flatpak/gnome-software/packagekit/appstream para o live |

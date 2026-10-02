@@ -1,3 +1,11 @@
+# Sons de interface. O Noctalia só procura tema de som em ~/.local/share/sounds,
+# /usr/local/share/sounds e /usr/share/sounds; sem o pacote sound-theme-freedesktop
+# não existe nenhum arquivo para os eventos do shell tocar (volume, notificação),
+# e o `sound_theme` fica vazio porque não há tema instalado para escolher.
+# A tecla é o evento, não o nome do arquivo: volume = audio-volume-change.
+[audio]
+sound_theme = "freedesktop"
+
 [shell]
 polkit_agent = true
 
