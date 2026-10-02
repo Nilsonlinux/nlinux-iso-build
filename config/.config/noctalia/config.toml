@@ -3,8 +3,18 @@
 # não existe nenhum arquivo para os eventos do shell tocar (volume, notificação),
 # e o `sound_theme` fica vazio porque não há tema instalado para escolher.
 # A tecla é o evento, não o nome do arquivo: volume = audio-volume-change.
+#
+# As quatro chaves são fixadas aqui de propósito, em vez de confiar no padrão
+# interno do app: `noctalia config export` com a config vazia não emite NENHUMA
+# chave [audio], então o que o app assume quando a chave falta não é observável
+# de fora nem versionado. `sound_volume` é o float32 1.0 na forma decimal exata
+# que o próprio Noctalia grava: é o mesmo número que a interface devolve, então
+# não diverge do que o usuário vê depois de mexer no ajuste.
 [audio]
+enable_overdrive = true
+enable_sounds = true
 sound_theme = "freedesktop"
+sound_volume = 0.99999997764825821
 
 [shell]
 polkit_agent = true
