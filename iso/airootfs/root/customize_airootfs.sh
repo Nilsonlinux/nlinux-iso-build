@@ -32,6 +32,31 @@ fi
 chmod -R 700 /etc/pacman.d/gnupg 2>/dev/null || true
 chown -R root:root /etc/pacman.d/gnupg 2>/dev/null || true
 
+# multilib: programas 32-bit. A loja do NLinux já esperava por isso — o
+# REPO_FILES dela (nlinux-software/src/nlinux/pacman_db.py) lê core, extra e
+# multilib — mas sem a seção no pacman.conf o sync db do multilib nunca baixa e
+# a loja fica sem os pacotes de lá, incluindo o Steam.
+# ATENÇÃO: este mesmo bloco está em install/chroot/10-system.sh, para o sistema
+# instalado, e os dois precisam ficar iguais.
+log "Habilitando o repositório multilib (programas 32-bit)"
+# O releng do archiso deixa o bloco comentado. Descomenta em vez de acrescentar
+# uma seção nova, para o arquivo continuar igual ao da wiki do Arch.
+sed -i '/^#\[multilib\]$/,/^\[/ s/^#Include/Include/; s/^#\[multilib\]$/[multilib]/' /etc/pacman.conf
+# Um pacman novo pode não trazer o bloco comentado: nesse caso acrescentar.
+if ! grep -q '^\[multilib\]$' /etc/pacman.conf; then
+  printf '\n[multilib]\nInclude = /etc/pacman.d/mirrorlist\n' >> /etc/pacman.conf
+  log "aviso: bloco [multilib] não encontrado no pacman.conf; acrescentado ao fim."
+fi
+# O multilib exige 'SigLevel = Required DatabaseOptional' em [options]. Já é o
+# padrão do Arch, mas descomenta se vier comentado — sem isso o multilib não é
+# lido. Por precaução, porque um build novo do pacman pode mudar esse texto.
+sed -i 's/^#SigLevel *= *Required *DatabaseOptional/SigLevel = Required DatabaseOptional/' /etc/pacman.conf
+log "repos do pacman: $(pacman-conf --repo-list 2>/dev/null | tr '\n' ' ')"
+# Não dá para habilitar isso em iso/profile/pacman.conf: essa pasta é
+# gitignored e o build-iso.sh recopia do releng do archiso a cada build, de
+# modo que a mudança se perderia. Por isso é aqui, no chroot da ISO.
+# O multilib-testing fica comentado: é repositório de teste.
+
 # O packagekit instala um hook alpm pós-transação ("Refreshing PackageKit...")
 # que reinicia o packagekit via D-Bus — inexistente dentro do chroot do build.
 # Quando um pacote AUR dispara esse hook, o pacman falha (exit status 4) e o

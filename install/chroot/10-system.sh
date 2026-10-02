@@ -41,6 +41,31 @@ log "Ativando downloads paralelos e cores no pacman"
 sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf
 sed -i 's/^#Color/Color/' /etc/pacman.conf
 
+# multilib: programas 32-bit. A loja do NLinux já esperava por isso — o
+# REPO_FILES dela (nlinux-software/src/nlinux/pacman_db.py) lê core, extra e
+# multilib — mas sem a seção no pacman.conf o sync db do multilib nunca baixa e
+# a loja fica sem os pacotes de lá, incluindo o Steam.
+# ATENÇÃO: este mesmo bloco está em install/chroot/10-system.sh, para o sistema
+# instalado, e os dois precisam ficar iguais.
+log "Habilitando o repositório multilib (programas 32-bit)"
+# O releng do archiso deixa o bloco comentado. Descomenta em vez de acrescentar
+# uma seção nova, para o arquivo continuar igual ao da wiki do Arch.
+sed -i '/^#\[multilib\]$/,/^\[/ s/^#Include/Include/; s/^#\[multilib\]$/[multilib]/' /etc/pacman.conf
+# Um pacman novo pode não trazer o bloco comentado: nesse caso acrescentar.
+if ! grep -q '^\[multilib\]$' /etc/pacman.conf; then
+  printf '\n[multilib]\nInclude = /etc/pacman.d/mirrorlist\n' >> /etc/pacman.conf
+  log "aviso: bloco [multilib] não encontrado no pacman.conf; acrescentado ao fim."
+fi
+# O multilib exige 'SigLevel = Required DatabaseOptional' em [options]. Já é o
+# padrão do Arch, mas descomenta se vier comentado — sem isso o multilib não é
+# lido. Por precaução, porque um build novo do pacman pode mudar esse texto.
+sed -i 's/^#SigLevel *= *Required *DatabaseOptional/SigLevel = Required DatabaseOptional/' /etc/pacman.conf
+log "repos do pacman: $(pacman-conf --repo-list 2>/dev/null | tr '\n' ' ')"
+# No modo offline o /etc/pacman.conf vem do live, que já vem com o multilib
+# habilitado pelo customize_airootfs.sh; na instalação online quem decide é o
+# pacman.conf do pacstrap. Fazer aqui deixa os dois caminhos iguais em vez de
+# depender do que o live herdou.
+
 log "Garantindo keyring do pacman (init + populate archlinux)"
 if ! pacman-key --list-keys archlinux >/dev/null 2>&1; then
   log "Keyring ausente/incompleto; inicializando..."

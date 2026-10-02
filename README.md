@@ -631,6 +631,11 @@ AppStream do Arch — o primeiro acesso ainda baixa um pouco de dados (precisa d
 rede).
 A mesma senha do usuário vale para o root; o shell padrão do usuário é o **fish**.
 
+Os repositórios do pacman são `core`, `extra` e **`multilib`** — o multilib é
+habilitado no live e no sistema instalado (`customize_airootfs.sh` e
+`10-system.sh`), o que dá programas 32-bit e é de onde sai o Steam. A loja já
+contava com isso: o `REPO_FILES` dela lê os três bancos.
+
 ---
 
 ## Dotfiles (`config/`)
