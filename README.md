@@ -104,7 +104,9 @@ O instalador:
      live** (`locale-gen`, `vconsole.conf`, `loadkeys`) e **mirror definido no
      topo do `mirrorlist`** + `DisableDownloadTimeout` no `pacman.conf`.
 3. **Particionamento**: GPT — `1G` EFI (FAT32, montada em `/boot`) + restante na
-   partição raiz (tipo `8309` `cryptroot` com LUKS, ou `8304` `archroot`).
+   partição raiz (tipo `8309` com LUKS, ou `8304` sem). A partição raiz é nomeada
+   `NLinux` no GPT em ambos os casos; com LUKS, o mapper continua sendo
+   `cryptroot`.
 
 No modo **dual boot**, o instalador preserva a ESP existente e cria a partição
 NLinux em espaço livre. Se não houver espaço livre suficiente, a interface web
@@ -134,12 +136,17 @@ copiado para `/var/log/offline-rsync.log` no sistema instalado.
 Nos dois modos o chroot roda `10-system.sh` (gera `systemd-boot` + `initramfs`),
 cria o usuário, aplica dotfiles e habilita os serviços — o boot **Sempre** tem a
 opção "NLinux". Ao final, o instalador **registra a entrada "NLinux" na lista de
-boot UEFI** (`efibootmgr --create`, rótulo próprio; o "Linux Boot Manager" do
-`bootctl` é removido) e grava o **fallback `/EFI/BOOT/BOOTX64.EFI`** — assim o
-disco aparece como **"NLinux"** na lista do firmware **e**, em firmwares sem
-NVRAM, como opção genérica `UEFI: <disco>`.
-4. **Sistema de arquivos**: LUKS2 (`cryptroot`) quando escolhido; btrfs com subvolumes
-   `@`, `@home`, `@log`, `@pkg`, ou ext4.
+boot UEFI** (`efibootmgr --create`, rótulo próprio) e grava o **fallback
+`/EFI/BOOT/BOOTX64.EFI`** — assim o disco aparece como **"NLinux"** na lista do
+firmware **e**, em firmwares sem NVRAM, como opção genérica `UEFI: <disco>`.
+O `bootctl install` também cria uma entrada "Linux Boot Manager"; o instalador
+apaga toda entrada que aponte para o systemd-boot **exceto a "NLinux"** — é o
+que evita a firmware mostrar o mesmo disco duas vezes. Entradas antigas de
+instalações anteriores são removidas junto. O "Windows Boot Manager" nunca é
+tocado (não é systemd-boot).
+4. **Sistema de arquivos**: LUKS2 (mapeador `cryptroot`) quando escolhido; btrfs
+   com subvolumes `@`, `@home`, `@log`, `@pkg`, ou ext4. O nome da partição no
+   GPT e o label do filesystem são `NLinux`.
 5. **Instalação dos pacotes** (ver tabela acima): modo **rápido offline** copia o
    sistema do pendrive; modo **completo online** usa `pacstrap`
    (`base.packages` + `desktop.packages` + drivers de GPU intel/amd/nvidia/vm +
@@ -244,7 +251,9 @@ sudo dd if=iso/out/*.iso of=/dev/sdX bs=4M status=progress conv=fsync
   e no instalado via `10-system.sh`;
 - `/etc/issue` → `NLinux \r (\l)` (live e instalado);
 - `/etc/motd` → ASCII-art "Bem-vindo ao NLinux!";
-- título do bootloader instalado → `NLinux` (systemd-boot `arch.conf`).
+- título do bootloader instalado → `NLinux` (systemd-boot `arch.conf`);
+- entrada na NVRAM → `NLinux` (ver acima; fica só uma, sem "Linux Boot Manager");
+- nome da partição no GPT e label do filesystem raiz → `NLinux`.
 
 ---
 

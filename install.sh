@@ -605,10 +605,10 @@ partition_disk() {
     info "Criando partição raiz NLinux em $DISK"
     if (( DUAL_RESIZE_BYTES > 0 )); then
       if ! sgdisk --new="$free_num:$DUAL_ROOT_START_SECTOR:$DUAL_ROOT_END_SECTOR" \
-        --typecode="$free_num:8304" --change-name="$free_num:archroot" "$DISK" >/dev/null 2>&1; then
+        --typecode="$free_num:8304" --change-name="$free_num:NLinux" "$DISK" >/dev/null 2>&1; then
         die "Não foi possível criar a partição NLinux no espaço NTFS liberado."
       fi
-    elif ! sgdisk --largest-new="$free_num" --typecode="$free_num:8304" --change-name="$free_num:archroot" "$DISK" >/dev/null 2>&1; then
+    elif ! sgdisk --largest-new="$free_num" --typecode="$free_num:8304" --change-name="$free_num:NLinux" "$DISK" >/dev/null 2>&1; then
       die "Dual boot: sem espaço livre suficiente em $DISK para a raiz NLinux."
     fi
     p_root="$(part_path "$DISK" "$free_num")"
@@ -643,9 +643,9 @@ partition_disk() {
   info "Criando partição EFI (1G) e raiz (restante)"
   sgdisk --new=1:0:+1G --typecode=1:ef00 --change-name=1:EFI "$DISK" >/dev/null
   if (( USE_LUKS )); then
-    sgdisk --new=2:0:0 --typecode=2:8309 --change-name=2:cryptroot "$DISK" >/dev/null
+    sgdisk --new=2:0:0 --typecode=2:8309 --change-name=2:NLinux "$DISK" >/dev/null
   else
-    sgdisk --new=2:0:0 --typecode=2:8304 --change-name=2:archroot "$DISK" >/dev/null
+    sgdisk --new=2:0:0 --typecode=2:8304 --change-name=2:NLinux "$DISK" >/dev/null
   fi
   partprobe "$DISK" >/dev/null 2>&1 || true
   udevadm trigger --subsystem-match=block 2>/dev/null || true
@@ -683,7 +683,7 @@ setup_filesystem() {
 
 if [[ "$FS_TYPE" == "btrfs" ]]; then
     info "Formatando btrfs em $root_dev"
-    mkfs.btrfs -f -L archroot "$root_dev" >/dev/null
+    mkfs.btrfs -f -L NLinux "$root_dev" >/dev/null
     sync
     udevadm settle 2>/dev/null || true
     blkid -s UUID -o value "$root_dev" >/dev/null 2>&1 \
@@ -702,7 +702,7 @@ if [[ "$FS_TYPE" == "btrfs" ]]; then
     mount -o subvol=@pkg "$root_dev" "$MNT/var/cache/pacman/pkg"
   else
     info "Formatando ext4 em $root_dev"
-    mkfs.ext4 -F -L archroot "$root_dev" >/dev/null
+    mkfs.ext4 -F -L NLinux "$root_dev" >/dev/null
     sync
     udevadm settle 2>/dev/null || true
     blkid -s UUID -o value "$root_dev" >/dev/null 2>&1 \
@@ -1019,8 +1019,14 @@ stage_software_store() {
 }
 
 # ---------------------------------------------------------------------------
-# Boot UEFI: instala o systemd-boot, garante fallback /EFI/BOOT e registra a
-# entrada na NVRAM com o rótulo "NLinux" (o bootctl usa "Linux Boot Manager").
+# Boot UEFI: instala o systemd-boot, garante o fallback /EFI/BOOT e deixa
+# exatamente UMA entrada systemd-boot na NVRAM, com o rótulo "NLinux".
+#
+# O `bootctl install` cria a entrada "Linux Boot Manager". Deixar as duas faz a
+# firmware mostrar o mesmo disco duas vezes. Instalações antigas também deixam
+# um "NLinux" a mais. Por isso criamos a nossa entrada e apagamos todas as
+# outras que apontam para o mesmo loader do systemd-boot — a do Windows nunca
+# é tocada porque não é systemd-boot.
 # ---------------------------------------------------------------------------
 register_uefi() {
   info "Instalando systemd-boot na ESP e registrando 'NLinux' na lista UEFI"
@@ -1029,38 +1035,92 @@ register_uefi() {
   mkdir -p "$MNT/boot/EFI/BOOT"
   cp -f "$MNT/boot/EFI/systemd/systemd-bootx64.efi" "$MNT/boot/EFI/BOOT/BOOTX64.EFI" 2>/dev/null || true
 
-  if command -v efibootmgr >/dev/null 2>&1; then
-    local efi_part edev en
-    efi_part="$(cat "$INSTALL_BASE/.part_efi")"
-    edev="$(lsblk -no PKNAME "$efi_part")"
-    en="$(lsblk -no PARTN "$efi_part")"
-    if [[ -n "$edev" && -n "$en" ]]; then
-      if efibootmgr --create --disk "$edev" --part "$en" \
-          --label "NLinux" \
-          --loader '\EFI\systemd\systemd-bootx64.efi' >/dev/null 2>&1; then
-        ok "Entrada 'NLinux' criada na lista de boot UEFI."
-        # Remove o "Linux Boot Manager" criado pelo bootctl, se presente.
-        local eb num
-        eb="$(efibootmgr -v 2>/dev/null | grep -i 'Linux Boot Manager' | awk '{print $1}')"
-        num="${eb#Boot}"
-        num="${num%\*}"
-        if [[ -n "$num" ]]; then
-          efibootmgr -b "$num" -B >/dev/null 2>&1 || true
-        fi
-      else
-        warn "Falha ao criar entrada 'NLinux'; a entrada do bootctl foi mantida."
-      fi
-    fi
-  else
-    warn "efibootmgr ausente; apenas fallback /EFI/BOOT garantido."
+  if ! command -v efibootmgr >/dev/null 2>&1; then
+    warn "efibootmgr ausente; a firmware mostrará 'Linux Boot Manager' (entrada do bootctl)."
+    return 0
   fi
+
+  local efi_part edev en
+  efi_part="$(cat "$INSTALL_BASE/.part_efi")"
+  edev="$(lsblk -no PKNAME "$efi_part")"
+  en="$(lsblk -no PARTN "$efi_part")"
+  if [[ -z "$edev" || -z "$en" ]]; then
+    warn "Não consegui identificar disco/partition da ESP ($efi_part); a firmware mostrará 'Linux Boot Manager'."
+    return 0
+  fi
+
+  # O efibootmgr procura a ESP montada; versões novas aceitam --esp-path, as
+  # antigas não. Nas antigas usamos um bind mount temporário em /boot/efi,
+  # senão a criação da entrada falha e sobra só a do bootctl.
+  local esp_opt=() bind_montado=0
+  if efibootmgr --help 2>&1 | grep -q -- '--esp-path'; then
+    esp_opt=(--esp-path "$MNT/boot")
+  elif mkdir -p /boot/efi 2>/dev/null && ! mountpoint -q /boot/efi \
+       && mount --bind "$MNT/boot" /boot/efi 2>/dev/null; then
+    bind_montado=1
+  else
+    warn "Não consegui expor a ESP ao efibootmgr (/boot/efi indisponível); a entrada do bootctl pode sobrar."
+  fi
+
+  # Números das entradas que já existiam. Serve para distinguir a entrada que
+  # vamos criar das sobras de instalações antigas (que também se chamam NLinux).
+  local antes
+  antes="$(efibootmgr -v 2>/dev/null | awk '/^Boot[0-9A-Fa-f]/ {n=$1; sub(/^Boot/,"",n); sub(/\*$/,"",n); print n}')"
+
+  if efibootmgr "${esp_opt[@]}" --create --disk "$edev" --part "$en" \
+      --label "NLinux" \
+      --loader '\EFI\systemd\systemd-bootx64.efi' >/dev/null 2>&1; then
+    ok "Entrada 'NLinux' criada na lista de boot UEFI."
+  else
+    warn "Falha ao criar a entrada 'NLinux' (disco $edev part $en); a entrada do bootctl foi mantida."
+  fi
+
+  # Qual é o número da entrada que acabamos de criar? A que não estava na
+  # listagem anterior. Sem isso, uma instalação antiga deixaria dois NLinux.
+  local meu
+  meu="$(efibootmgr -v 2>/dev/null \
+    | awk '/^Boot[0-9A-Fa-f]/ {n=$1; sub(/^Boot/,"",n); sub(/\*$/,"",n); print n}' \
+    | { grep -Fxv -f <(printf '%s\n' "$antes") || true; })"
+  meu="${meu%%$'\n'*}"
+
+  # O efibootmgr pode devolver 0 sem gravar nada. Sem a entrada nova, não
+  # apagamos nada: é melhor manter a do bootctl do que deixar a máquina sem
+  # entrada nenhuma além do fallback /EFI/BOOT.
+  if [[ -z "$meu" ]]; then
+    warn "A entrada 'NLinux' não apareceu na NVRAM; a do bootctl foi mantida."
+    (( bind_montado )) && umount /boot/efi 2>/dev/null
+    return 0
+  fi
+
+  # Apaga todo o resto que aponta para o systemd-boot (o "Linux Boot Manager"
+  # do bootctl e sobras de instalações antigas), preservando a nossa e a do
+  # Windows, que não é systemd-boot.
+  local num rotulo
+  while IFS=$'\t' read -r num rotulo; do
+    [[ -n "$num" && "$num" != "$meu" ]] || continue
+    if efibootmgr -b "$num" -B >/dev/null 2>&1; then
+      info "Entrada duplicada removida: Boot$num ($rotulo)"
+    fi
+  done < <(efibootmgr -v 2>/dev/null | awk '
+    /^Boot[0-9A-Fa-f]/ {
+      n = $1; sub(/^Boot/, "", n); sub(/\*$/, "", n);
+      resto = $0; sub(/^Boot[0-9A-Fa-f]+\*?[[:space:]]+/, "", resto);
+      # o rótulo vem antes do caminho, separado por duas ou mais colunas
+      rotulo = resto; sub(/[[:space:]][[:space:]]+.*$/, "", rotulo);
+      # só o systemd-boot desta máquina; o "Windows Boot Manager" fica
+      if (resto ~ /systemd-boot/)
+        print n "\t" rotulo;
+    }')
+
+  (( bind_montado )) && umount /boot/efi 2>/dev/null
+  return 0
 }
 
 # ---------------------------------------------------------------------------
 # Desmontagem
 # ---------------------------------------------------------------------------
 # Em caso de falha, grava o erro NO DISCO-ALVO antes de desmontar, para ser
-# lido depois sem a VM (ex.: /run/media/<user>/archroot/@log/install-error.log).
+# lido depois sem a VM (ex.: /run/media/<user>/NLinux/@log/install-error.log).
 _save_error_marker() {
   local rc=$1
   mkdir -p "$MNT/var/log" 2>/dev/null || true
