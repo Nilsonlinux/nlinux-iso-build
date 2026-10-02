@@ -56,8 +56,26 @@ echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/10-nlinux-builder
 chmod 440 /etc/sudoers.d/10-nlinux-builder
 
 log "Instalando yay (yay-bin) via makepkg"
+# O git:// do AUR cai com 502 o suficiente para abortar o build inteiro, e sem
+# isto a falha vira uma mensagem que não ajuda: o clone deixa só um diretório
+# parcial (ou nada), o `cd` falha, e o makepkg reporta "You do not have write
+# permission for the directory $BUILDDIR (/)" — que não é a causa. Então: limpa o
+# diretório entre tentativas, repete, e se falhar de vez diz o que aconteceu.
+tentativas=3
+for (( i = 1; i <= tentativas; i++ )); do
+  rm -rf /tmp/yay-bin
+  if runuser -u builder -- git clone --depth 1 \
+       https://aur.archlinux.org/yay-bin.git /tmp/yay-bin; then
+    break
+  fi
+  if (( i < tentativas )); then
+    log "clone do yay falhou (tentativa $i/$tentativas); repetindo em 10s"
+    sleep 10
+  fi
+done
+[[ -f /tmp/yay-bin/PKGBUILD ]] \
+  || die "não consegui clonar yay-bin do AUR em $tentativas tentativas. É falha de rede — o build inteiro aborta aqui, mas é seguro repetir do começo."
 runuser -u builder -- bash -c '
-  git clone --depth 1 https://aur.archlinux.org/yay-bin.git /tmp/yay-bin
   cd /tmp/yay-bin
   makepkg --config /opt/noctalia-installer/install/chroot/makepkg-no-debug.conf \
     -si --noconfirm --nocheck
