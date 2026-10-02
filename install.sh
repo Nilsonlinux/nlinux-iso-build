@@ -1031,143 +1031,218 @@ _efivars_dump() {
   done <<< "$saida"
 }
 
-# Roda o efibootmgr --create e registra o motivo da falha, em vez de engolir.
-# A ordem das tentativas importa: --esp-path junto de --disk/--part não é
-# aceito por todo efibootmgr, então a forma clássica vem primeiro.
-_efibootmgr_create() {
-  local desc="$1"; shift
-  local err rc
-  err="$(efibootmgr "$@" 2>&1)"; rc=$?
-  if (( rc == 0 )); then
-    info "efibootmgr --create [$desc]: ok"
+# Números (em hexadecimal, sem o "Boot") de todas as entradas de boot.
+_efiboot_numeros() {
+  efibootmgr -v 2>/dev/null | awk '/^Boot[0-9A-Fa-f]/ {
+    n = $1; sub(/^Boot/, "", n); sub(/\*$/, "", n); print n }'
+}
+
+# Lista as entradas em três colunas: número, rótulo e device path.
+#
+# O separador entre o rótulo e o device path é um TAB, não dois espaços —
+# show_var_path() no fonte do efibootmgr faz printf("\t%s", ...). Por isso as
+# colunas não podem ser separadas com '[[:space:]][[:space:]]+', que nunca casa
+# e acaba engolindo o device path dentro do rótulo.
+_efiboot_listar() {
+  efibootmgr -v 2>/dev/null | awk '
+    /^Boot[0-9A-Fa-f]/ {
+      n = $1; sub(/^Boot/, "", n); sub(/\*$/, "", n);
+      r = substr($0, length($1) + 1)
+      sub(/^[ \t]+/, "", r)
+      i = index(r, "\t")
+      if (i) print n "\t" substr(r, 1, i - 1) "\t" substr(r, i + 1)
+      else   print n "\t" r "\t"
+    }'
+}
+
+# Rótulo de uma entrada, lido direto do efibootmgr. show_vars() imprime
+# "Boot0060" + um marcador de ativa/inativa + um espaço, e só depois o rótulo.
+_efiboot_rotulo() {
+  efibootmgr -v 2>/dev/null | awk -v alvo="Boot$1" '
+    index($0, alvo) == 1 {
+      r = substr($0, length(alvo) + 1); sub(/^[* \t]+/, "", r)
+      i = index(r, "\t"); print (i ? substr(r, 1, i - 1) : r); exit
+    }'
+}
+
+# Reescreve o rótulo de uma entrada de boot que JÁ EXISTE.
+#
+# Nada aqui usa o efibootmgr para renomear porque ele não sabe: o -L/--label
+# só é lido por --create e por --delete, então o `efibootmgr -b 0001 -L "NLinux"`
+# que circula em wiki é um no-op nesta versão (e no main do upstream também).
+#
+# E também não vale criar uma entrada nova com --create: ele grava uma variável
+# que ainda não existe, e o kernel do live exige EFI_VARIABLE_APPEND_WRITE
+# nesse caso — flag que só o systemd passa, por meio do retry de
+# efi_set_variable_platform(). Daí o bootctl conseguir criar a entrada e o
+# efibootmgr falhar com ENOENT ("Could not prepare Boot variable"). Reescrever
+# uma variável que já existe não passa por esse caminho.
+#
+# O rótulo é localizado procurando a string antiga em UTF-16LE dentro do
+# arquivo, e não por offset: em parte dos kernels o efivarfs prefixa o
+# EFI_LOAD_OPTION com 4 bytes de atributos, então a posição do rótulo muda
+# conforme o kernel.
+_efiboot_renomear() {
+  local num="$1" novo="$2"
+  local efivars="${EFIVARS:-/sys/firmware/efi/efivars}"
+  local guid=8be4df61-93ca-11d2-aa0d-00e098032b8c          # EFI_GLOBAL_GUID
+  local var="$efivars/Boot${num}-${guid}"
+  local antigo off tam work lido
+
+  if [[ ! -r $var ]]; then
+    warn "a entrada Boot$num não existe em $efivars; nada foi alterado"
+    return 1
+  fi
+
+  antigo="$(_efiboot_rotulo "$num")"
+  if [[ -z "$antigo" ]]; then
+    warn "não consegui ler o rótulo de Boot$num; nada foi alterado"
+    return 1
+  fi
+  if [[ "$antigo" == "$novo" ]]; then
+    info "Boot$num já se chama '$novo'"
     return 0
   fi
-  info "efibootmgr --create [$desc] falhou (rc=$rc): ${err:-o efibootmgr não disse nada}"
+
+  work="$(mktemp -d)"
+  printf '%s' "$antigo" | iconv -f UTF-8 -t UTF-16LE > "$work/antigo.bin"
+  off="$(grep -aobFf "$work/antigo.bin" "$var" 2>/dev/null | head -n1 | cut -d: -f1)"
+  if [[ -z "$off" ]]; then
+    warn "o rótulo '$antigo' não apareceu nos bytes de $var; nada foi alterado"
+    rm -rf "$work"
+    return 1
+  fi
+  tam="$(stat -c%s "$work/antigo.bin")"
+
+  {
+    head -c "$off" "$var"
+    printf '%s' "$novo" | iconv -f UTF-8 -t UTF-16LE
+    printf '\0\0'
+    tail -c "+$(( off + tam + 2 + 1 ))" "$var"
+  } > "$work/novo.bin"
+
+  if ! cat "$work/novo.bin" > "$var"; then
+    warn "a gravação de Boot$num falhou; o conteúdo antigo foi preservado"
+    rm -rf "$work"
+    return 1
+  fi
+  rm -rf "$work"
+
+  lido="$(_efiboot_rotulo "$num")"
+  if [[ "$lido" == "$novo" ]]; then
+    ok "Boot$num renomeada de '$antigo' para '$novo' ($tam bytes de rótulo antigo)"
+    return 0
+  fi
+  warn "Boot$num deveria se chamar '$novo' e está como '${lido:-vazio}'"
   return 1
+}
+
+# Entradas que apontam para o systemd-boot desta ESP. É o que separa a entrada
+# do NLinux das entradas de outras distribuições — e das sobras de instalações
+# antigas do próprio NLinux, que precisam sair.
+_efiboot_esta_esp() {
+  local guid="$1"
+  _efiboot_listar | awk -F'\t' -v guid="$guid" '
+    { d = tolower($3) }
+    guid != "" && index(d, tolower(guid)) && d ~ /systemd-boot/ { print $1 "\t" $2 }'
 }
 
 # ---------------------------------------------------------------------------
 # Boot UEFI: instala o systemd-boot, garante o fallback /EFI/BOOT e deixa
-# exatamente UMA entrada systemd-boot na NVRAM, com o rótulo "NLinux".
+# exatamente UMA entrada systemd-boot na ESP do NLinux, com o rótulo "NLinux".
 #
-# O `bootctl install` cria a entrada "Linux Boot Manager". Deixar as duas faz a
-# firmware mostrar o mesmo disco duas vezes. Instalações antigas também deixam
-# um "NLinux" a mais. Por isso criamos a nossa entrada e apagamos todas as
-# outras que apontam para o mesmo loader do systemd-boot — a do Windows nunca
-# é tocada porque não é systemd-boot.
+# O `bootctl install` já cria a entrada, e ele cria com o rótulo fixo
+# "Linux Boot Manager". Como o efibootmgr não sabe renomear e o --create dele
+# falha neste kernel (ver _efiboot_renomear), o caminho é deixar o bootctl criar
+# e reescrever só o rótulo da variável que ele gravou.
+#
+# Instalações antigas do próprio NLinux deixam entradas a mais na mesma ESP,
+# então as outras são removidas. Só nesta ESP: entrada de outra distribuição é
+# problema dela, e a do Windows nunca aparece aqui porque não é systemd-boot.
 # ---------------------------------------------------------------------------
 register_uefi() {
   info "Instalando systemd-boot na ESP e registrando 'NLinux' na lista UEFI"
+
+  # Entradas que já existiam antes do bootctl. Serve para o log e, quando o
+  # bootctl cria algo novo em vez de reaproveitar, para saber qual é.
+  local antes=""
+  if command -v efibootmgr >/dev/null 2>&1; then
+    antes="$(_efiboot_numeros)"
+    _efivars_dump "antes do bootctl install"
+  fi
+
   bootctl --esp-path="$MNT/boot" install >/dev/null 2>&1 || true
 
   mkdir -p "$MNT/boot/EFI/BOOT"
   cp -f "$MNT/boot/EFI/systemd/systemd-bootx64.efi" "$MNT/boot/EFI/BOOT/BOOTX64.EFI" 2>/dev/null || true
-
-  # Despeja a NVRAM no log. Sem isso não há como descobrir, depois do reboot,
-  # por que a entrada não ficou com o rótulo NLinux.
-  _efivars_dump "antes de criar a entrada"
 
   if ! command -v efibootmgr >/dev/null 2>&1; then
     warn "efibootmgr ausente; a firmware mostrará 'Linux Boot Manager' (entrada do bootctl)."
     return 0
   fi
 
-  local efi_part edev en
+  # A NVRAM não guarda o disco e a partição, e sim o PARTUUID da ESP. É por ele
+  # que a entrada do NLinux é distinguida das entradas de outras distribuições.
+  local efi_part esp_guid
   efi_part="$(cat "$INSTALL_BASE/.part_efi")"
-  edev="$(lsblk -no PKNAME "$efi_part")"
-  en="$(lsblk -no PARTN "$efi_part")"
-  if [[ -z "$edev" || -z "$en" ]]; then
-    warn "Não consegui identificar disco/partition da ESP ($efi_part); a firmware mostrará 'Linux Boot Manager'."
+  esp_guid="$(lsblk -no PARTUUID "$efi_part" 2>/dev/null | head -n1 | tr 'A-Z' 'a-z')"
+  if [[ -z "$esp_guid" ]]; then
+    warn "Não consegui o PARTUUID da ESP ($efi_part); a firmware mostrará 'Linux Boot Manager'."
     return 0
   fi
 
-  # Caminho do loader gravado na NVRAM. Tem que bater com o que está em disco,
-  # porque nem toda firmware é insensível a maiúsculas/minúsculas no caminho.
-  local loader
-  if [[ -f "$MNT/boot/EFI/systemd/systemd-bootaa64.efi" ]]; then
-    loader='\EFI\systemd\systemd-bootaa64.efi'
-  else
-    loader='\EFI\systemd\systemd-bootx64.efi'
+  local nesta_esp total meu
+  nesta_esp="$(_efiboot_esta_esp "$esp_guid")"
+  total="$(printf '%s\n' "$nesta_esp" | grep -c . || true)"
+  info "Entradas systemd-boot nesta ESP ($esp_guid): $total"
+  if [[ -n "$nesta_esp" ]]; then
+    local n r
+    while IFS=$'\t' read -r n r; do
+      info "  | Boot$n — ${r:-(sem rótulo)}"
+    done <<< "$nesta_esp"
   fi
 
-  # Números das entradas que já existiam. Serve para distinguir a entrada que
-  # vamos criar das sobras de instalações antigas (que também se chamam NLinux).
-  local antes
-  antes="$(efibootmgr -v 2>/dev/null | awk '/^Boot[0-9A-Fa-f]/ {n=$1; sub(/^Boot/,"",n); sub(/\*$/,"",n); print n}')"
-
-  # Cria a entrada. Tenta na ordem em que as firmwares costumam aceitar: primeiro
-  # a forma clássica (--disk/--part, sem --esp-path, que é o que toda wiki de
-  # Arch usa), depois com --esp-path, e por último expondo a ESP em /boot, que é
-  # onde as versões antigas do efibootmgr a procuram. A mensagem de erro do
-  # efibootmgr vai para o log: antes ela ia para /dev/null e não dava para
-  # saber por que a entrada não era criada.
-  local bind_montado=0 criou=0
-  _efibootmgr_create "disco/partição" --create --disk "$edev" --part "$en" \
-      --label "NLinux" --loader "$loader" && criou=1
-
-  if (( ! criou )) && efibootmgr --help 2>&1 | grep -q -- '--esp-path'; then
-    _efibootmgr_create "com --esp-path" --esp-path "$MNT/boot" --create \
-        --disk "$edev" --part "$en" --label "NLinux" --loader "$loader" && criou=1
-  fi
-
-  if (( ! criou )) && mkdir -p /boot 2>/dev/null && ! mountpoint -q /boot \
-       && mount --bind "$MNT/boot" /boot 2>/dev/null; then
-    bind_montado=1
-    _efibootmgr_create "ESP em /boot (bind mount)" --create --disk "$edev" --part "$en" \
-        --label "NLinux" --loader "$loader" && criou=1
-  fi
-
-  if (( bind_montado )); then
-    umount /boot 2>/dev/null || true
-    rmdir /boot 2>/dev/null || true
-    bind_montado=0
-  fi
-
-  if (( criou )); then
-    ok "Entrada 'NLinux' criada na lista de boot UEFI."
-  else
-    warn "Nenhuma tentativa de criar a entrada 'NLinux' funcionou (disco $edev, part $en, loader $loader)."
-    warn "A entrada do bootctl foi mantida: a firmware vai mostrar 'Linux Boot Manager'."
+  if [[ "$total" -eq 0 ]]; then
+    warn "Nenhuma entrada systemd-boot na ESP; a firmware vai mostrar 'UEFI: <disco>'."
     warn "A NVRAM completa está no log: /var/log/nlinux-install.log no sistema instalado."
-  fi
-
-  # Qual é o número da entrada que acabamos de criar? A que não estava na
-  # listagem anterior. Sem isso, uma instalação antiga deixaria dois NLinux.
-  local meu
-  meu="$(efibootmgr -v 2>/dev/null \
-    | awk '/^Boot[0-9A-Fa-f]/ {n=$1; sub(/^Boot/,"",n); sub(/\*$/,"",n); print n}' \
-    | { grep -Fxv -f <(printf '%s\n' "$antes") || true; })"
-  meu="${meu%%$'\n'*}"
-
-  # O efibootmgr pode devolver 0 sem gravar nada. Sem a entrada nova, não
-  # apagamos nada: é melhor manter a do bootctl do que deixar a máquina sem
-  # entrada nenhuma além do fallback /EFI/BOOT.
-  if [[ -z "$meu" ]]; then
-    warn "A entrada 'NLinux' não apareceu na NVRAM; a do bootctl foi mantida."
     return 0
   fi
 
-  _efivars_dump "depois de criar a entrada"
+  # Qual é a nossa? O 10-system.sh já rodou `bootctl install` dentro do chroot,
+  # então normalmente a entrada já existe e é reaproveitada — nesse caso o diff
+  # com "antes" vem vazio e sobra escolher entre as candidatas. O bootctl
+  # reutiliza uma entrada compatível quando encontra, então em ESP limpa é uma
+  # só; havendo mais de uma, a mais alta é a criação mais recente.
+  local novos
+  novos="$(printf '%s\n' "$nesta_esp" | cut -f1 \
+    | { grep -Fxv -f <(printf '%s\n' "$antes") || true; })"
+  if [[ -n "$novos" ]]; then
+    meu="$(printf '%s\n' "$novos" | sort | tail -n1)"
+  else
+    meu="$(printf '%s\n' "$nesta_esp" | cut -f1 | sort | tail -n1)"
+  fi
+  if [[ "$total" -gt 1 ]]; then
+    info "Usando a Boot$meu e removendo as outras $(( total - 1 )) desta ESP."
+  fi
 
-  # Apaga todo o resto que aponta para o systemd-boot (o "Linux Boot Manager"
-  # do bootctl e sobras de instalações antigas), preservando a nossa e a do
-  # Windows, que não é systemd-boot.
+  # Falha aqui não é motivo para apagar nada: a entrada do bootctl continua
+  # funcionando, e é melhor "Linux Boot Manager" do que deixar a máquina sem
+  # entrada além do fallback /EFI/BOOT.
+  _efiboot_renomear "$meu" NLinux || \
+    warn "A firmware vai mostrar 'Linux Boot Manager'; o NLinux continua na partição."
+
+  _efivars_dump "depois de renomear a entrada"
+
+  # Apaga as sobras do systemd-boot nesta mesma ESP (instalações antigas).
   local num rotulo
   while IFS=$'\t' read -r num rotulo; do
     [[ -n "$num" && "$num" != "$meu" ]] || continue
     if efibootmgr -b "$num" -B >/dev/null 2>&1; then
-      info "Entrada duplicada removida: Boot$num ($rotulo)"
+      info "Entrada duplicada removida: Boot$num (${rotulo:-sem rótulo})"
+    else
+      warn "Não consegui remover a duplicada Boot$num (${rotulo:-sem rótulo})."
     fi
-  done < <(efibootmgr -v 2>/dev/null | awk '
-    /^Boot[0-9A-Fa-f]/ {
-      n = $1; sub(/^Boot/, "", n); sub(/\*$/, "", n);
-      resto = $0; sub(/^Boot[0-9A-Fa-f]+\*?[[:space:]]+/, "", resto);
-      # o rótulo vem antes do caminho, separado por duas ou mais colunas
-      rotulo = resto; sub(/[[:space:]][[:space:]]+.*$/, "", rotulo);
-      # só o systemd-boot desta máquina; o "Windows Boot Manager" fica
-      if (resto ~ /systemd-boot/)
-        print n "\t" rotulo;
-    }')
+  done < <(_efiboot_esta_esp "$esp_guid")
 
   _efivars_dump "final (depois de remover as duplicatas)"
   return 0

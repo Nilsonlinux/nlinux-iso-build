@@ -135,25 +135,37 @@ copiado para `/var/log/offline-rsync.log` no sistema instalado.
 
 Nos dois modos o chroot roda `10-system.sh` (gera `systemd-boot` + `initramfs`),
 cria o usuário, aplica dotfiles e habilita os serviços — o boot **Sempre** tem a
-opção "NLinux". Ao final, o instalador **registra a entrada "NLinux" na lista de
-boot UEFI** (`efibootmgr --create`, rótulo próprio) e grava o **fallback
-`/EFI/BOOT/BOOTX64.EFI`** — assim o disco aparece como **"NLinux"** na lista do
-firmware **e**, em firmwares sem NVRAM, como opção genérica `UEFI: <disco>`.
-O `bootctl install` também cria uma entrada "Linux Boot Manager"; o instalador
-apaga toda entrada que aponte para o systemd-boot **exceto a "NLinux"** — é o
-que evita a firmware mostrar o mesmo disco duas vezes. Entradas antigas de
-instalações anteriores são removidas junto. O "Windows Boot Manager" nunca é
-tocado (não é systemd-boot).
+opção "NLinux". Ao final, o instalador deixa a entrada da NVRAM com o rótulo
+**"NLinux"** e grava o **fallback `/EFI/BOOT/BOOTX64.EFI`** — assim o disco
+aparece como **"NLinux"** na lista do firmware **e**, em firmwares sem NVRAM,
+como opção genérica `UEFI: <disco>`.
 
-A criação da entrada tenta três formas, nessa ordem, porque nem toda firmware
-aceita as duas primeiras: `efibootmgr --create --disk/--part` (a forma clássica,
-que é a que a maioria aceita), a mesma com `--esp-path`, e por último com a ESP
-exposta em `/boot` por bind mount (onde as versões antigas do efibootmgr a
-procuram). Cada tentativa e o dump completo da NVRAM vão para o log, com a
-mensagem de erro do `efibootmgr` — nada é engolido em `/dev/null`. Se as três
-falharem, o instalador **mantém a entrada do `bootctl`** (é melhor um rótulo
-impessoal do que uma máquina sem entrada alguma além do fallback) e avisa qual
-foi o erro; para investigar, ver `/var/log/nlinux-install.log`.
+A entrada é criada pelo `bootctl install` e só o **rótulo** é reescrito depois.
+Isso não é preferência: o `efibootmgr --create` **falha neste kernel** com
+`ENOENT` / `Could not prepare Boot0001 variable`. A causa é o `efivarfs` exigir
+`EFI_VARIABLE_APPEND_WRITE` ao gravar uma variável que ainda não existe, e o
+kernel do live passar essa flag apenas no retry que o systemd faz em
+`efi_set_variable_platform()` — o `efibootmgr` não faz esse retry. Reescrever
+uma variável **que já existe** não passa por esse caminho. Não é permissão,
+Secure Boot, `lockdown` nem ESP escondida: o mesmo `efibootmgr --create` funciona
+no Arch instalado na mesma máquina, e o `bootctl install` a partir do live grava
+normalmente.
+
+Duas consequências práticas:
+
+- `efibootmgr -b 0001 -L "NLinux"` **não renomeia nada** nesta versão — o
+  `--label` só é lido por `--create` e por `--delete`. É o que a maioria das wiki
+  manda fazer, e é um no-op.
+- O instalador **não** apaga entradas de outras distribuições. Só remove as que
+  apontam para o systemd-boot **na ESP do NLinux** (sobras de instalações
+  antigas), preservando a que ele mesmo acabou de renomear. O "Windows Boot
+  Manager" nunca é tocado, e o `UEFI: <disco>` de outro S.O. também não.
+
+Se a reescrita falhar, o instalador **mantém a entrada do `bootctl`** (é melhor
+um rótulo impessoal do que uma máquina sem entrada alguma além do fallback) e
+avisa; o fallback `/EFI/BOOT/BOOTX64.EFI` continua cobrindo esse caso. A NVRAM
+completa é despejada no log antes e depois — nada é engolido em `/dev/null`. Para
+investigar, ver `/var/log/nlinux-install.log` no sistema instalado.
 4. **Sistema de arquivos**: LUKS2 (mapeador `cryptroot`) quando escolhido; btrfs
    com subvolumes `@`, `@home`, `@log`, `@pkg`, ou ext4. O nome da partição no
    GPT e o label do filesystem são `NLinux`.
@@ -293,7 +305,8 @@ do live — nesse modo o sistema instalado fica **sem** a unit.
 - `/etc/issue` → `NLinux \r (\l)` (live e instalado);
 - `/etc/motd` → ASCII-art "Bem-vindo ao NLinux!";
 - título do bootloader instalado → `NLinux` (systemd-boot `arch.conf`);
-- entrada na NVRAM → `NLinux` (ver acima; fica só uma, sem "Linux Boot Manager");
+- entrada na NVRAM → `NLinux` (ver acima; fica só uma nesta ESP, e o rótulo é
+  reescrito depois do `bootctl install`);
 - nome da partição no GPT e label do filesystem raiz → `NLinux`.
 
 ---
@@ -568,7 +581,7 @@ avisa é o `all.sh`, com `cstage`/`cnote`/`cact` (ver
 
 | Etapa | Arquivo | Função |
 |---|---|---|
-| 1 | `10-system.sh` | fuso, locale, keymap, hostname/hosts, `issue`, branding `os-release`, pacman (ParallelDownloads/Color), `pacman-key`, initramfs com `sd-encrypt` (quando LUKS), **zram** (`zram-generator`, zstd), usuários/senhas (shell padrão **fish**), sudoers, **systemd-boot** (entrada `NLinux`, UUID+LUKS) |
+| 1 | `10-system.sh` | fuso, locale, keymap, hostname/hosts, `issue`, branding `os-release`, pacman (ParallelDownloads/Color), `pacman-key`, initramfs com `sd-encrypt` (quando LUKS), **zram** (`zram-generator`, zstd), usuários/senhas (shell padrão **fish**), sudoers, **systemd-boot** (loader + fallback, UUID+LUKS) |
 | 2 | `20-aur.sh` | usuário de sistema `greeter`; usuário temporário `builder` (sudo sem senha) para instalar **yay-bin** (makepkg) e rodar `yay -S` dos `aur.packages`; remove o `builder` no final |
 | 3 | `30-greetd.sh` | `/etc/greetd/config.toml` com o **noctalia-greeter** (sessão padrão `umbriel`) + setup do pacote |
 | 4 | `40-user-config.sh` | copia `config/.config` → `~/.config` do usuário (`.tpl` resolvidos com `__KEYBOARD_LAYOUT__` derivado do keymap) e `config/.local` → `~/.local` (ícones/cursor Bibata, logo do fastfetch), delega ao usuário |
