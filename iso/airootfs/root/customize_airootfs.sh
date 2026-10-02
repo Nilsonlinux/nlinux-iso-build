@@ -57,6 +57,7 @@ log "repos do pacman: $(pacman-conf --repo-list 2>/dev/null | tr '\n' ' ')"
 # modo que a mudança se perderia. Por isso é aqui, no chroot da ISO.
 # O multilib-testing fica comentado: é repositório de teste.
 
+
 # O packagekit instala um hook alpm pós-transação ("Refreshing PackageKit...")
 # que reinicia o packagekit via D-Bus — inexistente dentro do chroot do build.
 # Quando um pacote AUR dispara esse hook, o pacman falha (exit status 4) e o
@@ -66,6 +67,25 @@ for h in /usr/share/libalpm/hooks/*.hook /etc/pacman.d/hooks/*.hook; do
   [[ -e "$h" ]] || continue
   grep -qil "packagekit" "$h" && { log "removido: $h"; rm -f "$h"; } || true
 done
+
+# O pacstrap do archiso so baixou os dbs de core e extra: na hora do pacstrap a
+# secao [multilib] ainda estava comentado no pacman.conf do profile. Deixar a
+# secao habilitada sem o db faz QUALQUER transacao seguinte falhar com
+# "failed to prepare transaction (could not find database)" — foi exatamente o
+# que quebrou este build na primeira tentativa, na transacao do yay dos pacotes
+# AUR. Baixa os dbs agora, ja com o multilib habilitado, e antes do primeiro
+# `pacman -S`. Fica depois da remocao dos hooks acima para nao depender de um
+# `-Sy` puro nao disparar hook de pacote, e o CheckSpace continua desativado
+# neste ponto (a trap do comeco do script so restaura no EXIT), que e o que
+# permite ao pacman rodar dentro deste chroot.
+# So no live: aqui a rede e garantida (o build ja baixa do AUR e de espelhos).
+# No chroot da instalacao o sync NAO e feito de proposito — na instalacao
+# offline pode nao haver rede e isso quebraria a instalacao; e o db chega pelo
+# clone do live ou pelo nlinux-pacman-refresh.service no primeiro boot.
+log "Sincronizando bancos de pacotes (inclui o db do multilib)"
+pacman -Sy
+test -f /var/lib/pacman/sync/multilib.db \
+  || die "sync terminou sem multilib.db — o primeiro pacman -S vai falhar"
 
 # A fase `check` de pacotes AUR Rust (xwayland-satellite-git, umbriel-git) roda
 # `cargo test` que comanda um display X/wayland — inexistente em chroot — e o
