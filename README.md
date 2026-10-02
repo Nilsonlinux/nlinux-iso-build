@@ -151,15 +151,26 @@ Secure Boot, `lockdown` nem ESP escondida: o mesmo `efibootmgr --create` funcion
 no Arch instalado na mesma máquina, e o `bootctl install` a partir do live grava
 normalmente.
 
+O `bootctl install` registra **duas** entradas na ESP: a do loader principal
+(`\EFI\systemd\systemd-bootx64.efi`) e a do fallback
+(`systemd-boot-fallbackx64.efi`). Só a primeira serve, e a segunda é redundante —
+o `/EFI/BOOT/BOOTX64.EFI` já cobre o papel de fallback. Isso importa porque a
+**firmware varre a NVRAM no boot e apaga qualquer entrada cujo loader ela não
+consiga resolver**: uma entrada que aponta para um arquivo inexistente não
+aparece no menu, e simplesmente some. Por isso o instalador escolhe a entrada
+pelo **arquivo em disco**, e não pelo número — renomear a entrada do fallback
+faz o rótulo "NLinux" sumir no boot seguinte.
+
 Duas consequências práticas:
 
 - `efibootmgr -b 0001 -L "NLinux"` **não renomeia nada** nesta versão — o
   `--label` só é lido por `--create` e por `--delete`. É o que a maioria das wiki
   manda fazer, e é um no-op.
 - O instalador **não** apaga entradas de outras distribuições. Só remove as que
-  apontam para o systemd-boot **na ESP do NLinux** (sobras de instalações
-  antigas), preservando a que ele mesmo acabou de renomear. O "Windows Boot
-  Manager" nunca é tocado, e o `UEFI: <disco>` de outro S.O. também não.
+  apontam para o systemd-boot **na ESP do NLinux** (a do fallback e sobras de
+  instalações antigas), preservando a que ele mesmo acabou de renomear. O
+  "Windows Boot Manager" nunca é tocado, e o `UEFI: <disco>` de outro S.O.
+  também não.
 
 Se a reescrita falhar, o instalador **mantém a entrada do `bootctl`** (é melhor
 um rótulo impessoal do que uma máquina sem entrada alguma além do fallback) e

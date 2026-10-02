@@ -1031,12 +1031,6 @@ _efivars_dump() {
   done <<< "$saida"
 }
 
-# Números (em hexadecimal, sem o "Boot") de todas as entradas de boot.
-_efiboot_numeros() {
-  efibootmgr -v 2>/dev/null | awk '/^Boot[0-9A-Fa-f]/ {
-    n = $1; sub(/^Boot/, "", n); sub(/\*$/, "", n); print n }'
-}
-
 # Lista as entradas em três colunas: número, rótulo e device path.
 #
 # O separador entre o rótulo e o device path é um TAB, não dois espaços —
@@ -1140,11 +1134,27 @@ _efiboot_renomear() {
 # Entradas que apontam para o systemd-boot desta ESP. É o que separa a entrada
 # do NLinux das entradas de outras distribuições — e das sobras de instalações
 # antigas do próprio NLinux, que precisam sair.
+#
+# Sai em três colunas: número, rótulo e o caminho do loader como a NVRAM o
+# guarda. O caminho é o que permite conferir se o arquivo existe de verdade, e
+# isso é decisivo (ver _efiboot_no_disco).
 _efiboot_esta_esp() {
   local guid="$1"
   _efiboot_listar | awk -F'\t' -v guid="$guid" '
     { d = tolower($3) }
-    guid != "" && index(d, tolower(guid)) && d ~ /systemd-boot/ { print $1 "\t" $2 }'
+    guid != "" && index(d, tolower(guid)) && d ~ /systemd-boot/ { print $1 "\t" $2 "\t" $3 }'
+}
+
+# Traduz o device path da NVRAM no caminho do arquivo dentro da ESP montada.
+# A entrada do systemd-boot tem a forma
+#   HD(1,GPT,<guid>,0x800,0x200000)/\EFI\systemd\systemd-bootx64.efi
+# e o caminho do loader é tudo depois do último ')' — o próprio caminho do
+# arquivo não tem parênteses, então isso não tem como pegar o pedaço errado.
+_efiboot_no_disco() {
+  local caminho="${1##*\)}"
+  local rel="${caminho#/}"
+  rel="${rel#\\}"                # o device path traz \EFI\..., não /EFI/...
+  printf '%s' "$MNT/boot/${rel//\\//}"
 }
 
 # ---------------------------------------------------------------------------
@@ -1156,18 +1166,16 @@ _efiboot_esta_esp() {
 # falha neste kernel (ver _efiboot_renomear), o caminho é deixar o bootctl criar
 # e reescrever só o rótulo da variável que ele gravou.
 #
-# Instalações antigas do próprio NLinux deixam entradas a mais na mesma ESP,
-# então as outras são removidas. Só nesta ESP: entrada de outra distribuição é
-# problema dela, e a do Windows nunca aparece aqui porque não é systemd-boot.
+# Instalações antigas do próprio NLinux deixam entradas a mais na mesma ESP, e
+# o bootctl ainda registra a entrada do loader de fallback junto com a
+# principal — então as outras são removidas. Só nesta ESP: entrada de outra
+# distribuição é problema dela, e a do Windows nunca aparece aqui porque não é
+# systemd-boot.
 # ---------------------------------------------------------------------------
 register_uefi() {
   info "Instalando systemd-boot na ESP e registrando 'NLinux' na lista UEFI"
 
-  # Entradas que já existiam antes do bootctl. Serve para o log e, quando o
-  # bootctl cria algo novo em vez de reaproveitar, para saber qual é.
-  local antes=""
   if command -v efibootmgr >/dev/null 2>&1; then
-    antes="$(_efiboot_numeros)"
     _efivars_dump "antes do bootctl install"
   fi
 
@@ -1191,14 +1199,19 @@ register_uefi() {
     return 0
   fi
 
-  local nesta_esp total meu
+  local nesta_esp total n r c arq
   nesta_esp="$(_efiboot_esta_esp "$esp_guid")"
   total="$(printf '%s\n' "$nesta_esp" | grep -c . || true)"
   info "Entradas systemd-boot nesta ESP ($esp_guid): $total"
   if [[ -n "$nesta_esp" ]]; then
-    local n r
-    while IFS=$'\t' read -r n r; do
-      info "  | Boot$n — ${r:-(sem rótulo)}"
+    while IFS=$'\t' read -r n r c; do
+      [[ -n "$n" ]] || continue
+      arq="$(_efiboot_no_disco "$c")"
+      if [[ -f "$arq" ]]; then
+        info "  | Boot$n — ${r:-(sem rótulo)} — loader presente"
+      else
+        info "  | Boot$n — ${r:-(sem rótulo)} — SEM O ARQUIVO $arq (a firmware descarta uma entrada assim)"
+      fi
     done <<< "$nesta_esp"
   fi
 
@@ -1208,21 +1221,47 @@ register_uefi() {
     return 0
   fi
 
-  # Qual é a nossa? O 10-system.sh já rodou `bootctl install` dentro do chroot,
-  # então normalmente a entrada já existe e é reaproveitada — nesse caso o diff
-  # com "antes" vem vazio e sobra escolher entre as candidatas. O bootctl
-  # reutiliza uma entrada compatível quando encontra, então em ESP limpa é uma
-  # só; havendo mais de uma, a mais alta é a criação mais recente.
-  local novos
-  novos="$(printf '%s\n' "$nesta_esp" | cut -f1 \
-    | { grep -Fxv -f <(printf '%s\n' "$antes") || true; })"
-  if [[ -n "$novos" ]]; then
-    meu="$(printf '%s\n' "$novos" | sort | tail -n1)"
-  else
-    meu="$(printf '%s\n' "$nesta_esp" | cut -f1 | sort | tail -n1)"
+  # Escolhe qual delas é a nossa. O `bootctl install` registra DUAS entradas na
+  # ESP: a do loader principal (\EFI\systemd\systemd-bootx64.efi) e a do
+  # fallback (systemd-boot-fallbackx64.efi). Só a primeira serve, e a segunda é
+  # redundante — o /EFI/BOOT/BOOTX64.EFI já cobre o papel de fallback.
+  #
+  # O que separa as duas com certeza não é o número: é o arquivo. A firmware
+  # varre a NVRAM no boot e apaga qualquer entrada cujo loader ela não consiga
+  # resolver, então uma entrada cujo arquivo não está na ESP simplesmente não
+  # aparece no menu — foi o que aconteceu com a do fallback, que sobreviveu à
+  # renomeação e sumiu no boot seguinte. Por isso o filtro é o arquivo em disco.
+  #
+  # Entre as que têm o arquivo, a principal ganha da fallback; havendo mais de
+  # uma da mesma espécie, fica a de número maior (a mais recente).
+  local meu="" nota melhor_nota=99
+  while IFS=$'\t' read -r n r c; do
+    [[ -n "$n" ]] || continue
+    arq="$(_efiboot_no_disco "$c")"
+    if [[ ! -f "$arq" ]]; then
+      nota=2
+    elif [[ "$c" == *fallback* ]]; then
+      nota=1
+    else
+      nota=0
+    fi
+    if (( nota < melhor_nota )) || { (( nota == melhor_nota )) && (( 0x"$n" > 0x"${meu:-0}" )); }; then
+      meu="$n"
+      melhor_nota=$nota
+    fi
+  done <<< "$nesta_esp"
+
+  if (( melhor_nota == 2 )); then
+    warn "Nenhuma entrada desta ESP tem o arquivo do loader em disco."
+    warn "A firmware apaga da NVRAM a entrada que ela não resolve, então é isso que"
+    warn "impede o rótulo NLinux de aparecer no menu. Nada foi apagado aqui."
+    warn "A NVRAM completa está no log: /var/log/nlinux-install.log no sistema instalado."
+    _efivars_dump "final (nenhuma entrada com o loader em disco)"
+    return 0
   fi
+
   if [[ "$total" -gt 1 ]]; then
-    info "Usando a Boot$meu e removendo as outras $(( total - 1 )) desta ESP."
+    info "Usando a Boot$meu (loader principal) e removendo as outras $(( total - 1 )) desta ESP."
   fi
 
   # Falha aqui não é motivo para apagar nada: a entrada do bootctl continua
@@ -1233,9 +1272,15 @@ register_uefi() {
 
   _efivars_dump "depois de renomear a entrada"
 
-  # Apaga as sobras do systemd-boot nesta mesma ESP (instalações antigas).
-  local num rotulo
-  while IFS=$'\t' read -r num rotulo; do
+  # Apaga as sobras do systemd-boot nesta mesma ESP: a entrada do fallback que o
+  # bootctl registra junto com a principal, e as de instalações anteriores. Só
+  # nesta ESP — entrada de outra distribuição é problema dela, e a do Windows
+  # nunca aparece aqui porque não é systemd-boot.
+  #
+  # Só depois de renomear a nossa, para nunca trocar uma entrada que funciona por
+  # uma que não funciona.
+  local num rotulo cam
+  while IFS=$'\t' read -r num rotulo cam; do
     [[ -n "$num" && "$num" != "$meu" ]] || continue
     if efibootmgr -b "$num" -B >/dev/null 2>&1; then
       info "Entrada duplicada removida: Boot$num (${rotulo:-sem rótulo})"
