@@ -1,0 +1,38 @@
+# Sincroniza o banco de dados do pacman a cada inicializacao do LIVE.
+#
+# No modo RÁPido offline (o padrão) o instalador clona o live com
+# `rsync -aHAXx` e não exclui nada de /etc/systemd, então esta unit e o
+# symlink de habilitação já chegam prontos no sistema instalado — por isso ela
+# vive aqui, no airootfs, e não precisa ser instalada por script nenhum.
+# No modo Completo online (pacstrap) o base não vem do live, e o sistema
+# instalado fica sem a unit.
+#
+# ATENÇÃO — isto é `pacman -Sy` SEM o `-u`, ou seja, um "partial upgrade": o
+# banco de pacotes fica mais novo do que os pacotes instalados. A Arch proíbe
+# isso porque um `pacman -S <pacote>` seguinte pode instalar um binário
+# compilado contra bibliotecas que o sistema ainda não tem (quebra de
+# dependências em tempo de execução). Para atualizar de verdade, o comando
+# correto é `pacman -Syu`.
+#
+# O serviço roda como root, então não há `sudo` nem prompt de senha. Não usa
+# `Before=` de nada: roda em paralelo ao desktop, não atrasa o boot.
+[Unit]
+Description=NLinux: sincroniza o banco de dados do pacman
+Documentation=man:pacman(8) man:systemd.service(5)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/usr/bin/pacman -Sy
+# Sem rede o pacman falha rápido; o teto existe para não travar o boot.
+TimeoutStartSec=300
+# Não disputa I/O e CPU com o desktop que está subindo ao mesmo tempo.
+IOSchedulingClass=idle
+CPUSchedulingPolicy=idle
+Nice=10
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

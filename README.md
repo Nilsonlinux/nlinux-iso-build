@@ -254,6 +254,37 @@ sudo dd if=iso/out/*.iso of=/dev/sdX bs=4M status=progress conv=fsync
 - Consoles extras do live: CTRL+ALT+F2 (shell root). Terminais no desktop:
   `Mod+T` / `Mod+Shift+T` (kitty).
 
+### Banco de dados do pacman sincronizado no boot
+
+A unit `nlinux-pacman-refresh.service` roda `pacman -Sy` a cada inicializacao
+do **live**. O arquivo mora no airootfs
+(`iso/airootfs/etc/systemd/system/`) e o `customize_airootfs.sh` so o habilita.
+
+**O sistema instalado recebe de graca no modo RÁPido offline (o padrao):** o
+`offline_clone` copia o live com `rsync -aHAXx` e nao exclui nada de
+`/etc/systemd`, entao a unit e o symlink em `multi-user.target.wants/` chegam
+prontos. Por isso nao ha nada instalado pelo `50-services.sh`. O modo Completo
+online (`pacstrap`) monta o base a partir de `packages/*.packages`, que nao vem
+do live — nesse modo o sistema instalado fica **sem** a unit.
+
+- roda como **root**, entao nao ha `sudo` nem prompt de senha;
+- nao tem `Before=` de nada e e `WantedBy=multi-user.target`, entao roda em
+  paralelo ao desktop e **nao atrasa o boot**;
+- `TimeoutStartSec=300`, `IOSchedulingClass=idle`, `CPUSchedulingPolicy=idle` e
+  `Nice=10` para nao competir I/O/CPU com o desktop subindo;
+- sem rede o pacman falha rapido e a unidade fica em `failed` no journal — nao
+  trava o boot. Para ver: `journalctl -b -u nlinux-pacman-refresh.service`;
+- no live o `/var/lib/pacman/sync` fica no overlay em RAM: a sincronizacao vale
+  so para a sessao, que e o que se quer num live.
+
+> **Atencao — isto e `pacman -Sy` SEM o `-u`.** E o que a Arch chama de *partial
+> upgrade*: o banco fica mais novo que os pacotes instalados. Se depois disso
+> alguem rodar `pacman -S <pacote>` (ou a loja), o pacote pode vir compilado
+> contra bibliotecas que o sistema ainda nao tem, e quebrar em tempo de
+> execucao. Para atualizar de verdade, o comando e `pacman -Syu`. O
+> `nlinux-software` usa `pacman -S --noconfirm --needed`, que cai exatamente
+> nesse caso.
+
 ### Branding no ISO (live e instalado)
 
 - `/etc/os-release` → `NAME="NLinux"`, `PRETTY_NAME="NLinux"` (mantendo

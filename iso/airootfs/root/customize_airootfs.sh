@@ -129,6 +129,19 @@ systemctl enable NetworkManager 2>/dev/null || true
 systemctl disable systemd-networkd 2>/dev/null || true
 systemctl disable systemd-networkd-wait-online.service 2>/dev/null || true
 
+# --- Banco de dados do pacman sincronizado a cada boot do live
+# A unit ja vem no airootfs (iso/airootfs/etc/systemd/system/); aqui so
+# habilitamos. O modo RÁPido offline clona o live com rsync sem excluir nada de
+# /etc/systemd, entao o sistema instalado herda a unit e o symlink de
+# habilitação — nao e preciso instalar nada no chroot.
+log "Habilitando sincronizacao do banco do pacman no boot"
+if [[ -f /etc/systemd/system/nlinux-pacman-refresh.service ]]; then
+  systemctl enable nlinux-pacman-refresh.service 2>/dev/null || true
+  log "habilitado: nlinux-pacman-refresh.service (pacman -Sy no boot)"
+else
+  log "aviso: unit do pacman-refresh ausente; a sincronizacao no boot ficou desativada"
+fi
+
 # --- Configurações do Umbriel e ícones (cursor) para o desktop no live
 log "Configurando dotfiles do usuário nlinux (umbriel, Bibata)"
 mkdir -p /home/nlinux/.config
