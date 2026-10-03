@@ -51,6 +51,7 @@ match_content = "^Screenshot saved$"
 play_sound    = false
 
 [shell]
+settings_window_translucent = true
 polkit_agent = true
 
 [location]
@@ -97,7 +98,7 @@ center = [ "group:g2" ]
     enabled = true
     fill = "surface_variant"
     id = "g1"
-    members = [ "ram", "temp", "cpu" ]
+    members = [ "ram", "cpu", "temp" ]
     opacity = 1.0
     padding = 6.0
 
