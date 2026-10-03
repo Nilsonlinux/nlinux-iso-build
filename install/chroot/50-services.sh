@@ -66,4 +66,36 @@ mkdir -p /etc/systemd/timesyncd.conf.d
 printf '[Time]\nNTP=true\n' > /etc/systemd/timesyncd.conf.d/noctalia.conf
 systemctl enable systemd-timesyncd
 
+# O archiso monta um tmpfs sobre /etc/pacman.d/gnupg (etc-pacman.d-gnupg.mount,
+# mode=755) porque a raiz do live e' read-only: o chaveiro tem que ir para RAM, e o
+# pacman-init.service repopula esse tmpfs a cada boot. No modo offline o rsync
+# copia /etc/systemd inteiro e o par chega pronto no sistema instalado — onde vira
+# o defeito: o tmpfs esconde o chaveiro que esta em disco, populado e 700, e o
+# pacman-init nao roda. O `pacman -Syu` da loja passava a abortar com "Chaveiro
+# publico nao encontrado" + "o chaveiro nao pode ser escrito", so que nenhum
+# pacote era atualizado.
+#
+# Em disco nao ha motivo para o tmpfs: o chaveiro e' persistente e o 10-system.sh
+# ja o popula. As duas units so existem em /etc (nao ha fallback em /usr/lib), e
+# ninguem alem do proprio pacman-init Requires= a mount, entao remover as duas
+# elimina o mecanismo inteiro.
+log "Removendo o chaveiro em tmpfs herdado do live (etc-pacman.d-gnupg.mount)"
+systemctl disable pacman-init.service >/dev/null 2>&1 || true
+# O rm do symlink e' explicito e nao espera o disable: um .wants apontando para
+# uma unit apagada e' inofensivo pro systemd, mas deixa um rastro que parece que a
+# correcao funcionou pela metade — e se o disable falhar (fora do chroot, sem
+# systemd como PID 1) e' o unico que limpa.
+rm -f /etc/systemd/system/multi-user.target.wants/pacman-init.service \
+      /etc/systemd/system/pacman-init.service \
+      /etc/systemd/system/etc-pacman.d-gnupg.mount
+systemctl daemon-reload >/dev/null 2>&1 || true
+
+# Sem isso o cache: um preset futuro do systemd, ou o proprio preset do Arch na
+# proxima instalacao online, pode reabilitar o pacman-init e o tmpfs volta a
+# mascarar o chaveiro — o mesmo bug, de novo, sem ninguem ter tocado em codigo.
+if [[ -e /etc/systemd/system/pacman-init.service || -e /etc/systemd/system/etc-pacman.d-gnupg.mount ]]; then
+  warn "aviso: a unit do tmpfs do chaveiro sobreviveu; o pacman -Syu vai falhar."
+  warn "verifique: ls -l /etc/systemd/system/{pacman-init.service,etc-pacman.d-gnupg.mount}"
+fi
+
 ok "Serviços habilitados."

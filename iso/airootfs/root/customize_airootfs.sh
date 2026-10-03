@@ -24,6 +24,16 @@ fi
 # como faz o yay para instalar as dependências dos AUR — falha então com
 # "Public keyring not found" / "keyring is not writable". Inicializa e popula
 # aqui (offline: as chaves vêm do pacote archlinux-keyring já instalado).
+# O 700 vem ANTES de qualquer --init/--populate: o chmod de depois nao recupera o
+# que o --init ja nao gravou. E' higiene, nao a correcao do bug da loja — o gpg
+# aceita gravar em 755 (so avisa "permissoes inseguras"). O que abortava o
+# `pacman -Syu` era o tmpfs do archiso mascarar este diretorio no sistema
+# instalado; ver install/chroot/50-services.sh.
+if [[ -d /etc/pacman.d/gnupg ]]; then
+  chmod 700 /etc/pacman.d/gnupg 2>/dev/null || true
+  chown root:root /etc/pacman.d/gnupg 2>/dev/null || true
+fi
+
 log "Inicializando keyring do pacman (pacman-key --init + populate)"
 if [[ ! -d /etc/pacman.d/gnupg ]] || ! pacman-key --list-keys archlinux >/dev/null 2>&1; then
   pacman-key --init >/dev/null 2>&1 || true

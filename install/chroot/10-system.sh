@@ -66,6 +66,15 @@ log "repos do pacman: $(pacman-conf --repo-list 2>/dev/null | tr '\n' ' ')"
 # pacman.conf do pacstrap. Fazer aqui deixa os dois caminhos iguais em vez de
 # depender do que o live herdou.
 
+# O 700 vem ANTES de qualquer --init/--populate: o chmod de depois nao recupera o
+# que o --init ja nao gravou. E' higiene, nao a correcao do bug da loja — o gpg
+# aceita gravar em 755 (so avisa "permissoes inseguras"), o que abortava o
+# `pacman -Syu` era outro, ver 50-services.sh.
+if [[ -d /etc/pacman.d/gnupg ]]; then
+  chmod 700 /etc/pacman.d/gnupg 2>/dev/null || true
+  chown root:root /etc/pacman.d/gnupg 2>/dev/null || true
+fi
+
 log "Garantindo keyring do pacman (init + populate archlinux)"
 if ! pacman-key --list-keys archlinux >/dev/null 2>&1; then
   log "Keyring ausente/incompleto; inicializando..."
@@ -74,6 +83,16 @@ if ! pacman-key --list-keys archlinux >/dev/null 2>&1; then
 fi
 chmod -R 700 /etc/pacman.d/gnupg 2>/dev/null || true
 chown -R root:root /etc/pacman.d/gnupg 2>/dev/null || true
+
+# Os `|| true` acima escondem falha: sem pubring utilizável o `pacman -Syu` da
+# loja aborta com "o chaveiro não pode ser escrito" e não há conserto depois.
+# Confirma em vez de confiar no --list-keys que deu entrada no if. Não aborta a
+# instalação (falhar aqui ainda deixa o log dizer o remédio), só deixa de ser
+# silencioso.
+if ! pacman-key --list-keys archlinux >/dev/null 2>&1; then
+  warn "ATENÇÃO: o chaveiro do pacman continua ilegível; o pacman -Sy/-Syu vai falhar."
+  warn "Remédio: pacman-key --init && pacman-key --populate archlinux"
+fi
 
 # Garantias p/ instalação rápida offline: /boot copiado do live vem vazio
 # (no archiso o /boot do rootfs é vazio; o kernel vive no bootmnt). O vmlinuz
