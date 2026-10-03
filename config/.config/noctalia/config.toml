@@ -75,5 +75,63 @@ reserve_space = false
 show_dots = true
 smart_auto_hide = true
 
+# Layout da barra superior. Vem da configuração que o Nilson usa na máquina de
+# produção, para a ISO já nascer com a barra no formato dele. Os grupos em
+# cápsula separam os indicadores em dois blocos: g1 (ram, temp, cpu) na ponta
+# esquerda, g2 (weather, clock) no centro. A indentação de 4 espaços nas
+# entradas [[bar.default.capsule_group]] é a que o Noctalia grava ao exportar,
+# e foi mantida para o diff com a máquina de produção continuar limpo.
+[widget.network]
+show_label = false
+
+[bar.default]
+start = [ "launcher", "wallpaper", "workspaces", "group:g1" ]
+capsule = true
+
+center = [ "group:g2" ]
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    border_width = 1.0
+    enabled = true
+    fill = "surface_variant"
+    id = "g1"
+    members = [ "ram", "temp", "cpu" ]
+    opacity = 1.0
+    padding = 6.0
+
+    [[bar.default.capsule_group]]
+    accordion = false
+    accordion_direction = "end"
+    border_width = 1.0
+    enabled = true
+    fill = "surface_variant"
+    id = "g2"
+    members = [ "weather", "clock" ]
+    opacity = 1.0
+    padding = 6.0
+
+
+[widget.clock]
+format = "{:%H:%M:%S}"
+
+[widget.cpu]
+visualization = "none"
+
+[widget.ram]
+visualization = "none"
+
+[widget.temp]
+visualization = "none"
+
+[widget.media]
+hide_when_no_media = true
+rotate_album_art = true
+show_progress = true
+
+[widget.weather]
+show_condition = false
+
 [theme.templates]
 builtin_ids = [ "gtk3", "gtk4", "kitty", "starship" ]
