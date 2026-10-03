@@ -11,15 +11,20 @@
 #     /usr/local/share/sounds e /usr/share/sounds. É por isso que o tema do
 #     usuário vence o do sistema.
 #
-# As quatro chaves são fixadas aqui de propósito, em vez de confiar no padrão
-# interno do app: `noctalia config export` com a config vazia não emite NENHUMA
-# chave [audio], então o que o app assume quando a chave falta não é observável
-# de fora nem versionado. `sound_volume` é o float32 1.0 na forma decimal exata
-# que o próprio Noctalia grava: é o mesmo número que a interface devolve, então
-# não diverge do que o usuário vê depois de mexer no ajuste.
+# As três chaves aqui são exatamente as que a máquina de produção do Nilson tem
+# em ~/.local/state/noctalia/settings.toml — verificado com `noctalia config
+# export`, uma chave a menos e nenhuma a mais. Não acrescentar enable_sounds:
+# com ela o print passa a tocar DOIS sons, porque o Noctalia dispara os dois
+# eventos no atalho de captura — `screen-capture` (que cai no freedesktop, já que
+# o tema nlinux não traz esse arquivo) e `message-new-instant` (o arquivo do
+# NLinux) pelo toast de "captura salva". Sem a chave o app não toca o segundo, e
+# o print faz um som só, como na máquina de produção.
+#
+# `sound_volume` é o float32 1.0 na forma decimal exata que o próprio Noctalia
+# grava: é o mesmo número que a interface devolve, então não diverge do que o
+# usuário vê depois de mexer no ajuste.
 [audio]
 enable_overdrive = true
-enable_sounds = true
 sound_theme = "nlinux"
 sound_volume = 0.99999997764825821
 
