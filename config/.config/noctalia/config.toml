@@ -59,6 +59,7 @@ polkit_agent = true
 
     [shell.panel]
     transparency_mode = "glass"
+    polkit_placement = "attached"
 
 [control_center]
 sidebar = "full"
@@ -142,6 +143,8 @@ visualization = "none"
 hide_when_no_media = true
 rotate_album_art = true
 show_progress = true
+title_scroll = "always"
+max_length = 165
 
 [widget.weather]
 show_condition = false
