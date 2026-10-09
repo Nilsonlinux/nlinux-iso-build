@@ -60,6 +60,9 @@ polkit_agent = true
     [shell.panel]
     transparency_mode = "glass"
     polkit_placement = "attached"
+    
+    [shell.screenshot]
+    annotate = true
 
 [control_center]
 sidebar = "full"
