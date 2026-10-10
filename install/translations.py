@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Traduções do instalador NLinux — única fonte (usada pelo instalador web).
 
 O antigo instalador TUI (menu.py curses + tui.py) foi removido: a instalação

@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
 
 source "$SHARE_DIR/chroot/helpers.sh"

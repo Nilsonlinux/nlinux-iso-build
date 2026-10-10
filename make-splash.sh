@@ -1,4 +1,5 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 set -euo pipefail
 
 # Converte uma imagem (JPG/PNG etc.) em splash.png (640x480 PNG) para o

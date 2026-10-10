@@ -1,3 +1,4 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Metadados da ISO (identidade). O restante do profiledef.sh é herdado do
 # perfil releng instalado no sistema (compatível com a versão do mkarchiso).
 

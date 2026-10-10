@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Ponta a ponta: o log que o instalador escreve -> servidor -> SSE na fio.
 
 Sobe o web/server.py de verdade numa porta livre, faz o que o install.sh faz

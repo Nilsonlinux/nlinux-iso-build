@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /* Instalador web NLinux — lógica do assistente + SSE. */
 "use strict";
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Roda as suítes do instalador web (painel, CSS e ponta a ponta).
 #
 #   web/tests/run-tests.sh              # o que der para rodar

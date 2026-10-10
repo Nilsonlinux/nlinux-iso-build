@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Instalador web do NLinux — servidor local (127.0.0.1).
 
 Serve a interface (HTML/CSS/JS), coleta as escolhas e executa o install.sh

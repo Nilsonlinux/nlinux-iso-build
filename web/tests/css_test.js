@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /* Valida o style.css do painel: sintaxe (css-tree) e as regras que o anel e
    a linha de etapa dependem.
 

@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+# SPDX-License-Identifier: GPL-3.0-or-later
 # Rodado pelo mkarchiso dentro do chroot do live system durante o build
 # (mecanismo oficial "customize_airootfs.sh"). Prepara o ambiente ao vivo
 # para o modo "Experimentar": pacotes AUR, greetd + noctalia-greeter e o

@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Janela de boas-vindas do NLinux (primeiro login / atalho manual).
 
 Usa a mesma stack da loja (python-gobject + GTK3) e carrega o idioma que foi

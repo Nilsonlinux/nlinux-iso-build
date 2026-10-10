@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
 """Testes do web/server.py: anel com ritmo real, atividade e resiliência.
 
 Roda o servidor de verdade (importa o módulo, com log/estado/cache apontados

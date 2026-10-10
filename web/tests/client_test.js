@@ -1,3 +1,4 @@
+// SPDX-License-Identifier: GPL-3.0-or-later
 /* Testes do web/static/app.js: o painel (anel, lista de etapas e a linha
    "etapa · atividade") rodando de verdade no jsdom, com o app.js inteiro
    carregado no DOM do index.html.
