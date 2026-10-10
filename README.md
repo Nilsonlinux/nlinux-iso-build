@@ -744,3 +744,37 @@ essa pasta do usuário em vez de dar escrita no `/opt`.
 - Hardware especial, atualizações e AUR usam `yay` (já instalado).
 - Dependências de build (compiladores, `meson`, `wlroots0.20`, Rust) ficam no
   sistema — remova-as depois se quiser enxugar.
+
+---
+
+## Licença
+
+Este projeto é distribuído sob a **GNU General Public License, versão 3 ou
+posterior** (GPL-3.0-or-later). Veja o arquivo [`LICENSE`](LICENSE) para o texto
+completo.
+
+```
+NLinux ISO build
+Copyright (C) 2026 Nilson Linux
+
+Este programa é software livre: você pode redistribuí-lo e/ou modificá-lo sob
+os termos da GNU General Public License, conforme publicada pela Free Software
+Foundation, seja a versão 3 da Licença, ou (à sua escolha) qualquer versão
+posterior.
+
+Este programa é distribuído na esperança de ser útil, mas SEM NENHUMA GARANTIA;
+sem mesmo a garantia implícita de COMERCIALIZAÇÃO ou ADEQUAÇÃO A UM DETERMINADO
+FIM. Veja a GNU General Public License para mais detalhes.
+```
+
+A escolha pela GPL-3.0 decorre de o projeto incorporar e derivar de componentes
+copyleft GPL-3.0 — em especial a base `archiso`/releng do Arch Linux (usada pelo
+`build-iso.sh`) e os cursores **Bibata** em `config/.local/share/icons/`. A GPL
+"ou posterior" mantém a compatibilidade e é compatível com o restante do
+ecossistema Arch.
+
+> Os **pacotes do Arch Linux** empacotados na ISO (incluindo os do AUR)
+> mantêm as suas próprias licenças e **não** são relicenciados por este projeto;
+> os avisos seguem em `/usr/share/licenses/` no sistema instalado. Assets de
+> terceiros embutidos no repositório estão listados em
+> [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).
