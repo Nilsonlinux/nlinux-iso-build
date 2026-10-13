@@ -63,6 +63,9 @@ polkit_agent = true
     
     [shell.screenshot]
     annotate = true
+    
+    [shell.session]
+    show_shortcuts = false
 
 [control_center]
 sidebar = "full"
