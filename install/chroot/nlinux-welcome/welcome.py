@@ -14,6 +14,7 @@ Modos:
 
 import os
 import sys
+import time
 import webbrowser
 from datetime import datetime
 
@@ -23,6 +24,14 @@ MARKER = os.path.expanduser("~/.config/nlinux-welcome-v1")
 REPO_URL = "https://github.com/Nilsonlinux/nlinux-iso-build"
 SITE_URL = "https://nilsonlinux.github.io/"
 AUTHOR = "Nilsonlinux"
+
+# Última release publicada (a data que aparece em "Versão atual"). Consultada
+# online e guardada em cache por 24h; sem rede, vale o que estiver no cache —
+# e, sem cache nenhum, cai para a versão gravada na instalação.
+RELEASES_API = (
+    "https://api.github.com/repos/Nilsonlinux/nlinux-iso-build/releases/latest"
+)
+LATEST_CACHE = os.path.expanduser("~/.cache/nlinux-welcome-latest")
 
 LANG_ALIASES = {
     "pt-br": "pt",
@@ -43,8 +52,8 @@ T = {
         "msg": "Instalação concluída com sucesso. Seu sistema está pronto.",
         "card.title": "Sobre o sistema",
         "label.name": "Nome",
-        "label.version": "Versão",
-        "label.update": "Data de atualização",
+        "label.update": "Data de instalação",
+        "label.iso_latest": "Versão atual (releases)",
         "label.author": "Autor",
         "features.title": "Destaques",
         "features": [
@@ -68,8 +77,8 @@ T = {
         "msg": "Installation completed successfully. Your system is ready.",
         "card.title": "About the system",
         "label.name": "Name",
-        "label.version": "Version",
-        "label.update": "Update date",
+        "label.update": "Installation date",
+        "label.iso_latest": "Latest version (releases)",
         "label.author": "Author",
         "features.title": "Highlights",
         "features": [
@@ -93,8 +102,8 @@ T = {
         "msg": "Instalación completada con éxito. Tu sistema está listo.",
         "card.title": "Acerca del sistema",
         "label.name": "Nombre",
-        "label.version": "Versión",
-        "label.update": "Fecha de actualización",
+        "label.update": "Fecha de instalación",
+        "label.iso_latest": "Última versión (releases)",
         "label.author": "Autor",
         "features.title": "Destacados",
         "features": [
@@ -118,8 +127,8 @@ T = {
         "msg": "L'installation s'est terminée avec succès. Votre système est prêt.",
         "card.title": "À propos du système",
         "label.name": "Nom",
-        "label.version": "Version",
-        "label.update": "Date de mise à jour",
+        "label.update": "Date d'installation",
+        "label.iso_latest": "Dernière version (releases)",
         "label.author": "Auteur",
         "features.title": "Points forts",
         "features": [
@@ -143,8 +152,8 @@ T = {
         "msg": "Die Installation war erfolgreich. Ihr System ist bereit.",
         "card.title": "Über das System",
         "label.name": "Name",
-        "label.version": "Version",
-        "label.update": "Aktualisierungsdatum",
+        "label.update": "Installationsdatum",
+        "label.iso_latest": "Aktuelle Version (Releases)",
         "label.author": "Autor",
         "features.title": "Highlights",
         "features": [
@@ -168,8 +177,8 @@ T = {
         "msg": "Installazione completata con successo. Il tuo sistema è pronto.",
         "card.title": "Informazioni sul sistema",
         "label.name": "Nome",
-        "label.version": "Versione",
-        "label.update": "Data di aggiornamento",
+        "label.update": "Data di installazione",
+        "label.iso_latest": "Ultima versione (releases)",
         "label.author": "Autore",
         "features.title": "In evidenza",
         "features": [
@@ -193,8 +202,8 @@ T = {
         "msg": "インストールが正常に完了しました。システムの準備ができました。",
         "card.title": "システムについて",
         "label.name": "名前",
-        "label.version": "バージョン",
-        "label.update": "更新日",
+        "label.update": "インストール日",
+        "label.iso_latest": "最新バージョン（リリース）",
         "label.author": "作者",
         "features.title": "特長",
         "features": [
@@ -364,11 +373,13 @@ def read_release():
     return data
 
 
-def format_built(ts, lang):
+def format_date(ts, lang):
+    """Formata uma data da ISO (2026.10.09) ou um timestamp para exibição."""
     if not ts:
         return "—"
     parsed = None
-    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S", "%Y-%m-%d"):
+    for fmt in ("%Y-%m-%dT%H:%M:%S%z", "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%d", "%Y.%m.%d"):
         try:
             parsed = datetime.strptime(ts, fmt)
             break
@@ -376,7 +387,53 @@ def format_built(ts, lang):
             continue
     if parsed is None:
         return ts
-    return T[lang]["built_at"].format(date=parsed.strftime(T[lang]["date_fmt"]))
+    return parsed.strftime(T[lang]["date_fmt"])
+
+
+def cached_latest_release():
+    """Última release em cache (< 24h), ou None. Não acessa a rede."""
+    try:
+        if (os.path.exists(LATEST_CACHE)
+                and time.time() - os.path.getmtime(LATEST_CACHE) < 24 * 3600):
+            with open(LATEST_CACHE) as fh:
+                tag = fh.read().strip()
+            return tag or None
+    except OSError:
+        pass
+    return None
+
+
+def fetch_latest_release():
+    """Consulta a última release no GitHub e atualiza o cache.
+
+    Retorna a tag (ex.: "2026.10.09") ou None se estiver offline. Quem chama
+    deve rodar isto fora da thread da interface: a janela não pode esperar
+    pela rede para aparecer.
+    """
+    try:
+        import json
+        import urllib.request
+        req = urllib.request.Request(
+            RELEASES_API, headers={"User-Agent": "nlinux-welcome"})
+        with urllib.request.urlopen(req, timeout=6) as resp:
+            data = json.loads(resp.read().decode("utf-8", "replace"))
+        tag = (data.get("tag_name") or "").strip()
+        if tag:
+            try:
+                os.makedirs(os.path.dirname(LATEST_CACHE), exist_ok=True)
+                with open(LATEST_CACHE, "w") as fh:
+                    fh.write(tag + "\n")
+            except OSError:
+                pass
+            return tag
+    except Exception:
+        pass
+    # Sem rede: usa o cache antigo, se houver.
+    try:
+        with open(LATEST_CACHE) as fh:
+            return fh.read().strip() or None
+    except OSError:
+        return None
 
 
 def build_ui(lang, release):
@@ -448,12 +505,13 @@ def build_ui(lang, release):
     board.set_margin_top(12)
 
     info_card = _card(board, t["card.title"])
-    version = release.get("NILINUX_VERSION", "rolling")
+    installed = format_date(
+        release.get("NILINUX_BUILT") or release.get("NILINUX_VERSION"), lang)
+    latest = cached_latest_release() or release.get("NILINUX_VERSION", "rolling")
     info_card.pack_start(_info_row(t["label.name"], "NLinux"), False, False, 5)
-    info_card.pack_start(_info_row(t["label.version"], version), False, False, 5)
-    info_card.pack_start(_info_row(t["label.update"],
-                                   format_built(release.get("NILINUX_BUILT"), lang)),
-                         False, False, 5)
+    info_card.pack_start(_info_row(t["label.update"], installed), False, False, 5)
+    latest_row = _info_row(t["label.iso_latest"], latest)
+    info_card.pack_start(latest_row, False, False, 5)
     info_card.pack_start(_info_row(t["label.author"], AUTHOR), False, False, 5)
 
     feat_card = _card(board, t["features.title"])
@@ -498,6 +556,26 @@ def build_ui(lang, release):
 
     win.connect("destroy", Gtk.main_quit)
     win.show_all()
+
+    # A "versão atual" vem da rede; a janela não espera por ela. Aparece já com
+    # o cache (ou com a versão instalada) e é atualizada quando a resposta
+    # chegar — sem travar a abertura quando não há internet.
+    def _load_latest():
+        tag = fetch_latest_release()
+        if not tag:
+            return
+
+        def _apply():
+            try:
+                latest_row.value_label.set_text(tag)
+            except Exception:
+                pass
+            return False
+
+        GLib.idle_add(_apply)
+
+    import threading
+    threading.Thread(target=_load_latest, daemon=True).start()
     Gtk.main()
 
 
@@ -535,6 +613,9 @@ def _info_row(label, value):
     sep = "  "
     row.pack_start(l1, False, False, 0)
     row.pack_start(v1, True, True, 0)
+    # Guarda o rótulo do valor para poder atualizá-lo depois (ex.: "Versão
+    # atual" chega da rede após a janela já estar visível).
+    row.value_label = v1
     return row
 
 
