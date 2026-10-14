@@ -57,7 +57,7 @@ T = {
         "label.author": "Autor",
         "features.title": "Destaques",
         "features": [
-            "App Center para instalar programas",
+            "NLinux Software para instalar programas",
             "Terminal kitty  (Mod+T)",
             "Shell padrão: fish",
             "Compositor Umbriel + Noctalia",
@@ -82,7 +82,7 @@ T = {
         "label.author": "Author",
         "features.title": "Highlights",
         "features": [
-            "App Center to install programs",
+            "NLinux Software to install programs",
             "kitty terminal  (Mod+T)",
             "Default shell: fish",
             "Umbriel + Noctalia compositor",
@@ -107,7 +107,7 @@ T = {
         "label.author": "Autor",
         "features.title": "Destacados",
         "features": [
-            "App Center para instalar programas",
+            "NLinux Software para instalar programas",
             "Terminal kitty  (Mod+T)",
             "Shell por defecto: fish",
             "Compositor Umbriel + Noctalia",
@@ -132,7 +132,7 @@ T = {
         "label.author": "Auteur",
         "features.title": "Points forts",
         "features": [
-            "App Center pour installer des programmes",
+            "NLinux Software pour installer des programmes",
             "Terminal kitty  (Mod+T)",
             "Shell par défaut : fish",
             "Compositeur Umbriel + Noctalia",
@@ -157,7 +157,7 @@ T = {
         "label.author": "Autor",
         "features.title": "Highlights",
         "features": [
-            "App Center zum Installieren von Programmen",
+            "NLinux Software zum Installieren von Programmen",
             "kitty-Terminal  (Mod+T)",
             "Standard-Shell: fish",
             "Umbriel + Noctalia-Compositor",
@@ -182,7 +182,7 @@ T = {
         "label.author": "Autore",
         "features.title": "In evidenza",
         "features": [
-            "App Center per installare programmi",
+            "NLinux Software per installare programmi",
             "Terminale kitty  (Mod+T)",
             "Shell predefinita: fish",
             "Compositor Umbriel + Noctalia",
@@ -207,7 +207,7 @@ T = {
         "label.author": "作者",
         "features.title": "特長",
         "features": [
-            "アプリをインストールする App Center",
+            "NLinux Software でアプリをインストール",
             "kitty ターミナル (Mod+T)",
             "デフォルトのシェル: fish",
             "Umbriel と Noctalia コンポジター",
