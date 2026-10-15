@@ -747,6 +747,27 @@ essa pasta do usuário em vez de dar escrita no `/opt`.
 
 ---
 
+## Assinatura das releases (GPG)
+
+As tags de release e os commits deste repositório são assinados com a chave GPG
+**NLinux Releases**:
+
+- Chave: `69B8B38D1DFF6CDA`
+- Impressão digital: `5122 1C0F B2B1 B421 64EB  1511 69B8 B38D 1DFF 6CDA`
+- Chave pública: [`nlinux-releases-gpg-pub.asc`](nlinux-releases-gpg-pub.asc)
+
+Para verificar localmente:
+
+```bash
+gpg --import nlinux-releases-gpg-pub.asc   # só na primeira vez
+git tag -v 2026.10.09                       # verifica uma tag de release
+git verify-commit <commit>                  # verifica um commit
+```
+
+No GitHub, tags e commits assinados aparecem com o selo **Verified**.
+
+---
+
 ## Licença
 
 Este projeto é distribuído sob a **GNU General Public License, versão 3 ou
