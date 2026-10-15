@@ -1,0 +1,25 @@
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=opencode
+GenericName=AI coding agent
+GenericName[pt_BR]=Agente de programação com IA
+GenericName[es]=Agente de programación con IA
+GenericName[fr]=Agent de codage IA
+GenericName[de]=KI-Programmieragent
+GenericName[it]=Agente di programmazione IA
+GenericName[ja]=AI コーディングエージェント
+Comment=Open source AI coding agent for the terminal
+Comment[pt_BR]=Agente de programação com IA de código aberto para o terminal
+Comment[es]=Agente de código abierto con IA para la terminal
+Comment[fr]=Agent de codage IA libre pour le terminal
+Comment[de]=Open-Source-KI-Programmieragent für das Terminal
+Comment[it]=Agente di programmazione IA open source per il terminale
+Comment[ja]=ターミナルで使うオープンソースの AI コーディングエージェント
+Exec=kitty opencode
+TryExec=opencode
+Icon=/usr/share/pixmaps/opencode.png
+Terminal=false
+StartupNotify=true
+Categories=Development;IDE;
+Keywords=ai;code;coding;agent;opencode;terminal;programming;

@@ -31,6 +31,10 @@ nautilus
 xdg-user-dirs
 gnome-text-editor
 
+# opencode: agente de programação com IA (repositório [extra]). O atalho para a
+# lista de aplicativos é instalado pelo build (iso/airootfs + install.sh).
+opencode
+
 wl-clipboard
 grim
 slurp

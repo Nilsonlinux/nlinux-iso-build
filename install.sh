@@ -1019,6 +1019,25 @@ stage_software_store() {
   fi
 }
 
+# ---------------------------------------------------------------------------
+# Atalho de menu para apps que não trazem .desktop no pacote (o opencode é
+# um TUI: o pacote só instala /usr/bin/opencode). O build entrega o atalho +
+# ícone no airootfs (live e, por rsync, no clone offline); aqui garante o
+# mesmo no modo online (pacstrap).
+# ---------------------------------------------------------------------------
+stage_app_shortcuts() {
+  local f alvo
+  for f in /usr/share/applications/opencode.desktop \
+           /usr/share/pixmaps/opencode.png; do
+    [[ -f "$f" ]] || continue
+    alvo="$MNT$f"
+    install -d "$(dirname "$alvo")"
+    install -m 0644 "$f" "$alvo"
+    chown root:root "$alvo" 2>/dev/null || true
+    info "Atalho incluído: $f"
+  done
+}
+
 # Despeja a NVRAM no log. Sem isso não há como descobrir, depois do reboot,
 # por que a entrada não ficou com o rótulo NLinux — o efibootmgr só fala o
 # erro no stderr, e stderr sumia em /dev/null.
@@ -1380,6 +1399,7 @@ main() {
   fi
   note "stage.note.store"
   stage_software_store
+  stage_app_shortcuts
   # As etapas dentro do chroot se anunciam sozinhas (NLSTEP, via all.sh).
   run_chroot_setup
   stage stage.boot

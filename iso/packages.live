@@ -55,6 +55,10 @@ udisks2
 gnome-text-editor
 xdg-user-dirs
 
+# opencode: agente de programação com IA (extra). Fica no live "Experimentar"
+# e, por consequência, no clone offline; o atalho vem do airootfs.
+opencode
+
 wl-clipboard
 grim
 slurp
