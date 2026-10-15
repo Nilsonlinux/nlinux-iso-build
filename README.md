@@ -619,9 +619,9 @@ avisa é o `all.sh`, com `cstage`/`cnote`/`cact` (ver
 | Lista | Conteúdo |
 |---|---|
 | `packages/base.packages` | kernel, firmware, rede, áudio (PipeWire + **sound-theme-freedesktop**), ferramentas (fzf/ripgrep/starship…), `cryptsetup`, fontes |
-| `packages/desktop.packages` | stack Noctalia + apps: firefox, **kitty** e fish, starship, fastfetch, nautilus, gnome-text-editor, **gnome-software** (App Center: PackageKit + AppStream + Flatpak + **zenity** [boas-vindas]), spotify-launcher, discord, telegram-desktop, gpu-screen-recorder, eartag, swaylock/idle, zram-generator, mpv/ffmpeg/imagemagick |
+| `packages/desktop.packages` | stack Noctalia + apps: firefox, **kitty** e fish, starship, fastfetch, nautilus, gnome-text-editor, **gnome-software** (App Center: PackageKit + AppStream + Flatpak + **zenity** [boas-vindas]), spotify-launcher, discord, telegram-desktop, gpu-screen-recorder, eartag, **opencode** (agente de IA no terminal), swaylock/idle, zram-generator, mpv/ffmpeg/imagemagick |
 | `packages/aur.packages` | `umbriel-git`, `noctalia-greeter`, `xwayland-satellite-git` (X11 no Umbriel), `whatsapp-linux-desktop-bin` — via `yay` no chroot |
-| `iso/packages.live` | ferramentas do instalador (cryptsetup/gdisk/btrfs-progs/parted/python…), `noctalia`, `greetd`, NetworkManager, e os mesmos apps do desktop + Flatpak/gnome-software/packagekit/appstream para o live |
+| `iso/packages.live` | ferramentas do instalador (cryptsetup/gdisk/btrfs-progs/parted/python…), `noctalia`, `greetd`, NetworkManager, e os mesmos apps do desktop (inclui **opencode**) + Flatpak/gnome-software/packagekit/appstream para o live |
 
 `gnome-software` lista apps de repositório via
 **PackageKit** e Flatpaks via **Flathub** (adicionado automaticamente ao usuário
@@ -635,6 +635,23 @@ Os repositórios do pacman são `core`, `extra` e **`multilib`** — o multilib 
 habilitado no live e no sistema instalado (`customize_airootfs.sh` e
 `10-system.sh`), o que dá programas 32-bit e é de onde sai o Steam. A loja já
 contava com isso: o `REPO_FILES` dela lê os três bancos.
+
+### Atalho do opencode (apps sem `.desktop`)
+
+O **opencode** (agente de programação com IA, do repo `extra`) é um TUI: o
+pacote instala só `/usr/bin/opencode` e **não** traz atalho de menu. Para ele
+aparecer na lista de aplicativos, o build entrega:
+
+- `iso/airootfs/usr/share/applications/opencode.desktop` — abre no **kitty**
+  (`Exec=kitty opencode`); o `TryExec=opencode` esconde o atalho se o binário
+  não existir;
+- `iso/airootfs/usr/share/pixmaps/opencode.png` — ícone usado pelo atalho.
+
+No modo **offline** os dois chegam pelo rsync do live; no **online**
+(pacstrap) o `install.sh` copia os mesmos arquivos com
+**`stage_app_shortcuts()`**, que roda logo depois de `stage_software_store`.
+É o modelo a repetir para qualquer outro programa de terminal que precise de
+entrada no menu.
 
 ---
 
