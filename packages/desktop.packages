@@ -19,6 +19,7 @@ ttf-firacode-nerd
 flatpak
 packagekit
 appstream
+mpv-mpris
 zenity
 
 spotify-launcher
