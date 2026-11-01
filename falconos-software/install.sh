@@ -29,15 +29,23 @@ fi
 # ls ordena alfabeticamente, e 'v115' < 'v211': com varios
 # tarballs na pasta, head -n1 pegava o MAIS ANTIGO, nao o
 # mais novo. sort -V ordena por numero de versao.
-TARBALL="$(ls "$SRC"/nlinux-software-v*.tar.gz "$SRC"/../nlinux-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)"
+TARBALL="$(ls "$SRC"/falconos-software-v*.tar.gz "$SRC"/../falconos-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)"
 if [ -z "$TARBALL" ]; then
-  echo "Aviso: nenhum nlinux-software-v<N>.tar.gz encontrado em $SRC."
+  # Pacotes publicados antes do rename da distro continuam instaláveis.
+  TARBALL="$(ls "$SRC"/nlinux-software-v*.tar.gz "$SRC"/../nlinux-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)"
+fi
+PUBKEY=""
+for k in "$SRC/falconos-software_pub.asc" "$SRC/nlinux-software_pub.asc"; do
+  if [ -f "$k" ]; then PUBKEY="$k"; break; fi
+done
+if [ -z "$TARBALL" ]; then
+  echo "Aviso: nenhum falconos-software-v<N>.tar.gz encontrado em $SRC."
   echo "         Instalando a loja a partir do src/ sem validar assinatura."
-elif [ -f "$TARBALL.asc" ] && [ -f "$SRC/nlinux-software_pub.asc" ]; then
+elif [ -f "$TARBALL.asc" ] && [ -n "$PUBKEY" ]; then
   # set -e + redirecionamento silencioso aqui ja matou o
   # instalador sem mensagem alguma quando a chave publica faltava.
-  if ! gpg --batch --import "$SRC/nlinux-software_pub.asc" >/dev/null 2>&1; then
-    echo "ERRO: nlinux-software_pub.asc não pôde ser importada." >&2
+  if ! gpg --batch --import "$PUBKEY" >/dev/null 2>&1; then
+    echo "ERRO: $(basename "$PUBKEY") não pôde ser importada." >&2
     echo "O pacote está sem a chave pública: baixe o repositório inteiro." >&2
     exit 1
   fi
@@ -50,22 +58,22 @@ elif [ -f "$TARBALL.asc" ] && [ -f "$SRC/nlinux-software_pub.asc" ]; then
 else
   echo "ERRO: assinatura ou chave pública ausente; sem validação." >&2
   echo "Esperado junto de $(basename "$TARBALL"):" >&2
-  echo "  $(basename "$TARBALL").asc  e  nlinux-software_pub.asc" >&2
+  echo "  $(basename "$TARBALL").asc  e  falconos-software_pub.asc" >&2
   echo "O pacote está incompleto. Baixe o repositório inteiro." >&2
   exit 1
 fi
 # --- instala a loja ----------------------------------------------------
-DEST="/opt/nlinux-software"
+DEST="/opt/falconos-software"
 rm -rf "$DEST"
 mkdir -p "$DEST"
 cp -a "$SRC/src" "$DEST/"
-cp "$SRC/nlinux-software" "$DEST/"
-chmod +x "$DEST/nlinux-software"
-cat > /usr/local/bin/nlinux-software <<'EOF'
+cp "$SRC/falconos-software" "$DEST/"
+chmod +x "$DEST/falconos-software"
+cat > /usr/local/bin/falconos-software <<'EOF'
 #!/bin/sh
-exec /opt/nlinux-software/nlinux-software "$@"
+exec /opt/falconos-software/falconos-software "$@"
 EOF
-chmod +x /usr/local/bin/nlinux-software
+chmod +x /usr/local/bin/falconos-software
 # --- dados gravaveis, fora do /opt ---------------------------------
 # O catalogo e a midia mudam toda vez que a loja sincroniza com o
 # GitHub. Em /opt isso pediria root, entao vao para o HOME do
@@ -74,7 +82,7 @@ STORE_USER="${SUDO_USER:-root}"
 STORE_HOME="$(getent passwd "$STORE_USER" | cut -d: -f6)"
 if [ -n "$STORE_HOME" ] && [ "$STORE_USER" != "root" ]; then
   STORE_DATA="${XDG_DATA_HOME:-$STORE_HOME/.local/share}"
-  APP_DATA="$STORE_DATA/nlinux"
+  APP_DATA="$STORE_DATA/falconos"
   DATA_DIR="$APP_DATA/store"
   mkdir -p "$DATA_DIR"
   if [ ! -d "$DATA_DIR/apps" ]; then
@@ -88,23 +96,23 @@ if [ -n "$STORE_HOME" ] && [ "$STORE_USER" != "root" ]; then
 fi
 # --- ícone + atalho no menu de aplicativos --------------------------
 mkdir -p /usr/share/pixmaps
-cp "$DEST/src/apps/nlinux-logo.png" /usr/share/pixmaps/nlinux-software.png
-rm -f /usr/share/icons/hicolor/scalable/apps/nlinux-software.svg
-rm -f /usr/share/applications/nlinux-software.desktop
-rm -f /usr/share/applications/nlinuxsoftware.desktop
-cat > /usr/share/applications/nlinuxstore.desktop <<'EOF'
+cp "$DEST/src/apps/falconos-logo.png" /usr/share/pixmaps/falconos-software.png
+rm -f /usr/share/icons/hicolor/scalable/apps/falconos-software.svg
+rm -f /usr/share/applications/falconos-software.desktop
+rm -f /usr/share/applications/falconossoftware.desktop
+cat > /usr/share/applications/falconosstore.desktop <<'EOF'
 [Desktop Entry]
 Type=Application
-Name=NLinux Software
+Name=FalconOS Software
 GenericName=Loja de aplicativos
-Comment=Loja de aplicativos do NLinux (distribuição)
-Exec=/usr/local/bin/nlinux-software
-Icon=nlinux-software
+Comment=Loja de aplicativos do FalconOS (distribuição)
+Exec=/usr/local/bin/falconos-software
+Icon=falconos-software
 Terminal=false
 Categories=Network;Utility;
 StartupNotify=true
-StartupWMClass=nlinuxstore
+StartupWMClass=falconosstore
 X-GNOME-UsesNotifications=false
 EOF
 (command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database /usr/share/applications) || true
-echo "Instalado: NLinux Software v373 (/usr/local/bin/nlinux-software)"
+echo "Instalado: FalconOS Software v373 (/usr/local/bin/falconos-software)"

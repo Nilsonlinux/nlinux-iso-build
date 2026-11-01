@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Janela de boas-vindas do NLinux (primeiro login / atalho manual).
+"""Janela de boas-vindas do FalconOS (primeiro login / atalho manual).
 
 Usa a mesma stack da loja (python-gobject + GTK3) e carrega o idioma que foi
 escolhido no instalador web (lido de /etc/locale.conf no sistema instalado).
 
 Modos:
-  padrão        -> exibe uma vez por usuário (marcador ~/.config/nlinux-welcome-v1),
+  padrão        -> exibe uma vez por usuário (marcador ~/.config/falconos-welcome-v1),
                    no sistema instalado.
   --menu        -> abre sempre (atalho), e marca como visto no final.
 """
@@ -18,8 +18,8 @@ import time
 import webbrowser
 from datetime import datetime
 
-APP_DIR = "/usr/share/nlinux-welcome"
-MARKER = os.path.expanduser("~/.config/nlinux-welcome-v1")
+APP_DIR = "/usr/share/falconos-welcome"
+MARKER = os.path.expanduser("~/.config/falconos-welcome-v1")
 
 REPO_URL = "https://github.com/Nilsonlinux/nlinux-iso-build"
 SITE_URL = "https://nilsonlinux.github.io/"
@@ -31,7 +31,7 @@ AUTHOR = "Nilsonlinux"
 RELEASES_API = (
     "https://api.github.com/repos/Nilsonlinux/nlinux-iso-build/releases/latest"
 )
-LATEST_CACHE = os.path.expanduser("~/.cache/nlinux-welcome-latest")
+LATEST_CACHE = os.path.expanduser("~/.cache/falconos-welcome-latest")
 
 LANG_ALIASES = {
     "pt-br": "pt",
@@ -47,8 +47,8 @@ LANG_ALIASES = {
 
 T = {
     "pt": {
-        "window.title": "Boas-vindas ao NLinux",
-        "hello": "Seja bem-vindo ao NLinux!",
+        "window.title": "Boas-vindas ao FalconOS",
+        "hello": "Seja bem-vindo ao FalconOS!",
         "msg": "Instalação concluída com sucesso. Seu sistema está pronto.",
         "card.title": "Sobre o sistema",
         "label.name": "Nome",
@@ -57,7 +57,7 @@ T = {
         "label.author": "Autor",
         "features.title": "Destaques",
         "features": [
-            "NLinux Software para instalar programas",
+            "FalconOS Software para instalar programas",
             "Terminal kitty  (Mod+T)",
             "Shell padrão: fish",
             "Compositor Umbriel + Noctalia",
@@ -72,8 +72,8 @@ T = {
         "built_at": "gerado em {date}",
     },
     "en": {
-        "window.title": "Welcome to NLinux",
-        "hello": "Welcome to NLinux!",
+        "window.title": "Welcome to FalconOS",
+        "hello": "Welcome to FalconOS!",
         "msg": "Installation completed successfully. Your system is ready.",
         "card.title": "About the system",
         "label.name": "Name",
@@ -82,7 +82,7 @@ T = {
         "label.author": "Author",
         "features.title": "Highlights",
         "features": [
-            "NLinux Software to install programs",
+            "FalconOS Software to install programs",
             "kitty terminal  (Mod+T)",
             "Default shell: fish",
             "Umbriel + Noctalia compositor",
@@ -97,8 +97,8 @@ T = {
         "built_at": "built on {date}",
     },
     "es": {
-        "window.title": "Bienvenido a NLinux",
-        "hello": "¡Bienvenido a NLinux!",
+        "window.title": "Bienvenido a FalconOS",
+        "hello": "¡Bienvenido a FalconOS!",
         "msg": "Instalación completada con éxito. Tu sistema está listo.",
         "card.title": "Acerca del sistema",
         "label.name": "Nombre",
@@ -107,7 +107,7 @@ T = {
         "label.author": "Autor",
         "features.title": "Destacados",
         "features": [
-            "NLinux Software para instalar programas",
+            "FalconOS Software para instalar programas",
             "Terminal kitty  (Mod+T)",
             "Shell por defecto: fish",
             "Compositor Umbriel + Noctalia",
@@ -122,8 +122,8 @@ T = {
         "built_at": "generado el {date}",
     },
     "fr": {
-        "window.title": "Bienvenue sur NLinux",
-        "hello": "Bienvenue sur NLinux !",
+        "window.title": "Bienvenue sur FalconOS",
+        "hello": "Bienvenue sur FalconOS !",
         "msg": "L'installation s'est terminée avec succès. Votre système est prêt.",
         "card.title": "À propos du système",
         "label.name": "Nom",
@@ -132,7 +132,7 @@ T = {
         "label.author": "Auteur",
         "features.title": "Points forts",
         "features": [
-            "NLinux Software pour installer des programmes",
+            "FalconOS Software pour installer des programmes",
             "Terminal kitty  (Mod+T)",
             "Shell par défaut : fish",
             "Compositeur Umbriel + Noctalia",
@@ -147,8 +147,8 @@ T = {
         "built_at": "généré le {date}",
     },
     "de": {
-        "window.title": "Willkommen bei NLinux",
-        "hello": "Willkommen bei NLinux!",
+        "window.title": "Willkommen bei FalconOS",
+        "hello": "Willkommen bei FalconOS!",
         "msg": "Die Installation war erfolgreich. Ihr System ist bereit.",
         "card.title": "Über das System",
         "label.name": "Name",
@@ -157,7 +157,7 @@ T = {
         "label.author": "Autor",
         "features.title": "Highlights",
         "features": [
-            "NLinux Software zum Installieren von Programmen",
+            "FalconOS Software zum Installieren von Programmen",
             "kitty-Terminal  (Mod+T)",
             "Standard-Shell: fish",
             "Umbriel + Noctalia-Compositor",
@@ -172,8 +172,8 @@ T = {
         "built_at": "erstellt am {date}",
     },
     "it": {
-        "window.title": "Benvenuto su NLinux",
-        "hello": "Benvenuto su NLinux!",
+        "window.title": "Benvenuto su FalconOS",
+        "hello": "Benvenuto su FalconOS!",
         "msg": "Installazione completata con successo. Il tuo sistema è pronto.",
         "card.title": "Informazioni sul sistema",
         "label.name": "Nome",
@@ -182,7 +182,7 @@ T = {
         "label.author": "Autore",
         "features.title": "In evidenza",
         "features": [
-            "NLinux Software per installare programmi",
+            "FalconOS Software per installare programmi",
             "Terminale kitty  (Mod+T)",
             "Shell predefinita: fish",
             "Compositor Umbriel + Noctalia",
@@ -197,8 +197,8 @@ T = {
         "built_at": "creato il {date}",
     },
     "ja": {
-        "window.title": "NLinux へようこそ",
-        "hello": "NLinux へようこそ！",
+        "window.title": "FalconOS へようこそ",
+        "hello": "FalconOS へようこそ！",
         "msg": "インストールが正常に完了しました。システムの準備ができました。",
         "card.title": "システムについて",
         "label.name": "名前",
@@ -207,7 +207,7 @@ T = {
         "label.author": "作者",
         "features.title": "特長",
         "features": [
-            "NLinux Software でアプリをインストール",
+            "FalconOS Software でアプリをインストール",
             "kitty ターミナル (Mod+T)",
             "デフォルトのシェル: fish",
             "Umbriel と Noctalia コンポジター",
@@ -217,7 +217,7 @@ T = {
         "btn.site": "ウェブサイトへ",
         "tip.site": "nilsonlinux.github.io を開く",
         "btn.close": "はじめる",
-        "footer": "Nilsonlinux によって作られた NLinux",
+        "footer": "Nilsonlinux によって作られた FalconOS",
         "date_fmt": "%Y/%m/%d",
         "built_at": "{date} に生成",
     },
@@ -363,7 +363,7 @@ def resolve_lang():
 def read_release():
     data = {}
     try:
-        with open("/etc/nlinux-release") as fh:
+        with open("/etc/falconos-release") as fh:
             for line in fh:
                 if "=" in line:
                     k, v = line.split("=", 1)
@@ -414,7 +414,7 @@ def fetch_latest_release():
         import json
         import urllib.request
         req = urllib.request.Request(
-            RELEASES_API, headers={"User-Agent": "nlinux-welcome"})
+            RELEASES_API, headers={"User-Agent": "falconos-welcome"})
         with urllib.request.urlopen(req, timeout=6) as resp:
             data = json.loads(resp.read().decode("utf-8", "replace"))
         tag = (data.get("tag_name") or "").strip()
@@ -445,7 +445,7 @@ def build_ui(lang, release):
 
     t = T.get(lang, T["pt"])
 
-    wm_class = "nlinux-welcome"
+    wm_class = "falconos-welcome"
     GLib.set_prgname(wm_class)
     try:
         Gdk.set_program_class(wm_class)
@@ -485,7 +485,7 @@ def build_ui(lang, release):
         logo = Gtk.Image.new_from_pixbuf(logo_pixbuf)
     except Exception:
         logo = Gtk.Label()
-        logo.set_text("NLinux")
+        logo.set_text("FalconOS")
         logo.set_name("hello")
     root.pack_start(logo, False, False, 0)
 
@@ -506,9 +506,9 @@ def build_ui(lang, release):
 
     info_card = _card(board, t["card.title"])
     installed = format_date(
-        release.get("NILINUX_BUILT") or release.get("NILINUX_VERSION"), lang)
-    latest = cached_latest_release() or release.get("NILINUX_VERSION", "rolling")
-    info_card.pack_start(_info_row(t["label.name"], "NLinux"), False, False, 5)
+        release.get("FALCONOS_BUILT") or release.get("FALCONOS_VERSION"), lang)
+    latest = cached_latest_release() or release.get("FALCONOS_VERSION", "rolling")
+    info_card.pack_start(_info_row(t["label.name"], "FalconOS"), False, False, 5)
     info_card.pack_start(_info_row(t["label.update"], installed), False, False, 5)
     latest_row = _info_row(t["label.iso_latest"], latest)
     info_card.pack_start(latest_row, False, False, 5)
@@ -549,7 +549,7 @@ def build_ui(lang, release):
     close.connect("clicked", lambda *_: win.destroy())
     root.pack_start(close, False, False, 0)
 
-    footer = Gtk.Label(label=("© NLinux   ·   " + t["footer"]))
+    footer = Gtk.Label(label=("© FalconOS   ·   " + t["footer"]))
     footer.get_style_context().add_class("footer")
     footer.set_margin_top(10)
     root.pack_start(footer, False, False, 0)

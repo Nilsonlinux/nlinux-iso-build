@@ -17,7 +17,7 @@
 # O serviço roda como root, então não há `sudo` nem prompt de senha. Não usa
 # `Before=` de nada: roda em paralelo ao desktop, não atrasa o boot.
 [Unit]
-Description=NLinux: sincroniza o banco de dados do pacman
+Description=FalconOS: sincroniza o banco de dados do pacman
 Documentation=man:pacman(8) man:systemd.service(5)
 After=network-online.target
 Wants=network-online.target

@@ -12,9 +12,9 @@ SRC_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 # por isso nunca deve ser usado para escrever.
 BUNDLED_APPS_DIR = os.path.join(SRC_ROOT, 'apps')
 
-# Subpasta do app. Não pode ser 'nlinux-software': esse nome pertence ao
-# WebKitGTK, que cria ~/.local/share/nlinux-software para os dados do site.
-APP_DIRNAME = 'nlinux'
+# Subpasta do app. Não pode ser 'falconos-software': esse nome pertence ao
+# WebKitGTK, que cria ~/.local/share/falconos-software para os dados do site.
+APP_DIRNAME = 'falconos'
 
 
 def resource_path(resource: str) -> str:
@@ -35,9 +35,9 @@ def _running_from_home() -> bool:
 def data_home() -> str:
     """Base dos dados graváveis, numa pasta oculta (XDG).
 
-    `NLINUX_DATA_DIR` troca a base inteira (útil para testes).
+    `FALCONOS_DATA_DIR` troca a base inteira (útil para testes).
     """
-    base = os.environ.get('NLINUX_DATA_DIR')
+    base = os.environ.get('FALCONOS_DATA_DIR')
     if not base:
         base = os.environ.get('XDG_DATA_HOME') \
             or os.path.join(os.path.expanduser('~'), '.local', 'share')
@@ -103,7 +103,7 @@ def apps_dir(role: str) -> str:
 
     No projeto de desenvolvimento continua em `<projeto>/src/apps`, para
     editar no lugar. Instalado em /opt, semeia e usa
-    `~/.local/share/nlinux/<role>/apps`: assim salvar um programa,
+    `~/.local/share/falconos/<role>/apps`: assim salvar um programa,
     trocar um ícone ou sincronizar o catálogo do GitHub não pede root.
     """
     if _running_from_home():
@@ -113,8 +113,8 @@ def apps_dir(role: str) -> str:
     except OSError as exc:
         # seguir so com leitura silenciosamente esconde o problema: avisa e
         # deixa claro que nada pode ser gravado nesta sessao
-        print(f"[nlinux] {exc}", file=sys.stderr, flush=True)
-        print(f"[nlinux] usando o catalogo somente-leitura de "
+        print(f"[falconos] {exc}", file=sys.stderr, flush=True)
+        print(f"[falconos] usando o catalogo somente-leitura de "
               f"{BUNDLED_APPS_DIR} (rode a curadoria com um usuario com "
               f"permissao de escrita)", file=sys.stderr, flush=True)
         return BUNDLED_APPS_DIR

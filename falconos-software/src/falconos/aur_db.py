@@ -21,7 +21,7 @@ catálogo.
 uma chamada por pacote transformaria a abertura da loja em dezenas de
 requisições, que é como se derruba o IP no archlinux.org.
 
-O cache fica em `~/.local/share/nlinux/aur-cache.json`, fora de `src/apps`, e
+O cache fica em `~/.local/share/falconos/aur-cache.json`, fora de `src/apps`, e
 portanto fora do pacote gerado.
 """
 
@@ -33,7 +33,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
-from nlinux import resources
+from falconos import resources
 
 AUR_RPC = "https://aur.archlinux.org/rpc/v5/info"
 
@@ -87,7 +87,7 @@ def _consultar(nomes):
         url = AUR_RPC + "?" + "&".join(
             "arg[]=" + urllib.parse.quote(n, safe="") for n in parte)
         req = urllib.request.Request(
-            url, headers={"User-Agent": "nlinux-software-admin/1.0"})
+            url, headers={"User-Agent": "falconos-software-admin/1.0"})
         try:
             with urllib.request.urlopen(req, timeout=TIMEOUT) as r:
                 dados = json.loads(r.read().decode("utf-8"))

@@ -11,7 +11,7 @@ deliberado — a chave GPG, o clone do GitHub e as credenciais estão no HOME do
 usuário, e o root usá-los direto causa conflito de lock no agente GPG.
 
 Uso (chamado pela própria curadoria):
-    pkexec /usr/bin/python3 .../src/nlinux/build_helper.py
+    pkexec /usr/bin/python3 .../src/falconos/build_helper.py
 """
 import json
 import os
@@ -43,12 +43,12 @@ def run_as_user(uid: int, home: str, apps_dir: str = "") -> int:
     # O caminho do catálogo vem por argumento, e não pelo ambiente. O `pkexec`
     # zera o ambiente do programa que executa, e o `runuser` reconstrói uma
     # lista branca de quatro variáveis — então uma variável como
-    # `NLINUX_APPS_DIR` jamais chegaria ao processo que de fato gera o pacote.
+    # `FALCONOS_APPS_DIR` jamais chegaria ao processo que de fato gera o pacote.
     # O efeito era silencioso e grave: a janela da curadoria mostrava o catálogo
     # vivo (rev 267) e o build empacotava o snapshot do projeto (rev 198), com
     # 97 apps em vez de 60.
     if apps_dir:
-        cmd.append(f"NLINUX_APPS_DIR={apps_dir}")
+        cmd.append(f"FALCONOS_APPS_DIR={apps_dir}")
     cmd += ["/usr/bin/python3", HELPER, "--as-user"]
     proc = subprocess.run(cmd, env=env, text=True)
     return proc.returncode
@@ -57,10 +57,10 @@ def run_as_user(uid: int, home: str, apps_dir: str = "") -> int:
 def build_as_user() -> int:
     """Gera o pacote com as permissões do usuário (sem elevação)."""
     if apps_dir := apps_dir_arg():
-        os.environ["NLINUX_APPS_DIR"] = apps_dir
+        os.environ["FALCONOS_APPS_DIR"] = apps_dir
     src_root = os.path.dirname(os.path.dirname(HELPER))
     sys.path.insert(0, src_root)
-    from nlinux import web_server as ws
+    from falconos import web_server as ws
 
     print(f"Gerando em {ws.DIST_DIR}", flush=True)
     print(f"Catálogo: {ws.APPS_DIR}", flush=True)

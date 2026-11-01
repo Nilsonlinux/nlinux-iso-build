@@ -1,4 +1,4 @@
-Dependencias de execucao do NLinux Software
+Dependencias de execucao do FalconOS Software
 (nomes de pacote Arch Linux)
 
 Obrigatorias (instaladas automaticamente pelo install.sh):

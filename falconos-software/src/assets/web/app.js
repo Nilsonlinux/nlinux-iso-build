@@ -197,7 +197,7 @@ function themeInit() {
 
 /* ============================== Header =================================== */
 function renderHeader(info) {
-  $("#brand-name").textContent = "NLinux";
+  $("#brand-name").textContent = "FalconOS";
   $("#foot-info").textContent = tr("foot.apps", info.total);
   // O botão e o selo nascem com `hidden` no HTML, e quem mostra é o payload.
   // Alternar o atributo (e não `style.display`) é o que faz funcionar o
@@ -260,7 +260,7 @@ function openStoreInfo() {
   ).join("");
   $("#modal-content").innerHTML = `
     <h2>${tr("storeinfo.title")}</h2>
-    <p class="m-desc">${info.total != null ? tr("storeinfo.appsCount", info.total) : ""} ${tr("storeinfo.curation", esc(st.author || "NLinux"))}</p>
+    <p class="m-desc">${info.total != null ? tr("storeinfo.appsCount", info.total) : ""} ${tr("storeinfo.curation", esc(st.author || "FalconOS"))}</p>
     <div class="meta">${rows}</div>
     <div class="actions">
       <a class="btn btn-ghost" href="${esc(st.repo || "#")}" target="_blank" rel="noopener"><i class="ti ti-brand-github"></i> ${tr("storeinfo.repo")}</a>

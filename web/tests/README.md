@@ -28,9 +28,9 @@ node web/tests/css_test.js          # css (css-tree)
 
 As duas Python usam **só a biblioteca padrão** (Python >= 3.6), não precisam de
 nada instalado e não pedem root. Elas também não encostam nos arquivos de
-instalação de verdade (`/tmp/nlinux-install.log`, `/tmp/nlinux-install-state.json`):
-criam uma pasta temporária e passam o caminho por `NLINUX_LOG_PATH` /
-`NLINUX_STATE_PATH` / `NLINUX_CACHE_DIRS`, que é a mesma engrenagem que o
+instalação de verdade (`/tmp/falconos-install.log`, `/tmp/falconos-install-state.json`):
+criam uma pasta temporária e passam o caminho por `FALCONOS_LOG_PATH` /
+`FALCONOS_STATE_PATH` / `FALCONOS_CACHE_DIRS`, que é a mesma engrenagem que o
 servidor usa para o checkpoint. Por isso dá para rodar as duas em paralelo.
 
 As duas de JavaScript dependem de `jsdom` e `css-tree` (`npm install` em

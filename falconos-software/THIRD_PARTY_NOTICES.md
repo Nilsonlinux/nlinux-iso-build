@@ -1,6 +1,6 @@
 # Avisos de terceiros (Third-Party Notices)
 
-O **NLinux Software** é distribuído sob a **GNU General Public License, versão 3
+O **FalconOS Software** é distribuído sob a **GNU General Public License, versão 3
 ou posterior** (GPL-3.0-or-later) — veja o arquivo [`LICENSE`](LICENSE). Ele
 incorpora ou referencia obras de terceiros, cujos termos estão indicados abaixo
 e prevalecem sobre as partes correspondentes.
@@ -59,12 +59,12 @@ Discord, Blender, GIMP, entre outros).
 
 ## 3. Catálogo e metadados — `src/apps/applications-en.json`, `catalog-*.json`
 
-- A seleção e o formato do catálogo são da curadoria do NLinux e ficam cobertos
+- A seleção e o formato do catálogo são da curadoria do FalconOS e ficam cobertos
   pela GPL-3.0-or-later deste projeto.
 - Nomes, descrições e versões derivam de metadados do Arch Linux (AppStream) e
   do AUR, mantidos por seus respectivos autores.
 
 ## 4. Chaves de assinatura
 
-- `nlinux-software_pub.asc` (chave pública) e a chave privada cifrada não são
+- `falconos-software_pub.asc` (chave pública) e a chave privada cifrada não são
   obras autorais.

@@ -11,7 +11,7 @@ if (closeButton) {
     }
 
     const handler = window.webkit && window.webkit.messageHandlers &&
-      window.webkit.messageHandlers.nlinuxCloseWindow;
+      window.webkit.messageHandlers.falconosCloseWindow;
     if (handler) {
       handler.postMessage("close");
       return;

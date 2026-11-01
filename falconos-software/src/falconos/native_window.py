@@ -16,7 +16,7 @@ gi.require_version("Gtk", "3.0")
 gi.require_version("WebKit2", "4.1")
 from gi.repository import GLib, Gio, Gtk, WebKit2
 
-from nlinux.web_server import BoutiqueHandler, build_payload
+from falconos.web_server import BoutiqueHandler, build_payload
 
 
 _INJECT = """(function(){
@@ -83,7 +83,7 @@ def _make_user_script(src):
 
 def _build_view(inject, port):
     manager = WebKit2.UserContentManager()
-    manager.register_script_message_handler("nlinuxCloseWindow")
+    manager.register_script_message_handler("falconosCloseWindow")
     if inject:
         manager.add_script(_make_user_script(inject))
     return WebKit2.WebView.new_with_user_content_manager(manager), manager
@@ -117,7 +117,7 @@ def _create_tray(app_id, window, icon_file, quit_app):
         indicador = AppIndicator3.Indicator.new(
             app_id, icon_file, AppIndicator3.IndicatorCategory.APPLICATION_STATUS)
         indicador.set_status(AppIndicator3.IndicatorStatus.ACTIVE)
-        indicador.set_title("Loja de Software NLinux")
+        indicador.set_title("Loja de Software FalconOS")
         indicador.set_menu(menu)
         print("Bandeja: ícone de notificação (StatusNotifier).", flush=True)
         return indicador
@@ -128,7 +128,7 @@ def _create_tray(app_id, window, icon_file, quit_app):
     # Sem SNI sobra o ícone antigo da GTK 3, que depende de um painel com bandeja.
     try:
         icone = Gtk.StatusIcon.new_from_file(icon_file)
-        icone.set_tooltip_text("Loja de Software NLinux")
+        icone.set_tooltip_text("Loja de Software FalconOS")
         icone.connect("activate", mostrar)
 
         def _popup(_icon, button, _time):
@@ -168,10 +168,10 @@ def run_window() -> None:
     port = server.server_address[1]
     url = f"http://127.0.0.1:{port}/"
     threading.Thread(target=server.serve_forever, daemon=True).start()
-    print(f"Loja de Software NLinux em {url}", flush=True)
+    print(f"Loja de Software FalconOS em {url}", flush=True)
 
     try:
-        from nlinux.web_server import (ADMIN_ENABLED, ensure_admin_shortcut,
+        from falconos.web_server import (ADMIN_ENABLED, ensure_admin_shortcut,
                                         start_remote_refresh)
         if ADMIN_ENABLED:
             try:
@@ -181,15 +181,15 @@ def run_window() -> None:
         else:
             start_remote_refresh()
         if ADMIN_ENABLED:
-            app_id = "io.github.nilsonlinux.NLinuxCuradoria"
-            wm_class = "nlinuxcuradoria"
+            app_id = "io.github.nilsonlinux.FalconOSCuradoria"
+            wm_class = "falconoscuradoria"
         else:
-            app_id = "io.github.nilsonlinux.NLinuxStore"
-            wm_class = "nlinuxstore"
+            app_id = "io.github.nilsonlinux.FalconOSStore"
+            wm_class = "falconosstore"
         # ícone único do projeto: a loja e a curadoria usam o mesmo arquivo
         icon_file = os.path.join(
             os.path.dirname(os.path.abspath(__file__)),
-            "..", "apps", "nlinux-logo.png")
+            "..", "apps", "falconos-logo.png")
         GLib.set_prgname(wm_class)
         try:
             from gi.repository import Gdk
@@ -214,7 +214,7 @@ def run_window() -> None:
                 application_id=app_id, flags=Gio.ApplicationFlags.NON_UNIQUE)
             app.register(None)
         window = Gtk.ApplicationWindow(
-            application=app, title="Loja de Software NLinux")
+            application=app, title="Loja de Software FalconOS")
         window.set_wmclass(wm_class, wm_class)
         try:
             from gi.repository import GdkPixbuf
@@ -268,7 +268,7 @@ def run_window() -> None:
                 GLib.idle_add(_hide_or_quit)
 
         content_manager.connect(
-            "script-message-received::nlinuxCloseWindow", _close_window)
+            "script-message-received::falconosCloseWindow", _close_window)
         settings = view.get_settings()
 
         def _set(name, value):

@@ -1,7 +1,7 @@
 [general]
 autostart = [
     "noctalia",
-    "nlinux-welcome",
+    "falconos-welcome",
     "WhatsApp Desktop",
     "org.telegram.desktop",
 ]
@@ -16,8 +16,8 @@ action = "overview-open"
 
 [hot_corners.bottom_right]
 enabled = true
-delay_ms = 750
-action = "spawn:notify-send 'Bottom right'"
+delay_ms = 50
+action = "overview-toggle"
 
 [environment]
 MOZ_ENABLE_WAYLAND = "1"

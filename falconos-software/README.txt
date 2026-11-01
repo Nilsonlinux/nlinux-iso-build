@@ -1,4 +1,4 @@
-NLinux Software v373 - loja de aplicativos (distribuicao)
+FalconOS Software v373 - loja de aplicativos (distribuicao)
 Sem opcao de administracao.
 
 Dependencias (veja DEPENDENCIES.txt):
@@ -13,6 +13,6 @@ Dependencias (veja DEPENDENCIES.txt):
 Instalar (o instalador verifica e instala as dependencias faltantes):
   sudo ./install.sh
 Executar:
-  nlinux-software
+  falconos-software
 Os bancos do pacman são atualizados com `pacman -Sy` ao iniciar
 uma instalação, não ao abrir a loja.

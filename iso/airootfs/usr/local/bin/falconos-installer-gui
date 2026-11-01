@@ -1,11 +1,11 @@
 #!/bin/sh
-# Instalador web do NLinux (exclusivo) para o modo live.
+# Instalador web do FalconOS (exclusivo) para o modo live.
 # Sobe o servidor local (root) e abre o Firefox em tela cheia (kiosk).
 # Não há fallback TUI: a instalação é exclusivamente via web.
-PORT="${NLINUX_WEB_PORT:-8765}"
+PORT="${FALCONOS_WEB_PORT:-8765}"
 URL="http://127.0.0.1:$PORT"
 INST="/opt/noctalia-installer"
-LOG=/tmp/nlinux-web.log
+LOG=/tmp/falconos-web.log
 
 server_up() {
   python3 - "$PORT" <<'PY'
@@ -24,15 +24,15 @@ PY
 
 # Instalador é só web: exige desktop gráfico e navegador no live.
 if [ -z "${DISPLAY:-}" ] && [ -z "${WAYLAND_DISPLAY:-}" ]; then
-  echo "Instalador NLinux: exige o desktop do live (opção 'NLinux ao vivo')." >&2
+  echo "Instalador FalconOS: exige o desktop do live (opção 'FalconOS ao vivo')." >&2
   exit 1
 fi
 if ! command -v firefox >/dev/null 2>&1; then
-  echo "Instalador NLinux: firefox ausente no live." >&2
+  echo "Instalador FalconOS: firefox ausente no live." >&2
   exit 1
 fi
 
-# Sobe o servidor como root (o usuário nlinux tem sudo sem senha no live).
+# Sobe o servidor como root (o usuário falconos tem sudo sem senha no live).
 # Roda sob um supervisor: se o processo do servidor cair (falta de memória no
 # live, por exemplo), ele é reiniciado e reanexa a instalação em andamento em
 # vez de deixar o painel morto. O log é acumulado (>>) para não perder o
@@ -58,11 +58,11 @@ fi
 
 if ! server_up; then
   if command -v zenity >/dev/null 2>&1; then
-    zenity --error --title="Instalador NLinux" \
+    zenity --error --title="Instalador FalconOS" \
       --text="Não foi possível iniciar o instalador web.\nVerifique o log: $LOG" \
       2>/dev/null || true
   fi
-  echo "Instalador NLinux: servidor web não iniciou (ver $LOG)." >&2
+  echo "Instalador FalconOS: servidor web não iniciou (ver $LOG)." >&2
   exit 1
 fi
 

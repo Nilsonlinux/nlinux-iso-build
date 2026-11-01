@@ -21,10 +21,10 @@ import urllib.parse
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from uuid import uuid4
 
-from nlinux import aur_db
-from nlinux import pacman_db
-from nlinux import resources
-from nlinux.system_state import SystemState
+from falconos import aur_db
+from falconos import pacman_db
+from falconos import resources
+from falconos.system_state import SystemState
 
 SRC_ROOT = resources.SRC_ROOT
 WEB_DIR = os.path.join(SRC_ROOT, "assets", "web")
@@ -86,16 +86,16 @@ DIST_DIR = _resolve_dist_dir()
 ADMIN_ENABLED = False
 
 # Catálogo e mídia: no projeto de desenvolvimento fica em src/apps; instalado
-# em /opt, em ~/.local/share/nlinux/<papel>/apps, gravável sem root.
+# em /opt, em ~/.local/share/falconos/<papel>/apps, gravável sem root.
 # Definido aqui
 # porque depende de ADMIN_ENABLED.
 #
-# NLINUX_APPS_DIR sobrescreve o caminho. Existe por causa de uma armadilha: rodar
+# FALCONOS_APPS_DIR sobrescreve o caminho. Existe por causa de uma armadilha: rodar
 # o projeto de dentro do $HOME faz a curadoria apontar para <projeto>/src/apps, o
-# snapshot do repositório, em vez de ~/.local/share/nlinux/admin/apps, que é o
+# snapshot do repositório, em vez de ~/.local/share/falconos/admin/apps, que é o
 # catálogo que se está curando. Os dois são catálogos válidos e o servidor não
 # tem como adivinhar qual é o certo — com a variável, dá para escolher.
-APPS_DIR = os.environ.get("NLINUX_APPS_DIR") or \
+APPS_DIR = os.environ.get("FALCONOS_APPS_DIR") or \
     resources.apps_dir("admin" if ADMIN_ENABLED else "store")
 
 
@@ -104,7 +104,7 @@ def _assets_dir() -> str:
 
     Não era uma constante `ASSETS_DIR` calculada na importação. O catálogo é lido
     por `_index_path()`, que resolve `APPS_DIR` na hora; a mídia, congelada no
-    import. Quando os dois divergem — `NLINUX_APPS_DIR` mudado, ou o papel
+    import. Quando os dois divergem — `FALCONOS_APPS_DIR` mudado, ou o papel
     admin/loja trocado em tempo de execução — o GC comparava o catálogo de um
     lugar com a mídia de outro e apagava de mais: foi assim que 68 ícones do
     snapshot saíram quando se salvou no catálogo vivo. Derivando sempre do mesmo
@@ -113,30 +113,30 @@ def _assets_dir() -> str:
     return os.path.join(APPS_DIR, "assets")
 
 # Publicação automática no GitHub quando o build da versão da loja terminar.
-# Desligue com NLINUX_GIT_PUSH=0. O repositório local é clonado no GIT_PUSH_DIR
+# Desligue com FALCONOS_GIT_PUSH=0. O repositório local é clonado no GIT_PUSH_DIR
 # na primeira vez (pede a senha do GitHub uma única vez).
-GIT_PUSH_ENABLED = os.environ.get("NLINUX_GIT_PUSH", "1") not in ("0", "false", "no")
-GIT_PUSH_URL = os.environ.get("NLINUX_GIT_URL") or \
+GIT_PUSH_ENABLED = os.environ.get("FALCONOS_GIT_PUSH", "1") not in ("0", "false", "no")
+GIT_PUSH_URL = os.environ.get("FALCONOS_GIT_URL") or \
     "https://github.com/Nilsonlinux/nlinux-software.git"
-GIT_PUSH_BRANCH = os.environ.get("NLINUX_GIT_BRANCH") or "main"
-GIT_PUSH_DIR = os.environ.get("NLINUX_GIT_DIR") or \
-    os.path.join(os.path.expanduser("~"), "nlinux-software")
-GIT_PUSH_USER = os.environ.get("NLINUX_GIT_USER") or "Nilsonlinux"
-GIT_PUSH_EMAIL = os.environ.get("NLINUX_GIT_EMAIL") or "nilsonlinux@users.noreply.github.com"
-# Projeto que constrói a ISO da distro. A subpasta <ISO_BUILD_DIR>/nlinux-software
-# é a fonte que o build-iso.sh embute em /opt/nlinux-software na imagem, e ela é
+GIT_PUSH_BRANCH = os.environ.get("FALCONOS_GIT_BRANCH") or "main"
+GIT_PUSH_DIR = os.environ.get("FALCONOS_GIT_DIR") or \
+    os.path.join(os.path.expanduser("~"), "falconos-software")
+GIT_PUSH_USER = os.environ.get("FALCONOS_GIT_USER") or "Nilsonlinux"
+GIT_PUSH_EMAIL = os.environ.get("FALCONOS_GIT_EMAIL") or "nilsonlinux@users.noreply.github.com"
+# Projeto que constrói a ISO da distro. A subpasta <ISO_BUILD_DIR>/falconos-software
+# é a fonte que o build-iso.sh embute em /opt/falconos-software na imagem, e ela é
 # versionada no repositório do iso-build: sem espelhar o build para lá, a ISO
 # continua embarcando a revisão que ficou commitada — uma loja velha, às vezes
 # com programas que você já removeu do catálogo.
-ISO_BUILD_DIR = os.environ.get("NLINUX_ISO_DIR") or \
+ISO_BUILD_DIR = os.environ.get("FALCONOS_ISO_DIR") or \
     os.path.join(os.path.expanduser("~"), "nlinux-iso-build")
-ISO_STORE_DIRNAME = "nlinux-software"
+ISO_STORE_DIRNAME = "falconos-software"
 # A imagem é montada a partir do que está commitado: deixar a pasta da loja
 # modificada faria o build da ISO usar uma loja diferente da do repositório.
-# Por isso o espelho fecha com commit. Desligue com NLINUX_ISO_COMMIT=0; o
-# push é automático por padrão; desligue com NLINUX_ISO_PUSH=0.
-ISO_COMMIT_ENABLED = os.environ.get("NLINUX_ISO_COMMIT", "1") not in ("0", "false", "no")
-ISO_PUSH_ENABLED = os.environ.get("NLINUX_ISO_PUSH", "1") not in ("0", "false", "no")
+# Por isso o espelho fecha com commit. Desligue com FALCONOS_ISO_COMMIT=0; o
+# push é automático por padrão; desligue com FALCONOS_ISO_PUSH=0.
+ISO_COMMIT_ENABLED = os.environ.get("FALCONOS_ISO_COMMIT", "1") not in ("0", "false", "no")
+ISO_PUSH_ENABLED = os.environ.get("FALCONOS_ISO_PUSH", "1") not in ("0", "false", "no")
 PACKAGE_DEPS = [
     "python",
     "python-gobject",
@@ -151,16 +151,16 @@ PACKAGE_DEPS_OPTIONAL = ("paru", "yay", "curl")
 # Catálogo remoto (JSON raw do GitHub). APENAS a versão de distribuição sincroniza
 # (a de curadoria é a fonte e não deve ser sobrescrita — ver start_remote_refresh).
 # Ajuste a URL para o seu repositório após publicar o catálogo no GitHub.
-REMOTE_CATALOG_URL = os.environ.get("NLINUX_CATALOG_URL") or \
+REMOTE_CATALOG_URL = os.environ.get("FALCONOS_CATALOG_URL") or \
     "https://raw.githubusercontent.com/nilsonlinux/nlinux-software/main/src/apps/applications-en.json"
 # Arquivo-marcador minúsculo publicado junto com o catálogo. A loja lê só ele a
 # cada REMOTE_CHECK_SECONDS e só baixa o catálogo inteiro (236 KB) quando a
 # impressão digital muda. O CDN do raw.githubusercontent responde 304 obsoleto
 # para requisições condicionais, então não dá para usar If-None-Match aqui.
-REMOTE_MARKER_URL = os.environ.get("NLINUX_CATALOG_MARKER_URL") or \
+REMOTE_MARKER_URL = os.environ.get("FALCONOS_CATALOG_MARKER_URL") or \
     "https://raw.githubusercontent.com/nilsonlinux/nlinux-software/main/catalog-head.json"
 try:
-    REMOTE_CHECK_SECONDS = max(5, int(os.environ.get("NLINUX_CATALOG_CHECK", "15")))
+    REMOTE_CHECK_SECONDS = max(5, int(os.environ.get("FALCONOS_CATALOG_CHECK", "15")))
 except ValueError:
     REMOTE_CHECK_SECONDS = 15
 
@@ -655,7 +655,7 @@ class InstallJob:
                 try:
                     invalidate_updates()
                 except Exception as exc:
-                    print(f"[nlinux] falha ao invalidar a lista de "
+                    print(f"[falconos] falha ao invalidar a lista de "
                           f"atualizações: {exc}")
                 self.done = True
                 return
@@ -672,7 +672,7 @@ class InstallJob:
             try:
                 rebuild_payload()
             except Exception as exc:
-                print(f"[nlinux] falha ao reconstruir o payload: {exc}")
+                print(f"[falconos] falha ao reconstruir o payload: {exc}")
             self.done = True
 
         threading.Thread(target=work, daemon=True).start()
@@ -934,7 +934,7 @@ class BoutiqueHandler(BaseHTTPRequestHandler):
     systemState = SystemState()
     js_log = []
     js_log_lock = threading.Lock()
-    server_version = "NLinuxBoutique/1.0"
+    server_version = "FalconOSBoutique/1.0"
 
     def log_message(self, fmt, *args):  # keep the console quiet
         pass
@@ -1601,12 +1601,12 @@ def _fetch_media(sha: str, wanted: set) -> list:
         try:
             req = urllib.request.Request(
                 _cache_busted(base + urllib.parse.quote(rel)),
-                headers={"User-Agent": "nlinux-software"},
+                headers={"User-Agent": "falconos-software"},
             )
             with urllib.request.urlopen(req, timeout=30) as resp:
                 data = resp.read()
         except Exception as exc:
-            print(f"[nlinux] mídia não baixada ({rel}): {exc}")
+            print(f"[falconos] mídia não baixada ({rel}): {exc}")
             continue
         with open(tmp, "wb") as fh:
             fh.write(data)
@@ -1636,7 +1636,7 @@ def remote_marker_revision(sha: str):
     url = f"{REMOTE_REPO_RAW}/{sha}/catalog-head.json"
     try:
         req = urllib.request.Request(
-            _cache_busted(url), headers={"User-Agent": "nlinux-software"})
+            _cache_busted(url), headers={"User-Agent": "falconos-software"})
         with urllib.request.urlopen(req, timeout=15) as resp:
             return json.loads(resp.read().decode("utf-8")).get("revision")
     except Exception:
@@ -1676,7 +1676,7 @@ def admin_sync_published() -> tuple:
         depois = remote.get("stats", {}).get("revision")
         novos = sorted(_catalog_ids(remote) - antes_ids)
         saida = sorted(antes_ids - _catalog_ids(remote))
-    print(f"[nlinux] catálogo da curadoria atualizado do publicado "
+    print(f"[falconos] catálogo da curadoria atualizado do publicado "
           f"(revision {antes} -> {depois}; {len(saida)} removidos, "
           f"{len(novos)} novos, {len(media)} midia baixada)", flush=True)
     return {"ok": True, "unchanged": False, "sha": sha, "de": antes,
@@ -1745,7 +1745,7 @@ def rebuild_payload() -> None:
 def _registered_source() -> str | None:
     """Projeto de curadoria registrado, para o git enxergar o catálogo vivo.
 
-    A curadoria instalada grava em ~/.local/share/nlinux/admin/apps (o /opt é do
+    A curadoria instalada grava em ~/.local/share/falconos/admin/apps (o /opt é do
     sistema). Sem isto, o src/apps do projeto — que é o que está no git —
     ficaria defasado a cada edição salva.
     """
@@ -1758,7 +1758,7 @@ def _registered_source() -> str | None:
     if path and os.path.isdir(os.path.join(path, "src", "apps")) \
             and os.path.exists(os.path.join(path, ".git")):
         return path
-    fallback = os.path.join(os.path.expanduser("~"), "nlinux-software-admin")
+    fallback = os.path.join(os.path.expanduser("~"), "falconos-software-admin")
     if os.path.isdir(os.path.join(fallback, "src", "apps")) \
             and os.path.exists(os.path.join(fallback, ".git")):
         return fallback
@@ -1809,9 +1809,9 @@ def _export_to_source(raw: dict) -> list:
                 except OSError:
                     pass
         if removidos:
-            print(f"[nlinux] {removidos} midia orfa removida do projeto", flush=True)
+            print(f"[falconos] {removidos} midia orfa removida do projeto", flush=True)
 
-    print(f"[nlinux] catalogo exportado para {dest}"
+    print(f"[falconos] catalogo exportado para {dest}"
           + (f" ({len(copiados)} midia)" if copiados else ""), flush=True)
     return copiados
 
@@ -1825,7 +1825,7 @@ def _gc_assets(raw: dict) -> None:
         for fname in files:
             path = os.path.join(root, fname)
             rel = os.path.relpath(path, APPS_DIR)
-            if rel == os.path.join("assets", "nlinux-logo.png") or rel in referenced:
+            if rel == os.path.join("assets", "falconos-logo.png") or rel in referenced:
                 continue
             try:
                 os.remove(path)
@@ -2045,8 +2045,8 @@ def admin_build(progress=None):
     with _ADMIN_LOCK:
         raw = _load_raw()
         rev = int(raw.get("stats", {}).get("revision", 0))
-        name = f"nlinux-software-v{rev}"
-        pkg_root = os.path.join(DIST_DIR, "nlinux-software")
+        name = f"falconos-software-v{rev}"
+        pkg_root = os.path.join(DIST_DIR, "falconos-software")
         tar_path = os.path.join(DIST_DIR, f"{name}.tar.gz")
         if os.path.exists(pkg_root):
             shutil.rmtree(pkg_root)
@@ -2087,7 +2087,7 @@ def admin_build(progress=None):
                     shutil.rmtree(apps_target)
                     shutil.copytree(APPS_DIR, apps_target)
 
-            src_ws = os.path.join(pkg_root, "src", "nlinux", "web_server.py")
+            src_ws = os.path.join(pkg_root, "src", "falconos", "web_server.py")
             with open(src_ws, encoding="utf-8") as fh:
                 content = fh.read()
             # Ancora no começo da linha, e não na primeira ocorrência do texto.
@@ -2107,7 +2107,7 @@ def admin_build(progress=None):
             with open(src_ws, "w", encoding="utf-8") as fh:
                 fh.write(content)
 
-            launch = os.path.join(pkg_root, "nlinux-software")
+            launch = os.path.join(pkg_root, "falconos-software")
             with open(launch, "w") as fh:
                 fh.write("#!/bin/sh\n"
                          "# SPDX-License-Identifier: GPL-3.0-or-later\n"
@@ -2149,15 +2149,23 @@ def admin_build(progress=None):
                     "# ls ordena alfabeticamente, e 'v115' < 'v211': com varios\n"
                     "# tarballs na pasta, head -n1 pegava o MAIS ANTIGO, nao o\n"
                     "# mais novo. sort -V ordena por numero de versao.\n"
-                    "TARBALL=\"$(ls \"$SRC\"/nlinux-software-v*.tar.gz \"$SRC\"/../nlinux-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)\"\n"
+                    "TARBALL=\"$(ls \"$SRC\"/falconos-software-v*.tar.gz \"$SRC\"/../falconos-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)\"\n"
                     "if [ -z \"$TARBALL\" ]; then\n"
-                    "  echo \"Aviso: nenhum nlinux-software-v<N>.tar.gz encontrado em $SRC.\"\n"
+                    "  # Pacotes publicados antes do rename da distro continuam instaláveis.\n"
+                    "  TARBALL=\"$(ls \"$SRC\"/nlinux-software-v*.tar.gz \"$SRC\"/../nlinux-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)\"\n"
+                    "fi\n"
+                    "PUBKEY=\"\"\n"
+                    "for k in \"$SRC/falconos-software_pub.asc\" \"$SRC/nlinux-software_pub.asc\"; do\n"
+                    "  if [ -f \"$k\" ]; then PUBKEY=\"$k\"; break; fi\n"
+                    "done\n"
+                    "if [ -z \"$TARBALL\" ]; then\n"
+                    "  echo \"Aviso: nenhum falconos-software-v<N>.tar.gz encontrado em $SRC.\"\n"
                     "  echo \"         Instalando a loja a partir do src/ sem validar assinatura.\"\n"
-                    "elif [ -f \"$TARBALL.asc\" ] && [ -f \"$SRC/nlinux-software_pub.asc\" ]; then\n"
+                    "elif [ -f \"$TARBALL.asc\" ] && [ -n \"$PUBKEY\" ]; then\n"
                     "  # set -e + redirecionamento silencioso aqui ja matou o\n"
                     "  # instalador sem mensagem alguma quando a chave publica faltava.\n"
-                    "  if ! gpg --batch --import \"$SRC/nlinux-software_pub.asc\" >/dev/null 2>&1; then\n"
-                    "    echo \"ERRO: nlinux-software_pub.asc não pôde ser importada.\" >&2\n"
+                    "  if ! gpg --batch --import \"$PUBKEY\" >/dev/null 2>&1; then\n"
+                    "    echo \"ERRO: $(basename \"$PUBKEY\") não pôde ser importada.\" >&2\n"
                     "    echo \"O pacote está sem a chave pública: baixe o repositório inteiro.\" >&2\n"
                     "    exit 1\n"
                     "  fi\n"
@@ -2170,22 +2178,22 @@ def admin_build(progress=None):
                     "else\n"
                     "  echo \"ERRO: assinatura ou chave pública ausente; sem validação.\" >&2\n"
                     "  echo \"Esperado junto de $(basename \"$TARBALL\"):\" >&2\n"
-                    "  echo \"  $(basename \"$TARBALL\").asc  e  nlinux-software_pub.asc\" >&2\n"
+                    "  echo \"  $(basename \"$TARBALL\").asc  e  falconos-software_pub.asc\" >&2\n"
                     "  echo \"O pacote está incompleto. Baixe o repositório inteiro.\" >&2\n"
                     "  exit 1\n"
                     "fi\n"
                     "# --- instala a loja ----------------------------------------------------\n"
-                    f"DEST=\"/opt/nlinux-software\"\n"
+                    f"DEST=\"/opt/falconos-software\"\n"
                     "rm -rf \"$DEST\"\n"
                     "mkdir -p \"$DEST\"\n"
                     "cp -a \"$SRC/src\" \"$DEST/\"\n"
-                    "cp \"$SRC/nlinux-software\" \"$DEST/\"\n"
-                    "chmod +x \"$DEST/nlinux-software\"\n"
-                    "cat > /usr/local/bin/nlinux-software <<'EOF'\n"
+                    "cp \"$SRC/falconos-software\" \"$DEST/\"\n"
+                    "chmod +x \"$DEST/falconos-software\"\n"
+                    "cat > /usr/local/bin/falconos-software <<'EOF'\n"
                     "#!/bin/sh\n"
-                    "exec /opt/nlinux-software/nlinux-software \"$@\"\n"
+                    "exec /opt/falconos-software/falconos-software \"$@\"\n"
                     "EOF\n"
-                    "chmod +x /usr/local/bin/nlinux-software\n"
+                    "chmod +x /usr/local/bin/falconos-software\n"
                     "# --- dados gravaveis, fora do /opt ---------------------------------\n"
                     "# O catalogo e a midia mudam toda vez que a loja sincroniza com o\n"
                     "# GitHub. Em /opt isso pediria root, entao vao para o HOME do\n"
@@ -2194,7 +2202,7 @@ def admin_build(progress=None):
                     "STORE_HOME=\"$(getent passwd \"$STORE_USER\" | cut -d: -f6)\"\n"
                     "if [ -n \"$STORE_HOME\" ] && [ \"$STORE_USER\" != \"root\" ]; then\n"
                     "  STORE_DATA=\"${XDG_DATA_HOME:-$STORE_HOME/.local/share}\"\n"
-                    "  APP_DATA=\"$STORE_DATA/nlinux\"\n"
+                    "  APP_DATA=\"$STORE_DATA/falconos\"\n"
                     "  DATA_DIR=\"$APP_DATA/store\"\n"
                     "  mkdir -p \"$DATA_DIR\"\n"
                     "  if [ ! -d \"$DATA_DIR/apps\" ]; then\n"
@@ -2208,32 +2216,32 @@ def admin_build(progress=None):
                     "fi\n"
                     "# --- ícone + atalho no menu de aplicativos --------------------------\n"
                     "mkdir -p /usr/share/pixmaps\n"
-                    "cp \"$DEST/src/apps/nlinux-logo.png\" /usr/share/pixmaps/nlinux-software.png\n"
-                    "rm -f /usr/share/icons/hicolor/scalable/apps/nlinux-software.svg\n"
-                    "rm -f /usr/share/applications/nlinux-software.desktop\n"
-                    "rm -f /usr/share/applications/nlinuxsoftware.desktop\n"
-                    "cat > /usr/share/applications/nlinuxstore.desktop <<'EOF'\n"
+                    "cp \"$DEST/src/apps/falconos-logo.png\" /usr/share/pixmaps/falconos-software.png\n"
+                    "rm -f /usr/share/icons/hicolor/scalable/apps/falconos-software.svg\n"
+                    "rm -f /usr/share/applications/falconos-software.desktop\n"
+                    "rm -f /usr/share/applications/falconossoftware.desktop\n"
+                    "cat > /usr/share/applications/falconosstore.desktop <<'EOF'\n"
                     "[Desktop Entry]\n"
                     "Type=Application\n"
-                    "Name=NLinux Software\n"
+                    "Name=FalconOS Software\n"
                     "GenericName=Loja de aplicativos\n"
-                    "Comment=Loja de aplicativos do NLinux (distribuição)\n"
-                    "Exec=/usr/local/bin/nlinux-software\n"
-                    "Icon=nlinux-software\n"
+                    "Comment=Loja de aplicativos do FalconOS (distribuição)\n"
+                    "Exec=/usr/local/bin/falconos-software\n"
+                    "Icon=falconos-software\n"
                     "Terminal=false\n"
                     "Categories=Network;Utility;\n"
                     "StartupNotify=true\n"
-                    "StartupWMClass=nlinuxstore\n"
+                    "StartupWMClass=falconosstore\n"
                     "X-GNOME-UsesNotifications=false\n"
                     "EOF\n"
                     "(command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database /usr/share/applications) || true\n"
-                    f"echo \"Instalado: NLinux Software v{rev} (/usr/local/bin/nlinux-software)\"\n"
+                    f"echo \"Instalado: FalconOS Software v{rev} (/usr/local/bin/falconos-software)\"\n"
                 )
             os.chmod(os.path.join(pkg_root, "install.sh"), 0o755)
 
             with open(os.path.join(pkg_root, "DEPENDENCIES.txt"), "w") as fh:
                 fh.write(
-                    "Dependencias de execucao do NLinux Software\n"
+                    "Dependencias de execucao do FalconOS Software\n"
                     "(nomes de pacote Arch Linux)\n\n"
                     "Obrigatorias (instaladas automaticamente pelo install.sh):\n" +
                     "\n".join(f"  - {p}" for p in PACKAGE_DEPS) +
@@ -2244,21 +2252,21 @@ def admin_build(progress=None):
 
             with open(os.path.join(pkg_root, "README.txt"), "w") as fh:
                 fh.write(
-                    f"NLinux Software v{rev} - loja de aplicativos (distribuicao)\n"
+                    f"FalconOS Software v{rev} - loja de aplicativos (distribuicao)\n"
                     "Sem opcao de administracao.\n\n"
                     "Dependencias (veja DEPENDENCIES.txt):\n" +
                     "\n".join(f"  - {p}" for p in PACKAGE_DEPS) +
                     "\n\nInstalar (o instalador verifica e instala as dependencias faltantes):\n"
                     "  sudo ./install.sh\n"
                     "Executar:\n"
-                    "  nlinux-software\n"
+                    "  falconos-software\n"
                     "Os bancos do pacman são atualizados com `pacman -Sy` ao iniciar\n"
                     "uma instalação, não ao abrir a loja.\n"
                 )
 
             _step(f"empacotando {os.path.basename(tar_path)}")
             with tarfile.open(tar_path, "w:gz") as tar:
-                tar.add(pkg_root, arcname=f"{name}/nlinux-software")
+                tar.add(pkg_root, arcname=f"{name}/falconos-software")
             size = os.path.getsize(tar_path)
 
             # Marcador de versão do catálogo: a loja lê só este arquivo (~100
@@ -2287,19 +2295,25 @@ def admin_build(progress=None):
             if sign.returncode != 0 or not os.path.exists(asc_path):
                 raise OSError("falha ao assinar o pacote com GPG: "
                               + (sign.stderr.strip() or "código desconhecido"))
-            pub_asc = os.path.expanduser("~/nlinux-software_pub.asc")
-            if os.path.exists(pub_asc):
-                shutil.copy2(pub_asc, os.path.join(pkg_root, "nlinux-software_pub.asc"))
+            # Aceita o export antigo (~/nlinux-software_pub.asc) para não
+            # gerar pacote sem chave pública só porque a distro foi renomeada.
+            pub_asc = next(
+                (p for p in (os.path.expanduser("~/falconos-software_pub.asc"),
+                             os.path.expanduser("~/nlinux-software_pub.asc"))
+                 if os.path.exists(p)),
+                None)
+            if pub_asc:
+                shutil.copy2(pub_asc, os.path.join(pkg_root, "falconos-software_pub.asc"))
             else:
                 # Sem a chave publica no pacote, o install.sh da outra
                 # maquina nao consegue validar a assinatura: ou morre em
                 # silencio (set -e) ou instala sem verificar. Gerava um
                 # pacote inutilizavel sem ninguem avisar -- v204 em diante.
-                print("[nlinux] AVISO: ~/nlinux-software_pub.asc não existe; "
+                print("[falconos] AVISO: ~/falconos-software_pub.asc não existe; "
                       "o pacote vai sair sem a chave pública e o instalador "
                       "não conseguirá validar a assinatura.", flush=True)
-                print("[nlinux] Gere com: "
-                      "gpg --armor --export <FINGERPRINT> > ~/nlinux-software_pub.asc",
+                print("[falconos] Gere com: "
+                      "gpg --armor --export <FINGERPRINT> > ~/falconos-software_pub.asc",
                       flush=True)
 
             _step("publicando no GitHub")
@@ -2342,9 +2356,9 @@ _ISO_IGNORE = shutil.ignore_patterns("__pycache__", "*.pyc", ".git")
 
 
 def sync_iso_store(build_dir: str, rev: int) -> dict:
-    """Espelha o build em `<iso-build>/nlinux-software/` e commita.
+    """Espelha o build em `<iso-build>/falconos-software/` e commita.
 
-    É a pasta que o `build-iso.sh` copia para `/opt/nlinux-software` dentro da
+    É a pasta que o `build-iso.sh` copia para `/opt/falconos-software` dentro da
     imagem, e ela é versionada no repositório do iso-build. Sem este espelho
     ela congela na revisão commitada: a imagem sai com a loja antiga, com o
     catálogo antigo e sem as correções do build.
@@ -2361,17 +2375,17 @@ def sync_iso_store(build_dir: str, rev: int) -> dict:
     dest = os.path.join(ISO_BUILD_DIR, ISO_STORE_DIRNAME)
     if not os.path.isdir(ISO_BUILD_DIR):
         return {"synced": False,
-                "reason": f"{ISO_BUILD_DIR} não existe (ajuste com NLINUX_ISO_DIR)"}
+                "reason": f"{ISO_BUILD_DIR} não existe (ajuste com FALCONOS_ISO_DIR)"}
     try:
         if os.path.isdir(dest):
             shutil.rmtree(dest)
         shutil.copytree(build_dir, dest, ignore=_ISO_IGNORE)
-        launcher = os.path.join(dest, "nlinux-software")
+        launcher = os.path.join(dest, "falconos-software")
         if os.path.exists(launcher):
             os.chmod(launcher, 0o755)
     except OSError as exc:
         return {"synced": False, "reason": str(exc)}
-    print(f"[nlinux] loja do iso-build sincronizada: {dest} (v{rev})", flush=True)
+    print(f"[falconos] loja do iso-build sincronizada: {dest} (v{rev})", flush=True)
     result = {"synced": True, "path": dest, "revision": rev}
     result["commit"] = _iso_commit(ISO_STORE_DIRNAME, rev)
     if ISO_PUSH_ENABLED:
@@ -2386,8 +2400,8 @@ def _git(repo: str, *args: str, timeout: int = 60) -> subprocess.CompletedProces
 
 def git_publish_admin_source(rev: int) -> dict:
     """Commita e envia as alterações do checkout privado da curadoria."""
-    if os.environ.get("NLINUX_ADMIN_GIT_PUSH", "1") in ("0", "false", "no"):
-        return {"pushed": False, "reason": "publicação desativada (NLINUX_ADMIN_GIT_PUSH=0)"}
+    if os.environ.get("FALCONOS_ADMIN_GIT_PUSH", "1") in ("0", "false", "no"):
+        return {"pushed": False, "reason": "publicação desativada (FALCONOS_ADMIN_GIT_PUSH=0)"}
 
     repo = _registered_source() or os.path.dirname(SRC_ROOT)
     root = _git(repo, "rev-parse", "--show-toplevel")
@@ -2414,7 +2428,7 @@ def git_publish_admin_source(rev: int) -> dict:
             commit_env.setdefault("GIT_COMMITTER_EMAIL", GIT_PUSH_EMAIL)
             commit = subprocess.run(
                 ["git", "-C", repo, "commit", "-m",
-                 f"NLinux Software Admin: publicação v{rev}"],
+                 f"FalconOS Software Admin: publicação v{rev}"],
                 capture_output=True, text=True, env=commit_env,
             )
             if commit.returncode != 0:
@@ -2440,7 +2454,7 @@ def _iso_commit(subdir: str, rev: int) -> dict:
     isso não é da conta da curadoria.
     """
     if not ISO_COMMIT_ENABLED:
-        return {"committed": False, "reason": "desligado (NLINUX_ISO_COMMIT=0)"}
+        return {"committed": False, "reason": "desligado (FALCONOS_ISO_COMMIT=0)"}
     if not os.path.isdir(os.path.join(ISO_BUILD_DIR, ".git")):
         return {"committed": False, "reason": f"{ISO_BUILD_DIR} não é um repositório git"}
     try:
@@ -2452,14 +2466,14 @@ def _iso_commit(subdir: str, rev: int) -> dict:
         msg = (f"Loja embarcada: revisão {rev}\n\n"
                f"Espelhado de {ISO_STORE_DIRNAME} pela curadoria ao gerar a versão "
                f"da loja (revisão {rev}). Esta pasta é o que o build-iso.sh "
-               f"embute em /opt/nlinux-software na imagem.")
+               f"embute em /opt/falconos-software na imagem.")
         res = _git(ISO_BUILD_DIR, "commit", "-m", msg)
         if res.returncode != 0:
             return {"committed": False, "reason": res.stderr.strip() or "git commit falhou"}
     except (OSError, subprocess.SubprocessError) as exc:
         return {"committed": False, "reason": str(exc)}
     head = _git(ISO_BUILD_DIR, "rev-parse", "--short", "HEAD").stdout.strip()
-    print(f"[nlinux] loja do iso-build commitada: {head}", flush=True)
+    print(f"[falconos] loja do iso-build commitada: {head}", flush=True)
     return {"committed": True, "head": head}
 
 
@@ -2472,18 +2486,18 @@ def _iso_push() -> dict:
     if res.returncode != 0:
         reason = (res.stderr or res.stdout).strip().splitlines()
         return {"pushed": False, "reason": reason[-1] if reason else "git push falhou"}
-    print("[nlinux] iso-build publicado no GitHub", flush=True)
+    print("[falconos] iso-build publicado no GitHub", flush=True)
     return {"pushed": True}
 
 
 def _prepare_git_clone() -> str:
-    """Garante o repositório local (~/nlinux-software) clonado do GitHub e o retorna."""
+    """Garante o repositório local (~/falconos-software) clonado do GitHub e o retorna."""
     clone_dir = GIT_PUSH_DIR
     if os.path.isdir(os.path.join(clone_dir, ".git")):
         return clone_dir
     parent = os.path.dirname(clone_dir)
     os.makedirs(parent, exist_ok=True)
-    print(f"[nlinux] clonando catálogo do GitHub pela primeira vez ({GIT_PUSH_URL})...")
+    print(f"[falconos] clonando catálogo do GitHub pela primeira vez ({GIT_PUSH_URL})...")
     result = subprocess.run(
         ["git", "clone", GIT_PUSH_URL, clone_dir],
         capture_output=True, text=True,
@@ -2499,7 +2513,7 @@ def git_publish(build_dir: str, tar_path: str, rev: int) -> dict:
     Retorna {"pushed": True} ou {"pushed": False, "reason": ...} — nunca lança
     exceção (a falha de publicação não deve impedir a loja de continuar)."""
     if not GIT_PUSH_ENABLED:
-        return {"pushed": False, "reason": "publicação desativada (NLINUX_GIT_PUSH=0)"}
+        return {"pushed": False, "reason": "publicação desativada (FALCONOS_GIT_PUSH=0)"}
 
     try:
         clone_dir = _prepare_git_clone()
@@ -2525,7 +2539,7 @@ def git_publish(build_dir: str, tar_path: str, rev: int) -> dict:
         # repositório pode ser publicado por mais de uma máquina: se o remoto
         # já estiver à frente, o push de aqui sobrescreveria um catálogo mais
         # novo com um mais velho. Melhor recusar e pedir a sincronização.
-        if not os.environ.get("NLINUX_PUBLISH_FORCE"):
+        if not os.environ.get("FALCONOS_PUBLISH_FORCE"):
             head = subprocess.run(
                 ["git", "-C", clone_dir, "show",
                  f"refs/remotes/origin/{GIT_PUSH_BRANCH}:catalog-head.json"],
@@ -2544,7 +2558,7 @@ def git_publish(build_dir: str, tar_path: str, rev: int) -> dict:
                         f"um catálogo mais novo com um mais antigo — "
                         f"sincronize o catálogo com o GitHub e gere de novo. "
                         f"Para publicar mesmo assim, gere com "
-                        f"NLINUX_PUBLISH_FORCE=1.")}
+                        f"FALCONOS_PUBLISH_FORCE=1.")}
 
     except Exception as exc:
         return {"pushed": False, "reason": str(exc)}
@@ -2601,7 +2615,7 @@ def git_publish(build_dir: str, tar_path: str, rev: int) -> dict:
         if status.stdout.strip():
             commit = _git(
                 "commit", "-q",
-                "-m", f"NLinux Software v{rev}: catálogo atualizado",
+                "-m", f"FalconOS Software v{rev}: catálogo atualizado",
                 env=author_env,
             )
             if commit.returncode != 0:
@@ -2631,7 +2645,7 @@ def git_publish(build_dir: str, tar_path: str, rev: int) -> dict:
 # 304 obsoletos), então a loja não confia nele para saber se houve mudança. A
 # detecção usa `git ls-remote`, que responde ao vivo em menos de 1s, e o catálogo
 # é lido de uma URL travada no commit — imutável, portanto sempre correta.
-REMOTE_REPO_RAW = os.environ.get("NLINUX_CATALOG_RAW_BASE") or \
+REMOTE_REPO_RAW = os.environ.get("FALCONOS_CATALOG_RAW_BASE") or \
     "https://raw.githubusercontent.com/nilsonlinux/nlinux-software"
 REMOTE_FALLBACK_SECONDS = 300
 
@@ -2651,7 +2665,7 @@ def _remote_get_bytes(url: str, timeout: int = 20) -> bytes:
 
     req = urllib.request.Request(
         _cache_busted(url),
-        headers={"User-Agent": "nlinux-software", "Cache-Control": "no-cache"},
+        headers={"User-Agent": "falconos-software", "Cache-Control": "no-cache"},
     )
     with urllib.request.urlopen(req, timeout=timeout) as resp:
         return resp.read()
@@ -2747,10 +2761,10 @@ def apply_remote_catalog(force: bool = False) -> bool:
     try:
         remote = fetch_remote_catalog(sha)
     except Exception as exc:
-        print(f"[nlinux] catálogo remoto indisponível: {exc}")
+        print(f"[falconos] catálogo remoto indisponível: {exc}")
         return False
     if not isinstance(remote, dict) or not remote:
-        print("[nlinux] catálogo remoto vazio ou inválido; mantido o atual")
+        print("[falconos] catálogo remoto vazio ou inválido; mantido o atual")
         return False
 
     # Trava de recuo, espelhando a da publicação. A sincronização só comparava
@@ -2762,7 +2776,7 @@ def apply_remote_catalog(force: bool = False) -> bool:
     rev_local = int((local.get("stats") or {}).get("revision") or 0)
     rev_remoto = int((remote.get("stats") or {}).get("revision") or 0)
     if not force and rev_remoto and rev_local > rev_remoto:
-        print(f"[nlinux] catálogo local na revisão {rev_local} é mais novo que o "
+        print(f"[falconos] catálogo local na revisão {rev_local} é mais novo que o "
               f"remoto ({rev_remoto}); mantido o local", flush=True)
         _REMOTE_SYNC["applied"] = _catalog_fingerprint(local)
         _REMOTE_SYNC["sha"] = sha
@@ -2787,7 +2801,7 @@ def apply_remote_catalog(force: bool = False) -> bool:
         try:
             _write_raw(remote)
         except OSError as exc:
-            print(f"[nlinux] falha ao gravar o catálogo remoto: {exc}")
+            print(f"[falconos] falha ao gravar o catálogo remoto: {exc}")
             return False
         _gc_assets(remote)
         rebuild_payload()
@@ -2796,7 +2810,7 @@ def apply_remote_catalog(force: bool = False) -> bool:
         _REMOTE_SYNC["sha"] = sha
         if assets_synced:
             _REMOTE_SYNC["assets"] = assets_key
-    print(f"[nlinux] catálogo atualizado do repositório remoto "
+    print(f"[falconos] catálogo atualizado do repositório remoto "
           f"(revision {revision}, commit {sha[:8] if sha else 'local'})", flush=True)
     return True
 
@@ -2810,12 +2824,12 @@ def _sync_remote_assets(raw: dict, sha: str | None) -> bool:
     try:
         manifest = _remote_get(manifest_url)
     except (OSError, ValueError) as exc:
-        print(f"[nlinux] manifesto de mídia remoto indisponível: {exc}")
+        print(f"[falconos] manifesto de mídia remoto indisponível: {exc}")
         return False
 
     files = manifest.get("files") if isinstance(manifest, dict) else None
     if not isinstance(files, dict):
-        print("[nlinux] manifesto de mídia remoto inválido")
+        print("[falconos] manifesto de mídia remoto inválido")
         return False
 
     referenced = set()
@@ -2837,7 +2851,7 @@ def _sync_remote_assets(raw: dict, sha: str | None) -> bool:
     for rel in sorted(referenced):
         expected = files.get(rel)
         if not isinstance(expected, str) or not re.fullmatch(r"[a-f0-9]{64}", expected):
-            print(f"[nlinux] mídia ausente ou inválida no manifesto: {rel}")
+            print(f"[falconos] mídia ausente ou inválida no manifesto: {rel}")
             complete = False
             continue
 
@@ -2848,7 +2862,7 @@ def _sync_remote_assets(raw: dict, sha: str | None) -> bool:
         except FileNotFoundError:
             local_hash = ""
         except OSError as exc:
-            print(f"[nlinux] não foi possível ler a mídia local {rel}: {exc}")
+            print(f"[falconos] não foi possível ler a mídia local {rel}: {exc}")
             complete = False
             continue
         if local_hash == expected:
@@ -2873,11 +2887,11 @@ def _sync_remote_assets(raw: dict, sha: str | None) -> bool:
                     os.remove(tmp)
             updated += 1
         except (OSError, ValueError) as exc:
-            print(f"[nlinux] falha ao sincronizar mídia {rel}: {exc}")
+            print(f"[falconos] falha ao sincronizar mídia {rel}: {exc}")
             complete = False
 
     if updated:
-        print(f"[nlinux] {updated} arquivo(s) de mídia atualizado(s)", flush=True)
+        print(f"[falconos] {updated} arquivo(s) de mídia atualizado(s)", flush=True)
     return complete
 
 
@@ -2894,7 +2908,7 @@ def remote_refresh_loop() -> None:
         try:
             apply_remote_catalog()
         except Exception as exc:
-            print(f"[nlinux] erro no ciclo de atualização remota: {exc}")
+            print(f"[falconos] erro no ciclo de atualização remota: {exc}")
 
 
 def start_remote_refresh() -> None:
@@ -2909,14 +2923,14 @@ def start_remote_refresh() -> None:
         try:
             apply_remote_catalog()
         except Exception as exc:
-            print(f"[nlinux] erro na atualização inicial remota: {exc}")
+            print(f"[falconos] erro na atualização inicial remota: {exc}")
         remote_refresh_loop()
 
     threading.Thread(target=_boot, daemon=True).start()
 
 
 def ensure_admin_shortcut() -> None:
-    """Cria o atalho 'NLinux Software Admin' apontando para o projeto real.
+    """Cria o atalho 'FalconOS Software Admin' apontando para o projeto real.
 
     Só roda na curadoria (ADMIN_ENABLED). Usa o caminho do próprio projeto,
     detectado via __file__, para não fixar o home do usuário no repositório.
@@ -2930,8 +2944,8 @@ def ensure_admin_shortcut() -> None:
 
     project_root = os.path.dirname(os.path.dirname(os.path.dirname(
         os.path.abspath(__file__))))
-    installed_launcher = "/usr/local/bin/nlinux-software-admin"
-    source_launcher = os.path.join(project_root, "nlinux-software-admin")
+    installed_launcher = "/usr/local/bin/falconos-software-admin"
+    source_launcher = os.path.join(project_root, "falconos-software-admin")
     if os.path.isfile(installed_launcher):
         launcher = installed_launcher
     elif os.path.isfile(source_launcher):
@@ -2941,8 +2955,8 @@ def ensure_admin_shortcut() -> None:
 
     icon_src = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
-        "..", "apps", "nlinux-logo.png")
-    icon_name = "nlinux-software-admin"
+        "..", "apps", "falconos-logo.png")
+    icon_name = "falconos-software-admin"
     icons_root = os.path.join(
         os.path.expanduser("~"), ".local", "share", "icons", "hicolor")
     icons_dir = os.path.join(icons_root, "128x128", "apps")
@@ -2963,19 +2977,19 @@ def ensure_admin_shortcut() -> None:
     entry = (
         "[Desktop Entry]\n"
         "Type=Application\n"
-        "Name=NLinux Software Admin\n"
+        "Name=FalconOS Software Admin\n"
         "GenericName=Curadoria da loja\n"
-        "Comment=Administração da NLinux Software (com curadoria)\n"
+        "Comment=Administração da FalconOS Software (com curadoria)\n"
         f"Exec={launcher}\n"
         f"Icon={icon_name}\n"
         "Terminal=false\n"
         "Categories=Utility;\n"
         "StartupNotify=true\n"
-        "StartupWMClass=nlinuxcuradoria\n"
+        "StartupWMClass=falconoscuradoria\n"
     )
     apps_dir = desktop_dir
-    path = os.path.join(apps_dir, "nlinuxcuradoria.desktop")
-    for old_name in ("nlinuxsoftware.desktop", "nlinux-software-admin.desktop"):
+    path = os.path.join(apps_dir, "falconoscuradoria.desktop")
+    for old_name in ("falconossoftware.desktop", "falconos-software-admin.desktop"):
         try:
             old_path = os.path.join(apps_dir, old_name)
             if os.path.exists(old_path):
@@ -3007,7 +3021,7 @@ def run(open_browser: bool = True) -> None:
 
     threading.Thread(target=server.serve_forever, daemon=True).start()
 
-    print(f"Loja de Software NLinux em {url}")
+    print(f"Loja de Software FalconOS em {url}")
     print("Pressione Ctrl+C para encerrar.")
 
     if open_browser:

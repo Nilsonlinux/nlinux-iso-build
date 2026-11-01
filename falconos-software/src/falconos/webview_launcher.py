@@ -16,7 +16,7 @@ os.environ.setdefault("WEBKIT_DISABLE_DMABUF_RENDERER", "1")
 # under the Umbriel compositor.
 os.environ.setdefault("GDK_BACKEND", "x11")
 
-from nlinux.web_server import BoutiqueHandler, build_payload
+from falconos.web_server import BoutiqueHandler, build_payload
 
 
 class Api:
@@ -41,7 +41,7 @@ def run_webview() -> None:
         import webview
     except ImportError:
         print("pywebview não está instalado; abrindo no navegador padrão.")
-        from nlinux.web_server import run
+        from falconos.web_server import run
 
         run(open_browser=True)
         return
@@ -54,13 +54,13 @@ def run_webview() -> None:
     url = f"http://127.0.0.1:{port}/"
     threading.Thread(target=server.serve_forever, daemon=True).start()
 
-    print(f"Loja de Software NLinux em {url}")
+    print(f"Loja de Software FalconOS em {url}")
     print("Feche a janela para encerrar.")
 
     try:
         api = Api()
         window = webview.create_window(
-            "Loja de Software NLinux",
+            "Loja de Software FalconOS",
             url,
             width=1120,
             height=780,
@@ -70,7 +70,7 @@ def run_webview() -> None:
         )
         api.window = window
         try:
-            window.set_wmclass("nlinux-software-admin", "nlinux-software-admin")
+            window.set_wmclass("falconos-software-admin", "falconos-software-admin")
         except Exception:
             pass
         window.events.loaded += lambda: print("WEBVIEW_PAGELOADED", flush=True)
@@ -91,7 +91,7 @@ def run_webview() -> None:
         print(f"Não foi possível abrir a janela nativa ({e}); tentando o navegador padrão.")
         server.shutdown()
         server.server_close()
-        from nlinux.web_server import run
+        from falconos.web_server import run
 
         run(open_browser=True)
         return
