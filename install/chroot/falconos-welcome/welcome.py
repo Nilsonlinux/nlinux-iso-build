@@ -21,7 +21,7 @@ from datetime import datetime
 APP_DIR = "/usr/share/falconos-welcome"
 MARKER = os.path.expanduser("~/.config/falconos-welcome-v1")
 
-REPO_URL = "https://github.com/Nilsonlinux/nlinux-iso-build"
+REPO_URL = "https://github.com/Nilsonlinux/falconos-iso-build"
 SITE_URL = "https://nilsonlinux.github.io/"
 AUTHOR = "Nilsonlinux"
 
@@ -29,7 +29,7 @@ AUTHOR = "Nilsonlinux"
 # online e guardada em cache por 24h; sem rede, vale o que estiver no cache —
 # e, sem cache nenhum, cai para a versão gravada na instalação.
 RELEASES_API = (
-    "https://api.github.com/repos/Nilsonlinux/nlinux-iso-build/releases/latest"
+    "https://api.github.com/repos/Nilsonlinux/falconos-iso-build/releases/latest"
 )
 LATEST_CACHE = os.path.expanduser("~/.cache/falconos-welcome-latest")
 
@@ -63,7 +63,7 @@ T = {
             "Compositor Umbriel + Noctalia",
         ],
         "btn.github": "Ver código no GitHub",
-        "tip.github": "Abrir github.com/Nilsonlinux/nlinux-iso-build",
+        "tip.github": "Abrir github.com/Nilsonlinux/falconos-iso-build",
         "btn.site": "Acessar o site",
         "tip.site": "Abrir nilsonlinux.github.io",
         "btn.close": "Começar a usar",
@@ -88,7 +88,7 @@ T = {
             "Umbriel + Noctalia compositor",
         ],
         "btn.github": "View code on GitHub",
-        "tip.github": "Open github.com/Nilsonlinux/nlinux-iso-build",
+        "tip.github": "Open github.com/Nilsonlinux/falconos-iso-build",
         "btn.site": "Visit the website",
         "tip.site": "Open nilsonlinux.github.io",
         "btn.close": "Get started",
@@ -113,7 +113,7 @@ T = {
             "Compositor Umbriel + Noctalia",
         ],
         "btn.github": "Ver código en GitHub",
-        "tip.github": "Abrir github.com/Nilsonlinux/nlinux-iso-build",
+        "tip.github": "Abrir github.com/Nilsonlinux/falconos-iso-build",
         "btn.site": "Visitar el sitio",
         "tip.site": "Abrir nilsonlinux.github.io",
         "btn.close": "Empezar",
@@ -138,7 +138,7 @@ T = {
             "Compositeur Umbriel + Noctalia",
         ],
         "btn.github": "Voir le code sur GitHub",
-        "tip.github": "Ouvrir github.com/Nilsonlinux/nlinux-iso-build",
+        "tip.github": "Ouvrir github.com/Nilsonlinux/falconos-iso-build",
         "btn.site": "Visiter le site",
         "tip.site": "Ouvrir nilsonlinux.github.io",
         "btn.close": "Commencer",
@@ -163,7 +163,7 @@ T = {
             "Umbriel + Noctalia-Compositor",
         ],
         "btn.github": "Code auf GitHub ansehen",
-        "tip.github": "github.com/Nilsonlinux/nlinux-iso-build öffnen",
+        "tip.github": "github.com/Nilsonlinux/falconos-iso-build öffnen",
         "btn.site": "Website besuchen",
         "tip.site": "nilsonlinux.github.io öffnen",
         "btn.close": "Loslegen",
@@ -188,7 +188,7 @@ T = {
             "Compositor Umbriel + Noctalia",
         ],
         "btn.github": "Vedi il codice su GitHub",
-        "tip.github": "Apri github.com/Nilsonlinux/nlinux-iso-build",
+        "tip.github": "Apri github.com/Nilsonlinux/falconos-iso-build",
         "btn.site": "Visita il sito",
         "tip.site": "Apri nilsonlinux.github.io",
         "btn.close": "Inizia",
@@ -213,7 +213,7 @@ T = {
             "Umbriel と Noctalia コンポジター",
         ],
         "btn.github": "GitHub でコードを見る",
-        "tip.github": "github.com/Nilsonlinux/nlinux-iso-build を開く",
+        "tip.github": "github.com/Nilsonlinux/falconos-iso-build を開く",
         "btn.site": "ウェブサイトへ",
         "tip.site": "nilsonlinux.github.io を開く",
         "btn.close": "はじめる",

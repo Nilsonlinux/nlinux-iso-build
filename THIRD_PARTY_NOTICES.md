@@ -49,7 +49,7 @@ pacote `sound-theme-freedesktop` é uma dependência declarada em
 Cópia do build publicado da loja de software do FalconOS, embutida na ISO em
 `/opt`, a partir de outro repositório do mesmo autor.
 
-- **Origem:** https://github.com/Nilsonlinux/nlinux-software
+- **Origem:** https://github.com/Nilsonlinux/falconos-software
 - **Licença:** consulte o repositório de origem (é um projeto do próprio autor
   deste repositório). Distribuída aqui como componente do sistema.
 

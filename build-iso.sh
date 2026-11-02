@@ -46,7 +46,7 @@ check_store_up_to_date() {
     warn "falconos-software/catalog-head.json ausente ou ilegível; não dá para conferir a revisão da loja."
     return 0
   fi
-  url="https://raw.githubusercontent.com/Nilsonlinux/nlinux-software/main/catalog-head.json"
+  url="https://raw.githubusercontent.com/Nilsonlinux/falconos-software/main/catalog-head.json"
   if ! command -v curl >/dev/null 2>&1; then
     info "curl ausente; pulando a conferência da revisão da loja."
     return 0

@@ -705,7 +705,7 @@ Aplicados ao usuário do **live** (`~/home/falconos`) e do **sistema instalado**
 ### Atualizar a loja embarcada
 
 `falconos-software/` é a cópia do build publicado da loja
-(`github.com/Nilsonlinux/nlinux-software`) que o `build-iso.sh` embute em
+(`github.com/Nilsonlinux/falconos-software`) que o `build-iso.sh` embute em
 `/opt/falconos-software` dentro da imagem.
 
 **Não é preciso fazer isso à mão.** A curadoria sincroniza esta pasta sozinha: ao
@@ -735,9 +735,9 @@ Se a curadoria falhar ao espelhar (ela avisa no stdout, e o build continua —
 o pacote já foi publicado), o caminho manual continua valendo:
 
 ```bash
-cd /home/nilsonlinux/nlinux-iso-build
+cd /home/nilsonlinux/Projetos/falconos-iso-build
 rm -rf falconos-software && mkdir falconos-software
-git clone --depth 1 https://github.com/Nilsonlinux/nlinux-software.git /tmp/loja
+git clone --depth 1 https://github.com/Nilsonlinux/falconos-software.git /tmp/loja
 cp -a /tmp/loja/. falconos-software/
 rm -rf falconos-software/.git falconos-software/*.tar.gz falconos-software/*.tar.gz.asc
 ```

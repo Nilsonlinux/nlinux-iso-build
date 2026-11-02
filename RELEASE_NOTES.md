@@ -13,7 +13,7 @@ Segunda release pública do FalconOS. Mantém a base Arch Linux com desktop Wayl
 
 - **opencode incluído no sistema**: o agente de programação com IA (repositório `extra`) vem pré-instalado tanto no ambiente live quanto no sistema instalado, e ganha **atalho próprio na lista de aplicativos** — abre no terminal kitty. Antes ele só podia ser instalado pela loja.
 
-![opencode no FalconOS](https://raw.githubusercontent.com/Nilsonlinux/nlinux-software/main/src/apps/assets/opencode-1.png)
+![opencode no FalconOS](https://raw.githubusercontent.com/Nilsonlinux/falconos-software/main/src/apps/assets/opencode-1.png)
 
 - **Atualização do sistema sem interrupções**: a atualização pela loja passou a rodar `pacman -Syu` de forma automática. Não é mais preciso digitar `s`/`y`, e a caixa "Resposta solicitada pelo pacman" deixou de aparecer quando não há pergunta real. Instalação, remoção e pacotes da AUR continuam pedindo confirmação quando de fato existe uma pergunta.
 - **Janela de boas-vindas mais clara**: passa a mostrar a **Data de instalação** e a **Versão atual (releases)**, consultada na última release publicada. O nome "App Center" foi trocado por **FalconOS Software** nos sete idiomas.
@@ -46,8 +46,8 @@ Segunda release pública do FalconOS. Mantém a base Arch Linux com desktop Wayl
 - [Changelog](https://nilsonlinux.github.io/changelog.html)
 - [Recursos da distribuição](https://nilsonlinux.github.io/recursos.html)
 - [Loja FalconOS Software](https://nilsonlinux.github.io/loja.html)
-- [Código e instruções para compilar a ISO](https://github.com/Nilsonlinux/nlinux-iso-build)
+- [Código e instruções para compilar a ISO](https://github.com/Nilsonlinux/falconos-iso-build)
 
 ## 📦 Versões anteriores
 
-- [FalconOS 2026.10.09](https://github.com/Nilsonlinux/nlinux-iso-build/releases/tag/2026.10.09) — primeira release pública.
+- [FalconOS 2026.10.09](https://github.com/Nilsonlinux/falconos-iso-build/releases/tag/2026.10.09) — primeira release pública.

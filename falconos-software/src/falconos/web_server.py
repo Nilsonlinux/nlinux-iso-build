@@ -117,7 +117,7 @@ def _assets_dir() -> str:
 # na primeira vez (pede a senha do GitHub uma única vez).
 GIT_PUSH_ENABLED = os.environ.get("FALCONOS_GIT_PUSH", "1") not in ("0", "false", "no")
 GIT_PUSH_URL = os.environ.get("FALCONOS_GIT_URL") or \
-    "https://github.com/Nilsonlinux/nlinux-software.git"
+    "https://github.com/Nilsonlinux/falconos-software.git"
 GIT_PUSH_BRANCH = os.environ.get("FALCONOS_GIT_BRANCH") or "main"
 GIT_PUSH_DIR = os.environ.get("FALCONOS_GIT_DIR") or \
     os.path.join(os.path.expanduser("~"), "falconos-software")
@@ -129,7 +129,7 @@ GIT_PUSH_EMAIL = os.environ.get("FALCONOS_GIT_EMAIL") or "nilsonlinux@users.nore
 # continua embarcando a revisão que ficou commitada — uma loja velha, às vezes
 # com programas que você já removeu do catálogo.
 ISO_BUILD_DIR = os.environ.get("FALCONOS_ISO_DIR") or \
-    os.path.join(os.path.expanduser("~"), "nlinux-iso-build")
+    os.path.join(os.path.expanduser("~"), "falconos-iso-build")
 ISO_STORE_DIRNAME = "falconos-software"
 # A imagem é montada a partir do que está commitado: deixar a pasta da loja
 # modificada faria o build da ISO usar uma loja diferente da do repositório.
@@ -152,21 +152,21 @@ PACKAGE_DEPS_OPTIONAL = ("paru", "yay", "curl")
 # (a de curadoria é a fonte e não deve ser sobrescrita — ver start_remote_refresh).
 # Ajuste a URL para o seu repositório após publicar o catálogo no GitHub.
 REMOTE_CATALOG_URL = os.environ.get("FALCONOS_CATALOG_URL") or \
-    "https://raw.githubusercontent.com/nilsonlinux/nlinux-software/main/src/apps/applications-en.json"
+    "https://raw.githubusercontent.com/Nilsonlinux/falconos-software/main/src/apps/applications-en.json"
 # Arquivo-marcador minúsculo publicado junto com o catálogo. A loja lê só ele a
 # cada REMOTE_CHECK_SECONDS e só baixa o catálogo inteiro (236 KB) quando a
 # impressão digital muda. O CDN do raw.githubusercontent responde 304 obsoleto
 # para requisições condicionais, então não dá para usar If-None-Match aqui.
 REMOTE_MARKER_URL = os.environ.get("FALCONOS_CATALOG_MARKER_URL") or \
-    "https://raw.githubusercontent.com/nilsonlinux/nlinux-software/main/catalog-head.json"
+    "https://raw.githubusercontent.com/Nilsonlinux/falconos-software/main/catalog-head.json"
 try:
     REMOTE_CHECK_SECONDS = max(5, int(os.environ.get("FALCONOS_CATALOG_CHECK", "15")))
 except ValueError:
     REMOTE_CHECK_SECONDS = 15
 
 STORE_AUTHOR = "Nilsonlinux"
-STORE_REPO_URL = "https://github.com/Nilsonlinux/nlinux-software"
-STORE_REPO_NAME = "Nilsonlinux/nlinux-software"
+STORE_REPO_URL = "https://github.com/Nilsonlinux/falconos-software"
+STORE_REPO_NAME = "Nilsonlinux/falconos-software"
 
 MIME = {
     "html": "text/html; charset=utf-8",
@@ -2646,7 +2646,7 @@ def git_publish(build_dir: str, tar_path: str, rev: int) -> dict:
 # detecção usa `git ls-remote`, que responde ao vivo em menos de 1s, e o catálogo
 # é lido de uma URL travada no commit — imutável, portanto sempre correta.
 REMOTE_REPO_RAW = os.environ.get("FALCONOS_CATALOG_RAW_BASE") or \
-    "https://raw.githubusercontent.com/nilsonlinux/nlinux-software"
+    "https://raw.githubusercontent.com/Nilsonlinux/falconos-software"
 REMOTE_FALLBACK_SECONDS = 300
 
 
