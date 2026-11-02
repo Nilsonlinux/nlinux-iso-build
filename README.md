@@ -20,7 +20,7 @@ Resultado instalado / ao vivo:
 
 ---
 
-<img width="640" height="480" alt="image" src="https://github.com/user-attachments/assets/a8d601e4-ad83-4b77-933a-a67312f9afcd" />
+<img width="1376" height="768" alt="FalconOS" src="https://github.com/user-attachments/assets/a6f7d6c8-be19-4737-bb08-500d743beffa" />
 
 
 ## Estrutura do projeto
