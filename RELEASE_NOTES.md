@@ -1,44 +1,64 @@
-# FalconOS — release 2026.10.15
+# FalconOS — release 2026.11.02
 
 <h2 align="center">⬇️ Download</h2>
 
 <p align="center">
-  <a href="https://drive.google.com/file/d/1OGHENI3Fs6Up4eLDzPFMtUIGkut3XqV2/view?usp=sharing">FalconOS ISO (Google Drive)</a> — ISO live, ~2,9 GB, para <code>x86_64</code>.<br>
-  sha256 da ISO <code>ec807478bfe6ef9b1b9bb837de6213e1b08ab32b7abf2a3ff29caff762ebe55b</code>
+  <a href="https://drive.google.com/file/d/1foh_WS4DnkBy_rJ5mo-6_AzOTCcFKxyk/view?usp=drive_link">FalconOS ISO (Google Drive)</a> — ISO live, ~2,9 GB, para <code>x86_64</code>.<br>
+  sha256 da ISO <code>85dd555c2da8199389c721d7a31db548d59f57a785c11b1b22ddbfa223178f9d</code>
 </p>
 
-Segunda release pública do FalconOS. Mantém a base Arch Linux com desktop Wayland Umbriel, shell Noctalia V5, instalador visual em 10 etapas e a loja FalconOS Software — e agora traz o agente de programação **opencode** já instalado, licenciamento GPL-3.0 explícito, atualização do sistema sem interrupções e uma janela de boas-vindas mais informativa.
+Terceira release pública do FalconOS. A grande mudança desta versão é a **identidade definitiva da distribuição**: o antigo nome NLinux sai de cena e tudo passa a se chamar **FalconOS** — nome do sistema, usuário do ambiente live, hostname padrão, instalador, loja, serviços, arquivos de configuração, arte e repositórios. Junto vêm o **Timeshift** para snapshots do sistema, o **mpv-mpris** para integração de mídia com o player e ajustes visuais no Noctalia.
 
 ## ✨ Novidades
 
-- **opencode incluído no sistema**: o agente de programação com IA (repositório `extra`) vem pré-instalado tanto no ambiente live quanto no sistema instalado, e ganha **atalho próprio na lista de aplicativos** — abre no terminal kitty. Antes ele só podia ser instalado pela loja.
+- **NLinux agora é FalconOS**: a renomeação foi completa e não ficou só na tela.
+  - `/etc/os-release`, `/etc/issue`, `/etc/motd`, hostname e label da ISO usam **FalconOS**.
+  - O usuário do ambiente live passa a ser **`falconos`**, com senha **`falconos`**.
+  - O hostname padrão da instalação passa a ser **`falconos`**.
+  - Instalador, loja, serviços systemd, pacote Python da loja e arquivos internos foram renomeados de `nlinux-*` para `falconos-*`.
+  - Os repositórios oficiais também mudaram: [`falconos-iso-build`](https://github.com/Nilsonlinux/falconos-iso-build), [`falconos-software`](https://github.com/Nilsonlinux/falconos-software) e [`falconos-software-admin`](https://github.com/Nilsonlinux/falconos-software-admin).
 
-![opencode no FalconOS](https://raw.githubusercontent.com/Nilsonlinux/falconos-software/main/src/apps/assets/opencode-1.png)
+- **Nova identidade visual**: logo novo no menu de boot, no fastfetch, na tela de boas-vindas, no instalador, na loja e nos ícones do sistema, com a arte de fundo atualizada (`FalconOS.jpg` / `splash.png`). Os temas de som e os nomes dos arquivos de arte também seguem a nova marca.
 
-- **Atualização do sistema sem interrupções**: a atualização pela loja passou a rodar `pacman -Syu` de forma automática. Não é mais preciso digitar `s`/`y`, e a caixa "Resposta solicitada pelo pacman" deixou de aparecer quando não há pergunta real. Instalação, remoção e pacotes da AUR continuam pedindo confirmação quando de fato existe uma pergunta.
-- **Janela de boas-vindas mais clara**: passa a mostrar a **Data de instalação** e a **Versão atual (releases)**, consultada na última release publicada. O nome "App Center" foi trocado por **FalconOS Software** nos sete idiomas.
-- **Licenciamento explícito**: a distribuição e a loja embarcada agora trazem a licença **GPL-3.0-or-later**, o arquivo **THIRD_PARTY_NOTICES.md** com os avisos de terceiros e cabeçalhos **SPDX** nos fontes.
+![FalconOS](https://raw.githubusercontent.com/Nilsonlinux/falconos-iso-build/main/install/chroot/falconos-welcome/welcome-logo.png)
+
+- **Timeshift incluído**: o Timeshift vem na lista de pacotes do desktop e é instalado tanto no modo **Rápido offline** quanto no **Completo online**. Dá para criar snapshots do sistema e restaurar depois, com interface gráfica e assistente próprio.
+
+- **mpv-mpris**: o mpv passa a expor controles de mídia pelo MPRIS, então as teclas **Play/Pause/Próxima/Anterior** e os widgets de mídia do Noctalia controlam o player direto, sem plugin extra.
+
+- **Noctalia**: os grupos da barra (RAM/CPU/temperatura e clima/relógio) passaram a usar `surface_container` como preenchimento, com contraste mais consistente com o tema.
+
+- **Comunidade no Telegram**: o site oficial agora aponta para o grupo [FalconOS Community](https://t.me/FalconOSCommunity).
 
 ## 🔧 Também nesta versão
 
-- **Catálogo da loja atualizado**: revisão 373, com **63 aplicativos** — entrou o **guvcview** (visualização de webcam de dispositivos V4L2). A loja baixa o catálogo novo automaticamente.
-- **Assinatura GPG das releases**: a chave pública passa a ser publicada no repositório (`falconos-releases-gpg-pub.asc`), junto das instruções de verificação de tags e commits.
-- **Noctalia**: atalhos de sessão desativados na tela de bloqueio (`show_shortcuts = false`).
-- **Documentação** do projeto atualizada, incluindo as seções de licença, assinatura GPG e do opencode.
+- **Instalador e loja com a marca nova**: janela, atalhos, caminhos em `/opt`, nomes dos binários e mensagens internas foram ajustados para FalconOS; o instalador continua com as **10 etapas** e os dois modos de instalação.
+- **Serviços renomeados**: `falconos-pacman-refresh.service` e os arquivos de sudoers do build agora usam o prefixo `falconos-`.
+- **Documentação atualizada**: README, notas de licença e textos de terceiros acompanham o novo nome, os novos repositórios e os pacotes incluídos.
+- **Catálogo da loja**: revisão 373, com **63 aplicativos**, servida automaticamente pelo FalconOS Software.
 
-## ⬆️ Já tem o FalconOS instalado?
+## ⬆️ Já tem o FalconOS/NLinux instalado?
 
-- Atualize o sistema: `sudo pacman -Syu`.
-- Instale o opencode: `sudo pacman -S opencode` — o atalho aparece no menu depois disso.
-- A loja FalconOS Software baixa o catálogo novo (revisão 373) automaticamente.
+- Atualize os pacotes normalmente: `sudo pacman -Syu`.
+- Para ter a identidade nova por completo — usuário live `falconos`, caminhos `falconos-*`, arte e menu atualizados — o caminho recomendado é **instalar a ISO 2026.11.02**. A renomeação mexe em caminhos do sistema que não são migrados por uma atualização de pacotes.
+- O Timeshift pode ser instalado em sistemas já existentes com `sudo pacman -S timeshift`.
+- O mpv-mpris pode ser instalado com `sudo pacman -S mpv-mpris`.
 
 ## 💾 Requisitos
 
 - Arquitetura `x86_64`; pendrive de 8 GB ou mais.
 - **UEFI é necessário para instalar.** A ISO também inclui opções de boot BIOS para experimentar o ambiente live.
 - Internet: opcional na instalação rápida offline; necessária na instalação completa online.
+- Login do ambiente live: usuário **`falconos`**, senha **`falconos`**.
 
 > Antes de alterar partições, faça backup dos dados. Em dual boot com Windows, desative o BitLocker e a Inicialização Rápida/hibernação antes de prosseguir.
+
+## ✅ Como conferir o download
+
+```bash
+sha256sum falconos-2026.11.02-x86_64.iso
+# 85dd555c2da8199389c721d7a31db548d59f57a785c11b1b22ddbfa223178f9d
+```
 
 ## 📚 Documentação
 
@@ -50,4 +70,5 @@ Segunda release pública do FalconOS. Mantém a base Arch Linux com desktop Wayl
 
 ## 📦 Versões anteriores
 
+- [FalconOS 2026.10.15](https://github.com/Nilsonlinux/falconos-iso-build/releases/tag/2026.10.15) — opencode incluído, GPL-3.0 explícito e atualização sem interrupções.
 - [FalconOS 2026.10.09](https://github.com/Nilsonlinux/falconos-iso-build/releases/tag/2026.10.09) — primeira release pública.
