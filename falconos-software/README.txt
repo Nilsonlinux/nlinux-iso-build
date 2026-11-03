@@ -1,4 +1,4 @@
-FalconOS Software v373 - loja de aplicativos (distribuicao)
+FalconOS Software v374 - loja de aplicativos (distribuicao)
 Sem opcao de administracao.
 
 Dependencias (veja DEPENDENCIES.txt):

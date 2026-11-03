@@ -31,21 +31,20 @@ fi
 # mais novo. sort -V ordena por numero de versao.
 TARBALL="$(ls "$SRC"/falconos-software-v*.tar.gz "$SRC"/../falconos-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)"
 if [ -z "$TARBALL" ]; then
-  # Pacotes publicados antes do rename da distro continuam instaláveis.
+  # fallback para o nome antigo (NLinux), caso a pasta venha de
+  # uma publicação anterior à padronização do nome
   TARBALL="$(ls "$SRC"/nlinux-software-v*.tar.gz "$SRC"/../nlinux-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)"
 fi
-PUBKEY=""
-for k in "$SRC/falconos-software_pub.asc" "$SRC/nlinux-software_pub.asc"; do
-  if [ -f "$k" ]; then PUBKEY="$k"; break; fi
-done
+PUBASC="$SRC/falconos-software_pub.asc"
+[ -f "$PUBASC" ] || PUBASC="$SRC/nlinux-software_pub.asc"
 if [ -z "$TARBALL" ]; then
   echo "Aviso: nenhum falconos-software-v<N>.tar.gz encontrado em $SRC."
   echo "         Instalando a loja a partir do src/ sem validar assinatura."
-elif [ -f "$TARBALL.asc" ] && [ -n "$PUBKEY" ]; then
+elif [ -f "$TARBALL.asc" ] && [ -f "$PUBASC" ]; then
   # set -e + redirecionamento silencioso aqui ja matou o
   # instalador sem mensagem alguma quando a chave publica faltava.
-  if ! gpg --batch --import "$PUBKEY" >/dev/null 2>&1; then
-    echo "ERRO: $(basename "$PUBKEY") não pôde ser importada." >&2
+  if ! gpg --batch --import "$PUBASC" >/dev/null 2>&1; then
+    echo "ERRO: $(basename "$PUBASC") não pôde ser importada." >&2
     echo "O pacote está sem a chave pública: baixe o repositório inteiro." >&2
     exit 1
   fi
@@ -58,7 +57,7 @@ elif [ -f "$TARBALL.asc" ] && [ -n "$PUBKEY" ]; then
 else
   echo "ERRO: assinatura ou chave pública ausente; sem validação." >&2
   echo "Esperado junto de $(basename "$TARBALL"):" >&2
-  echo "  $(basename "$TARBALL").asc  e  falconos-software_pub.asc" >&2
+  echo "  $(basename "$TARBALL").asc  e  $(basename "$PUBASC")" >&2
   echo "O pacote está incompleto. Baixe o repositório inteiro." >&2
   exit 1
 fi
@@ -82,12 +81,23 @@ STORE_USER="${SUDO_USER:-root}"
 STORE_HOME="$(getent passwd "$STORE_USER" | cut -d: -f6)"
 if [ -n "$STORE_HOME" ] && [ "$STORE_USER" != "root" ]; then
   STORE_DATA="${XDG_DATA_HOME:-$STORE_HOME/.local/share}"
+  # migra a pasta de dados do nome antigo (NLinux) sem sobrescrever
+  if [ -d "$STORE_DATA/nlinux" ]; then
+    mkdir -p "$STORE_DATA/falconos"
+    cp -an "$STORE_DATA/nlinux/." "$STORE_DATA/falconos/" 2>/dev/null || true
+    rm -rf "$STORE_DATA/nlinux"
+  fi
   APP_DATA="$STORE_DATA/falconos"
   DATA_DIR="$APP_DATA/store"
   mkdir -p "$DATA_DIR"
   if [ ! -d "$DATA_DIR/apps" ]; then
     cp -a "$DEST/src/apps" "$DATA_DIR/apps"
   fi
+  # a logo mudou de nome e de conteudo: atualiza a copia gravavel
+  rm -f "$DATA_DIR/apps/nlinux-logo.png"
+  cp -f "$DEST/src/apps/falconos-logo.png" "$DATA_DIR/apps/falconos-logo.png"
+  # dados de site/cache do WebKit que ficaram com o nome antigo
+  rm -rf "$STORE_DATA/nlinuxstore" "$STORE_HOME/.cache/nlinuxstore"
   # o chown tem de pegtar a arvore inteira: um 'mkdir -p' como root
   # deixa os diretorios intermediarios do root, e sem dono o usuario
   # nao consegue criar mais nada dentro deles
@@ -95,6 +105,12 @@ if [ -n "$STORE_HOME" ] && [ "$STORE_USER" != "root" ]; then
   echo "Catalogo e midia: $DATA_DIR/apps"
 fi
 # --- ícone + atalho no menu de aplicativos --------------------------
+# remove a instalação anterior com a marca NLinux (nome antigo)
+rm -rf /opt/nlinux-software
+rm -f /usr/local/bin/nlinux-software
+rm -f /usr/share/applications/nlinuxstore.desktop
+rm -f /usr/share/applications/nlinuxsoftware.desktop
+rm -f /usr/share/pixmaps/nlinux-software.png
 mkdir -p /usr/share/pixmaps
 cp "$DEST/src/apps/falconos-logo.png" /usr/share/pixmaps/falconos-software.png
 rm -f /usr/share/icons/hicolor/scalable/apps/falconos-software.svg
@@ -115,4 +131,4 @@ StartupWMClass=falconosstore
 X-GNOME-UsesNotifications=false
 EOF
 (command -v update-desktop-database >/dev/null 2>&1 && update-desktop-database /usr/share/applications) || true
-echo "Instalado: FalconOS Software v373 (/usr/local/bin/falconos-software)"
+echo "Instalado: FalconOS Software v374 (/usr/local/bin/falconos-software)"

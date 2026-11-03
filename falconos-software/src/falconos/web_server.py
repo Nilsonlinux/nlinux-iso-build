@@ -95,7 +95,7 @@ ADMIN_ENABLED = False
 # snapshot do repositório, em vez de ~/.local/share/falconos/admin/apps, que é o
 # catálogo que se está curando. Os dois são catálogos válidos e o servidor não
 # tem como adivinhar qual é o certo — com a variável, dá para escolher.
-APPS_DIR = os.environ.get("FALCONOS_APPS_DIR") or \
+APPS_DIR = resources.env("APPS_DIR") or \
     resources.apps_dir("admin" if ADMIN_ENABLED else "store")
 
 
@@ -115,28 +115,28 @@ def _assets_dir() -> str:
 # Publicação automática no GitHub quando o build da versão da loja terminar.
 # Desligue com FALCONOS_GIT_PUSH=0. O repositório local é clonado no GIT_PUSH_DIR
 # na primeira vez (pede a senha do GitHub uma única vez).
-GIT_PUSH_ENABLED = os.environ.get("FALCONOS_GIT_PUSH", "1") not in ("0", "false", "no")
-GIT_PUSH_URL = os.environ.get("FALCONOS_GIT_URL") or \
+GIT_PUSH_ENABLED = resources.env("GIT_PUSH", "1") not in ("0", "false", "no")
+GIT_PUSH_URL = resources.env("GIT_URL") or \
     "https://github.com/Nilsonlinux/falconos-software.git"
-GIT_PUSH_BRANCH = os.environ.get("FALCONOS_GIT_BRANCH") or "main"
-GIT_PUSH_DIR = os.environ.get("FALCONOS_GIT_DIR") or \
-    os.path.join(os.path.expanduser("~"), "falconos-software")
-GIT_PUSH_USER = os.environ.get("FALCONOS_GIT_USER") or "Nilsonlinux"
-GIT_PUSH_EMAIL = os.environ.get("FALCONOS_GIT_EMAIL") or "nilsonlinux@users.noreply.github.com"
+GIT_PUSH_BRANCH = resources.env("GIT_BRANCH") or "main"
+GIT_PUSH_DIR = resources.env("GIT_DIR") or \
+    os.path.join(os.path.expanduser("~"), "Projetos", "falconos-software")
+GIT_PUSH_USER = resources.env("GIT_USER") or "Nilsonlinux"
+GIT_PUSH_EMAIL = resources.env("GIT_EMAIL") or "nilsonlinux@users.noreply.github.com"
 # Projeto que constrói a ISO da distro. A subpasta <ISO_BUILD_DIR>/falconos-software
 # é a fonte que o build-iso.sh embute em /opt/falconos-software na imagem, e ela é
 # versionada no repositório do iso-build: sem espelhar o build para lá, a ISO
 # continua embarcando a revisão que ficou commitada — uma loja velha, às vezes
 # com programas que você já removeu do catálogo.
-ISO_BUILD_DIR = os.environ.get("FALCONOS_ISO_DIR") or \
-    os.path.join(os.path.expanduser("~"), "falconos-iso-build")
+ISO_BUILD_DIR = resources.env("ISO_DIR") or \
+    os.path.join(os.path.expanduser("~"), "Projetos", "falconos-iso-build")
 ISO_STORE_DIRNAME = "falconos-software"
 # A imagem é montada a partir do que está commitado: deixar a pasta da loja
 # modificada faria o build da ISO usar uma loja diferente da do repositório.
 # Por isso o espelho fecha com commit. Desligue com FALCONOS_ISO_COMMIT=0; o
 # push é automático por padrão; desligue com FALCONOS_ISO_PUSH=0.
-ISO_COMMIT_ENABLED = os.environ.get("FALCONOS_ISO_COMMIT", "1") not in ("0", "false", "no")
-ISO_PUSH_ENABLED = os.environ.get("FALCONOS_ISO_PUSH", "1") not in ("0", "false", "no")
+ISO_COMMIT_ENABLED = resources.env("ISO_COMMIT", "1") not in ("0", "false", "no")
+ISO_PUSH_ENABLED = resources.env("ISO_PUSH", "1") not in ("0", "false", "no")
 PACKAGE_DEPS = [
     "python",
     "python-gobject",
@@ -151,16 +151,16 @@ PACKAGE_DEPS_OPTIONAL = ("paru", "yay", "curl")
 # Catálogo remoto (JSON raw do GitHub). APENAS a versão de distribuição sincroniza
 # (a de curadoria é a fonte e não deve ser sobrescrita — ver start_remote_refresh).
 # Ajuste a URL para o seu repositório após publicar o catálogo no GitHub.
-REMOTE_CATALOG_URL = os.environ.get("FALCONOS_CATALOG_URL") or \
-    "https://raw.githubusercontent.com/Nilsonlinux/falconos-software/main/src/apps/applications-en.json"
+REMOTE_CATALOG_URL = resources.env("CATALOG_URL") or \
+    "https://raw.githubusercontent.com/nilsonlinux/falconos-software/main/src/apps/applications-en.json"
 # Arquivo-marcador minúsculo publicado junto com o catálogo. A loja lê só ele a
 # cada REMOTE_CHECK_SECONDS e só baixa o catálogo inteiro (236 KB) quando a
 # impressão digital muda. O CDN do raw.githubusercontent responde 304 obsoleto
 # para requisições condicionais, então não dá para usar If-None-Match aqui.
-REMOTE_MARKER_URL = os.environ.get("FALCONOS_CATALOG_MARKER_URL") or \
-    "https://raw.githubusercontent.com/Nilsonlinux/falconos-software/main/catalog-head.json"
+REMOTE_MARKER_URL = resources.env("CATALOG_MARKER_URL") or \
+    "https://raw.githubusercontent.com/nilsonlinux/falconos-software/main/catalog-head.json"
 try:
-    REMOTE_CHECK_SECONDS = max(5, int(os.environ.get("FALCONOS_CATALOG_CHECK", "15")))
+    REMOTE_CHECK_SECONDS = max(5, int(resources.env("CATALOG_CHECK", "15")))
 except ValueError:
     REMOTE_CHECK_SECONDS = 15
 
@@ -1758,10 +1758,12 @@ def _registered_source() -> str | None:
     if path and os.path.isdir(os.path.join(path, "src", "apps")) \
             and os.path.exists(os.path.join(path, ".git")):
         return path
-    fallback = os.path.join(os.path.expanduser("~"), "falconos-software-admin")
-    if os.path.isdir(os.path.join(fallback, "src", "apps")) \
-            and os.path.exists(os.path.join(fallback, ".git")):
-        return fallback
+    for fallback in (
+            os.path.join(os.path.expanduser("~"), "Projetos", "falconos-software-admin"),
+            os.path.join(os.path.expanduser("~"), "falconos-software-admin")):
+        if os.path.isdir(os.path.join(fallback, "src", "apps")) \
+                and os.path.exists(os.path.join(fallback, ".git")):
+            return fallback
     return None
 
 
@@ -2151,21 +2153,20 @@ def admin_build(progress=None):
                     "# mais novo. sort -V ordena por numero de versao.\n"
                     "TARBALL=\"$(ls \"$SRC\"/falconos-software-v*.tar.gz \"$SRC\"/../falconos-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)\"\n"
                     "if [ -z \"$TARBALL\" ]; then\n"
-                    "  # Pacotes publicados antes do rename da distro continuam instaláveis.\n"
+                    "  # fallback para o nome antigo (NLinux), caso a pasta venha de\n"
+                    "  # uma publicação anterior à padronização do nome\n"
                     "  TARBALL=\"$(ls \"$SRC\"/nlinux-software-v*.tar.gz \"$SRC\"/../nlinux-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)\"\n"
                     "fi\n"
-                    "PUBKEY=\"\"\n"
-                    "for k in \"$SRC/falconos-software_pub.asc\" \"$SRC/nlinux-software_pub.asc\"; do\n"
-                    "  if [ -f \"$k\" ]; then PUBKEY=\"$k\"; break; fi\n"
-                    "done\n"
+                    "PUBASC=\"$SRC/falconos-software_pub.asc\"\n"
+                    "[ -f \"$PUBASC\" ] || PUBASC=\"$SRC/nlinux-software_pub.asc\"\n"
                     "if [ -z \"$TARBALL\" ]; then\n"
                     "  echo \"Aviso: nenhum falconos-software-v<N>.tar.gz encontrado em $SRC.\"\n"
                     "  echo \"         Instalando a loja a partir do src/ sem validar assinatura.\"\n"
-                    "elif [ -f \"$TARBALL.asc\" ] && [ -n \"$PUBKEY\" ]; then\n"
+                    "elif [ -f \"$TARBALL.asc\" ] && [ -f \"$PUBASC\" ]; then\n"
                     "  # set -e + redirecionamento silencioso aqui ja matou o\n"
                     "  # instalador sem mensagem alguma quando a chave publica faltava.\n"
-                    "  if ! gpg --batch --import \"$PUBKEY\" >/dev/null 2>&1; then\n"
-                    "    echo \"ERRO: $(basename \"$PUBKEY\") não pôde ser importada.\" >&2\n"
+                    "  if ! gpg --batch --import \"$PUBASC\" >/dev/null 2>&1; then\n"
+                    "    echo \"ERRO: $(basename \"$PUBASC\") não pôde ser importada.\" >&2\n"
                     "    echo \"O pacote está sem a chave pública: baixe o repositório inteiro.\" >&2\n"
                     "    exit 1\n"
                     "  fi\n"
@@ -2178,7 +2179,7 @@ def admin_build(progress=None):
                     "else\n"
                     "  echo \"ERRO: assinatura ou chave pública ausente; sem validação.\" >&2\n"
                     "  echo \"Esperado junto de $(basename \"$TARBALL\"):\" >&2\n"
-                    "  echo \"  $(basename \"$TARBALL\").asc  e  falconos-software_pub.asc\" >&2\n"
+                    "  echo \"  $(basename \"$TARBALL\").asc  e  $(basename \"$PUBASC\")\" >&2\n"
                     "  echo \"O pacote está incompleto. Baixe o repositório inteiro.\" >&2\n"
                     "  exit 1\n"
                     "fi\n"
@@ -2202,12 +2203,23 @@ def admin_build(progress=None):
                     "STORE_HOME=\"$(getent passwd \"$STORE_USER\" | cut -d: -f6)\"\n"
                     "if [ -n \"$STORE_HOME\" ] && [ \"$STORE_USER\" != \"root\" ]; then\n"
                     "  STORE_DATA=\"${XDG_DATA_HOME:-$STORE_HOME/.local/share}\"\n"
+                    "  # migra a pasta de dados do nome antigo (NLinux) sem sobrescrever\n"
+                    "  if [ -d \"$STORE_DATA/nlinux\" ]; then\n"
+                    "    mkdir -p \"$STORE_DATA/falconos\"\n"
+                    "    cp -an \"$STORE_DATA/nlinux/.\" \"$STORE_DATA/falconos/\" 2>/dev/null || true\n"
+                    "    rm -rf \"$STORE_DATA/nlinux\"\n"
+                    "  fi\n"
                     "  APP_DATA=\"$STORE_DATA/falconos\"\n"
                     "  DATA_DIR=\"$APP_DATA/store\"\n"
                     "  mkdir -p \"$DATA_DIR\"\n"
                     "  if [ ! -d \"$DATA_DIR/apps\" ]; then\n"
                     "    cp -a \"$DEST/src/apps\" \"$DATA_DIR/apps\"\n"
                     "  fi\n"
+                    "  # a logo mudou de nome e de conteudo: atualiza a copia gravavel\n"
+                    "  rm -f \"$DATA_DIR/apps/nlinux-logo.png\"\n"
+                    "  cp -f \"$DEST/src/apps/falconos-logo.png\" \"$DATA_DIR/apps/falconos-logo.png\"\n"
+                    "  # dados de site/cache do WebKit que ficaram com o nome antigo\n"
+                    "  rm -rf \"$STORE_DATA/nlinuxstore\" \"$STORE_HOME/.cache/nlinuxstore\"\n"
                     "  # o chown tem de pegtar a arvore inteira: um 'mkdir -p' como root\n"
                     "  # deixa os diretorios intermediarios do root, e sem dono o usuario\n"
                     "  # nao consegue criar mais nada dentro deles\n"
@@ -2215,6 +2227,12 @@ def admin_build(progress=None):
                     "  echo \"Catalogo e midia: $DATA_DIR/apps\"\n"
                     "fi\n"
                     "# --- ícone + atalho no menu de aplicativos --------------------------\n"
+                    "# remove a instalação anterior com a marca NLinux (nome antigo)\n"
+                    "rm -rf /opt/nlinux-software\n"
+                    "rm -f /usr/local/bin/nlinux-software\n"
+                    "rm -f /usr/share/applications/nlinuxstore.desktop\n"
+                    "rm -f /usr/share/applications/nlinuxsoftware.desktop\n"
+                    "rm -f /usr/share/pixmaps/nlinux-software.png\n"
                     "mkdir -p /usr/share/pixmaps\n"
                     "cp \"$DEST/src/apps/falconos-logo.png\" /usr/share/pixmaps/falconos-software.png\n"
                     "rm -f /usr/share/icons/hicolor/scalable/apps/falconos-software.svg\n"
@@ -2295,13 +2313,16 @@ def admin_build(progress=None):
             if sign.returncode != 0 or not os.path.exists(asc_path):
                 raise OSError("falha ao assinar o pacote com GPG: "
                               + (sign.stderr.strip() or "código desconhecido"))
-            # Aceita o export antigo (~/nlinux-software_pub.asc) para não
-            # gerar pacote sem chave pública só porque a distro foi renomeada.
-            pub_asc = next(
-                (p for p in (os.path.expanduser("~/falconos-software_pub.asc"),
-                             os.path.expanduser("~/nlinux-software_pub.asc"))
-                 if os.path.exists(p)),
-                None)
+            # A chave pública pode estar no HOME (fluxo antigo), no próprio
+            # projeto ou já espelhada no repositório da ISO. Qualquer uma serve
+            # para o pacote sair instalável em outra máquina.
+            pub_candidates = (
+                os.path.expanduser("~/falconos-software_pub.asc"),
+                os.path.expanduser("~/nlinux-software_pub.asc"),
+                os.path.join(ISO_BUILD_DIR, ISO_STORE_DIRNAME,
+                             "falconos-software_pub.asc"),
+            )
+            pub_asc = next((p for p in pub_candidates if os.path.exists(p)), "")
             if pub_asc:
                 shutil.copy2(pub_asc, os.path.join(pkg_root, "falconos-software_pub.asc"))
             else:
@@ -2400,7 +2421,7 @@ def _git(repo: str, *args: str, timeout: int = 60) -> subprocess.CompletedProces
 
 def git_publish_admin_source(rev: int) -> dict:
     """Commita e envia as alterações do checkout privado da curadoria."""
-    if os.environ.get("FALCONOS_ADMIN_GIT_PUSH", "1") in ("0", "false", "no"):
+    if resources.env("ADMIN_GIT_PUSH", "1") in ("0", "false", "no"):
         return {"pushed": False, "reason": "publicação desativada (FALCONOS_ADMIN_GIT_PUSH=0)"}
 
     repo = _registered_source() or os.path.dirname(SRC_ROOT)
@@ -2539,7 +2560,7 @@ def git_publish(build_dir: str, tar_path: str, rev: int) -> dict:
         # repositório pode ser publicado por mais de uma máquina: se o remoto
         # já estiver à frente, o push de aqui sobrescreveria um catálogo mais
         # novo com um mais velho. Melhor recusar e pedir a sincronização.
-        if not os.environ.get("FALCONOS_PUBLISH_FORCE"):
+        if not resources.env("PUBLISH_FORCE"):
             head = subprocess.run(
                 ["git", "-C", clone_dir, "show",
                  f"refs/remotes/origin/{GIT_PUSH_BRANCH}:catalog-head.json"],
@@ -2645,8 +2666,8 @@ def git_publish(build_dir: str, tar_path: str, rev: int) -> dict:
 # 304 obsoletos), então a loja não confia nele para saber se houve mudança. A
 # detecção usa `git ls-remote`, que responde ao vivo em menos de 1s, e o catálogo
 # é lido de uma URL travada no commit — imutável, portanto sempre correta.
-REMOTE_REPO_RAW = os.environ.get("FALCONOS_CATALOG_RAW_BASE") or \
-    "https://raw.githubusercontent.com/Nilsonlinux/falconos-software"
+REMOTE_REPO_RAW = resources.env("CATALOG_RAW_BASE") or \
+    "https://raw.githubusercontent.com/nilsonlinux/falconos-software"
 REMOTE_FALLBACK_SECONDS = 300
 
 
@@ -2989,7 +3010,10 @@ def ensure_admin_shortcut() -> None:
     )
     apps_dir = desktop_dir
     path = os.path.join(apps_dir, "falconoscuradoria.desktop")
-    for old_name in ("falconossoftware.desktop", "falconos-software-admin.desktop"):
+    for old_name in ("falconossoftware.desktop", "falconos-software-admin.desktop",
+                     # nomes da marca anterior, para não sobrar atalho quebrado
+                     "nlinuxcuradoria.desktop", "nlinuxsoftware.desktop",
+                     "nlinux-software-admin.desktop"):
         try:
             old_path = os.path.join(apps_dir, old_name)
             if os.path.exists(old_path):

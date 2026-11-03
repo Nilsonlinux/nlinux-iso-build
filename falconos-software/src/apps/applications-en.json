@@ -2616,14 +2616,14 @@
   },
   "stats": {
     "version": 7,
-    "revision": 373,
-    "compiled": 1791842320,
+    "revision": 374,
+    "compiled": 1793745474,
     "apps": 63,
     "categories": 11
   },
   "distro": {
     "name": "FalconOS",
-    "info_url": "https://nilsonlinux.github.io/nlinux.html",
+    "info_url": "https://nilsonlinux.github.io/",
     "support_url": "https://nilsonlinux.github.io"
   },
   "supported": {

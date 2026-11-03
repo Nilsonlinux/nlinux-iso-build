@@ -15,6 +15,21 @@ BUNDLED_APPS_DIR = os.path.join(SRC_ROOT, 'apps')
 # Subpasta do app. Não pode ser 'falconos-software': esse nome pertence ao
 # WebKitGTK, que cria ~/.local/share/falconos-software para os dados do site.
 APP_DIRNAME = 'falconos'
+# Pasta usada pelo FalconOS/NLinux antes da padronização do nome. Se só ela
+# existir, `data_home()` a renomeia para `falconos` na primeira execução.
+LEGACY_APP_DIRNAME = 'nlinux'
+
+
+def env(name: str, default=None):
+    """Lê `FALCONOS_<nome>`, com fallback para o prefixo antigo `NLINUX_`.
+
+    O prefixo NLINUX_ é mantido só por compatibilidade com scripts e
+    documentação anteriores; todo nome novo usa FALCONOS_.
+    """
+    value = os.environ.get(f"FALCONOS_{name}")
+    if value is None:
+        value = os.environ.get(f"NLINUX_{name}")
+    return default if value is None else value
 
 
 def resource_path(resource: str) -> str:
@@ -35,13 +50,21 @@ def _running_from_home() -> bool:
 def data_home() -> str:
     """Base dos dados graváveis, numa pasta oculta (XDG).
 
-    `FALCONOS_DATA_DIR` troca a base inteira (útil para testes).
+    `FALCONOS_DATA_DIR` troca a base inteira (útil para testes); o prefixo
+    antigo `NLINUX_DATA_DIR` continua aceito.
     """
-    base = os.environ.get('FALCONOS_DATA_DIR')
+    base = env('DATA_DIR')
     if not base:
         base = os.environ.get('XDG_DATA_HOME') \
             or os.path.join(os.path.expanduser('~'), '.local', 'share')
-    return os.path.join(base, APP_DIRNAME)
+    novo = os.path.join(base, APP_DIRNAME)
+    antigo = os.path.join(base, LEGACY_APP_DIRNAME)
+    if not os.path.exists(novo) and os.path.isdir(antigo):
+        try:
+            shutil.move(antigo, novo)
+        except OSError:
+            pass
+    return novo
 
 
 def data_dir(role: str) -> str:
@@ -71,6 +94,21 @@ def writable(path: str) -> str:
     return path
 
 
+def _migrate_logo(target: str) -> None:
+    """Renomeia a logo antiga e garante a versão atual na pasta gravável."""
+    legacy = os.path.join(target, 'nlinux-logo.png')
+    new = os.path.join(target, 'falconos-logo.png')
+    bundled = os.path.join(BUNDLED_APPS_DIR, 'falconos-logo.png')
+    try:
+        if os.path.exists(legacy):
+            os.remove(legacy)
+        if os.path.exists(bundled) \
+                and os.path.realpath(bundled) != os.path.realpath(new):
+            shutil.copy2(bundled, new)
+    except OSError:
+        pass
+
+
 def seed_apps_dir(role: str) -> str:
     """Copia o catálogo do pacote para a pasta gravável, uma única vez.
 
@@ -79,6 +117,7 @@ def seed_apps_dir(role: str) -> str:
     """
     target = os.path.join(data_dir(role), 'apps')
     if os.path.isdir(target) or not os.path.isdir(BUNDLED_APPS_DIR):
+        _migrate_logo(target)
         return writable(target)
     writable(os.path.dirname(target))
     os.makedirs(os.path.dirname(target), exist_ok=True)
