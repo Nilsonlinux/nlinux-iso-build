@@ -97,3 +97,28 @@ imagemagick
 
 jq
 yq
+
+# Paridade com a instalação (packages/base.packages + desktop.packages).
+# O modo offline clona o live, então tudo o que o modo online recebe pelo
+# pacstrap precisa existir aqui também. Listado de forma explícita para não
+# depender de dependências transitivas do releng, que mudam entre releases.
+texinfo
+openresolv
+pipewire-jack
+brightnessctl
+dbus
+gvfs-mtp
+fontconfig
+ttf-jetbrains-mono-nerd
+fzf
+ripgrep
+fd
+eza
+bat
+btop
+wget
+curl
+unzip
+zip
+pciutils
+pacman-contrib

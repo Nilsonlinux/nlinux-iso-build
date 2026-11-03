@@ -38,9 +38,11 @@ rtkit
 
 cryptsetup
 lvm2
+btrfs-progs
 dosfstools
 exfatprogs
 ntfs-3g
+efibootmgr
 
 udisks2
 gvfs

@@ -16,7 +16,7 @@ Resultado instalado / ao vivo:
 - **FalconOS Software** (falconos-software com PackageKit + metadados AppStream)
 - **Boas-vindas no primeiro login** do sistema instalado (janela única, `zenity`)
 - **fastfetch** mostra a logo do FalconOS (PNG via protocolo kitty em `config/.config/fastfetch/img/falconos.png`) + especificações do sistema em pt-BR
-- **Desktop no live** com os mesmos apps da instalação (Firefox, kitty, Gnome Software…)
+- **Desktop no live** com os mesmos apps da instalação (Firefox, kitty, FalconOS Software…)
 
 ---
 
@@ -610,7 +610,7 @@ avisa é o `all.sh`, com `cstage`/`cnote`/`cact` (ver
 | 3 | `30-greetd.sh` | `/etc/greetd/config.toml` com o **noctalia-greeter** (sessão padrão `umbriel`) + setup do pacote |
 | 4 | `40-user-config.sh` | copia `config/.config` → `~/.config` do usuário (`.tpl` resolvidos com `__KEYBOARD_LAYOUT__` derivado do keymap) e `config/.local` → `~/.local` (ícones/cursor Bibata, logo do fastfetch), delega ao usuário |
 | 5 | `41-welcome.sh` | marca `/etc/falconos-installed` e instala `/usr/local/bin/falconos-welcome` (janela de boas-vindas única no 1º login; no live é inócuo) — acionado pelo autostart do Umbriel |
-| 6 | `50-services.sh` | habilita NetworkManager, bluetooth, greetd, accounts-daemon, **packagekit**, **rtkit-daemon**; **desabilita o `systemd-networkd`** e confere que só o NetworkManager ficou de gerente (o preset do Arch habilita os dois, e eles disputam o link); adiciona o **Flathub** para o usuário (App Center); **`appstreamcli refresh --force`** (metadados para a loja); `/etc/environment` (Wayland + `XCURSOR_THEME=Bibata-Modern-Ice`); NTP (`systemd-timesyncd`) |
+| 6 | `50-services.sh` | habilita NetworkManager, bluetooth, greetd, accounts-daemon, **packagekit**, **rtkit-daemon**; **desabilita o `systemd-networkd`** e confere que só o NetworkManager ficou de gerente (o preset do Arch habilita os dois, e eles disputam o link); adiciona o **Flathub** para o usuário (loja FalconOS Software); **`appstreamcli refresh --force`** (metadados para a loja); `/etc/environment` (Wayland + `XCURSOR_THEME=Bibata-Modern-Ice`); NTP (`systemd-timesyncd`) |
 
 ---
 
@@ -618,12 +618,18 @@ avisa é o `all.sh`, com `cstage`/`cnote`/`cact` (ver
 
 | Lista | Conteúdo |
 |---|---|
-| `packages/base.packages` | kernel, firmware, rede, áudio (PipeWire + **sound-theme-freedesktop**), ferramentas (fzf/ripgrep/starship…), `cryptsetup`, fontes |
-| `packages/desktop.packages` | stack Noctalia + apps: firefox, **kitty** e fish, starship, fastfetch, nautilus, gnome-text-editor, **gnome-software** (App Center: PackageKit + AppStream + Flatpak + **zenity** [boas-vindas]), spotify-launcher, discord, telegram-desktop, gpu-screen-recorder, eartag, **opencode** (agente de IA no terminal), swaylock/idle, zram-generator, mpv/ffmpeg/imagemagick |
+| `packages/base.packages` | kernel, firmware, rede, áudio (PipeWire + **sound-theme-freedesktop**), ferramentas (fzf/ripgrep/starship…), `cryptsetup`, `btrfs-progs`, `efibootmgr`, fontes |
+| `packages/desktop.packages` | stack Noctalia + apps: firefox, **kitty** e fish, starship, fastfetch, nautilus, gnome-text-editor, **FalconOS Software** (Python + GTK3/WebKit + PackageKit + AppStream + Flatpak, com **zenity** para as boas-vindas), **timeshift** (snapshots do sistema), **mpv-mpris** (controles de mídia), spotify-launcher, discord, telegram-desktop, gpu-screen-recorder, **opencode** (agente de IA no terminal), swaylock/idle, zram-generator, mpv/ffmpeg/imagemagick |
 | `packages/aur.packages` | `umbriel-git`, `noctalia-greeter`, `xwayland-satellite-git` (X11 no Umbriel), `whatsapp-linux-desktop-bin` — via `yay` no chroot |
-| `iso/packages.live` | ferramentas do instalador (cryptsetup/gdisk/btrfs-progs/parted/python…), `noctalia`, `greetd`, NetworkManager, e os mesmos apps do desktop (inclui **opencode**) + Flatpak/gnome-software/packagekit/appstream para o live |
+| `iso/packages.live` | ferramentas do instalador (cryptsetup/gdisk/btrfs-progs/parted/python…), `noctalia`, `greetd`, NetworkManager, e os mesmos apps do desktop (inclui **opencode**, **timeshift** e **mpv-mpris**) + Flatpak/packagekit/appstream para o live |
 
-`gnome-software` lista apps de repositório via
+> **Curadoria / paridade offline:** o modo **Rápido offline** clona o sistema
+> live em vez de rodar `pacstrap`. Por isso, todo pacote de `base.packages` ou
+> `desktop.packages` precisa estar também em `iso/packages.live` — a seção
+> final dessa lista existe só para garantir essa paridade. Ao adicionar um
+> pacote para a instalação, adicione-o ao live na mesma mudança.
+
+`FalconOS Software` lista apps de repositório via
 **PackageKit** e Flatpaks via **Flathub** (adicionado automaticamente ao usuário
 no live e na instalação). Para a loja listar programas, o live (no build) e a
 instalação rodam **`appstreamcli refresh --force`** para baixar os metadados

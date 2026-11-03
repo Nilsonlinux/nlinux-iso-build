@@ -1,10 +1,10 @@
-# FalconOS — release 2026.11.02
+# FalconOS — release 2026.11.03
 
 <h2 align="center">⬇️ Download</h2>
 
 <p align="center">
-  <a href="https://drive.google.com/file/d/1foh_WS4DnkBy_rJ5mo-6_AzOTCcFKxyk/view?usp=drive_link">FalconOS ISO (Google Drive)</a> — ISO live, ~2,9 GB, para <code>x86_64</code>.<br>
-  sha256 da ISO <code>85dd555c2da8199389c721d7a31db548d59f57a785c11b1b22ddbfa223178f9d</code>
+  <a href="https://drive.google.com/file/d/1OwX09j8_L7ikGAhdyWwYPVtuHDfo1CtK/view?usp=sharing">FalconOS ISO (Google Drive)</a> — ISO live, ~2,9 GB, para <code>x86_64</code>.<br>
+  sha256 da ISO <code>92ce5f420d335d23f4bf64ec6fe61886166163e7eb48fe1af459b9cec2754551</code>
 </p>
 
 Terceira release pública do FalconOS. A grande mudança desta versão é a **identidade definitiva da distribuição**: o antigo nome NLinux sai de cena e tudo passa a se chamar **FalconOS** — nome do sistema, usuário do ambiente live, hostname padrão, instalador, loja, serviços, arquivos de configuração, arte e repositórios. Junto vêm o **Timeshift** para snapshots do sistema, o **mpv-mpris** para integração de mídia com o player e ajustes visuais no Noctalia.
@@ -40,7 +40,7 @@ Terceira release pública do FalconOS. A grande mudança desta versão é a **id
 ## ⬆️ Já tem o FalconOS/NLinux instalado?
 
 - Atualize os pacotes normalmente: `sudo pacman -Syu`.
-- Para ter a identidade nova por completo — usuário live `falconos`, caminhos `falconos-*`, arte e menu atualizados — o caminho recomendado é **instalar a ISO 2026.11.02**. A renomeação mexe em caminhos do sistema que não são migrados por uma atualização de pacotes.
+- Para ter a identidade nova por completo — usuário live `falconos`, caminhos `falconos-*`, arte e menu atualizados — o caminho recomendado é **instalar a ISO 2026.11.03**. A renomeação mexe em caminhos do sistema que não são migrados por uma atualização de pacotes.
 - O Timeshift pode ser instalado em sistemas já existentes com `sudo pacman -S timeshift`.
 - O mpv-mpris pode ser instalado com `sudo pacman -S mpv-mpris`.
 
@@ -56,8 +56,8 @@ Terceira release pública do FalconOS. A grande mudança desta versão é a **id
 ## ✅ Como conferir o download
 
 ```bash
-sha256sum falconos-2026.11.02-x86_64.iso
-# 85dd555c2da8199389c721d7a31db548d59f57a785c11b1b22ddbfa223178f9d
+sha256sum falconos-2026.11.03-x86_64.iso
+# 92ce5f420d335d23f4bf64ec6fe61886166163e7eb48fe1af459b9cec2754551
 ```
 
 ## 📚 Documentação
