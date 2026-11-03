@@ -42,6 +42,7 @@ ttf-firacode-nerd
 flatpak
 packagekit
 appstream
+zenity
 
 spotify-launcher
 discord
@@ -54,6 +55,7 @@ gvfs
 udisks2
 gnome-text-editor
 xdg-user-dirs
+timeshift
 
 # opencode: agente de programação com IA (extra). Fica no live "Experimentar"
 # e, por consequência, no clone offline; o atalho vem do airootfs.
@@ -89,6 +91,7 @@ xdg-desktop-portal-gtk
 zram-generator
 
 mpv
+mpv-mpris
 ffmpeg
 imagemagick
 
