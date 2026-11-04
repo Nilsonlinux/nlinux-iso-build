@@ -25,7 +25,7 @@ Terceira release pública do FalconOS. A grande mudança desta versão é a **id
 
 - **Nova identidade visual**: logo novo no menu de boot, no fastfetch, na tela de boas-vindas, no instalador, na loja e nos ícones do sistema, com a arte de fundo atualizada (`FalconOS.jpg` / `splash.png`). Os temas de som e os nomes dos arquivos de arte também seguem a nova marca.
 
-![FalconOS](https://raw.githubusercontent.com/Nilsonlinux/falconos-iso-build/main/install/chroot/falconos-welcome/welcome-logo.png)
+![FalconOS](https://raw.githubusercontent.com/Nilsonlinux/nlinux-iso-build/main/install/chroot/nlinux-welcome/welcome-logo.png)
 
 - **Timeshift incluído**: o Timeshift vem na lista de pacotes do desktop e é instalado tanto no modo **Rápido offline** quanto no **Completo online**. Dá para criar snapshots do sistema e restaurar depois, com interface gráfica e assistente próprio.
 
