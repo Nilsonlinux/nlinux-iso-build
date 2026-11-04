@@ -20,7 +20,7 @@ Resultado instalado / ao vivo:
 
 ---
 
-<img width="1376" height="768" alt="NLinux" src="https://github.com/user-attachments/assets/a6f7d6c8-be19-4737-bb08-500d743beffa" />
+<img width="1376" height="768" alt="NLinux" src="https://github.com/user-attachments/assets/ec8d5381-bfb8-4a38-98ab-f31883c4a27f" />
 
 
 ## Estrutura do projeto
