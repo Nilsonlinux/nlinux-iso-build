@@ -368,8 +368,8 @@ collect_options_prompt() {
     INSTALL_MODE="${INSTALL_MODE:-wipe}"
   fi
   if [[ -z "$FS_TYPE" ]]; then
-    read -r -p "Sistema de arquivos (ext4 | btrfs) [ext4]: " FS_TYPE
-    FS_TYPE="${FS_TYPE:-ext4}"
+    read -r -p "Sistema de arquivos (ext4 | btrfs) [btrfs]: " FS_TYPE
+    FS_TYPE="${FS_TYPE:-btrfs}"
   fi
   if [[ -z "$USE_LUKS" ]]; then
     if is_prompt_y "Criptografar o disco com LUKS2?"; then
@@ -396,7 +396,7 @@ validate_options() {
   elif [[ -n "$DUAL_RESIZE_PARTITION" ]]; then
     die "Partição NTFS selecionada sem tamanho de redimensionamento."
   fi
-  FS_TYPE="${FS_TYPE:-ext4}"
+  FS_TYPE="${FS_TYPE:-btrfs}"
   [[ "$FS_TYPE" =~ ^(ext4|btrfs)$ ]] || die "Sistema de arquivos inválido: $FS_TYPE"
   USE_LUKS="${USE_LUKS:-0}"
   [[ "$USE_LUKS" =~ ^(0|1)$ ]] || USE_LUKS=0

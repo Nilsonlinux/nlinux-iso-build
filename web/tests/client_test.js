@@ -83,7 +83,8 @@ function boot(statusReply) {
      ficam no escopo do eval, então o epilogue é quem os expõe ao teste. */
   window.eval(app + `
 ;globalThis.__t = {
-  run, applyState, setLabel, paint, renderSteps, buildStages, startInstall,
+  run, state, steps, applyState, setLabel, paint, renderSteps, buildStages, startInstall,
+  renderStep: (index) => steps[index].render(document.getElementById("step")),
   stopClock, FALLBACK_STEPS,
   labels: () => ({
     label: doc.getElementById("stage-label").textContent,
@@ -131,6 +132,24 @@ const st = (plan, extra) => Object.assign(
   extra || {});
 
 (async function main() {
+  const defaults = boot({ running: false, done: false });
+  await sleep(60);
+  console.log("== opções padrão do assistente ==");
+  eq("btrfs é o sistema de arquivos padrão", defaults.T.state.FS_TYPE, "btrfs");
+  defaults.T.renderStep(3);
+  const fsCards = defaults.window.document.querySelectorAll("#step .card");
+  eq("btrfs aparece marcado", fsCards[1].classList.contains("selected"), true);
+  eq("ext4 não aparece marcado", fsCards[0].classList.contains("selected"), false);
+  eq("espelho automático é o padrão", defaults.T.state.MIRROR, "");
+  defaults.T.renderStep(4);
+  const mirrorCards = defaults.window.document.querySelectorAll("#step .card");
+  eq("espelho automático aparece marcado", mirrorCards[0].classList.contains("selected"), true);
+  eq("modo offline é o padrão", defaults.T.state.OFFLINE, "1");
+  defaults.T.renderStep(5);
+  const typeCards = defaults.window.document.querySelectorAll("#step .card");
+  eq("instalação offline aparece marcada", typeCards[0].classList.contains("selected"), true);
+  eq("instalação online não aparece marcada", typeCards[1].classList.contains("selected"), false);
+
   const p = boot(st(PLAN_ONLINE));
   const T = p.T;
   await sleep(60); // o IIFE do app já rodou (consultou o /api/status)

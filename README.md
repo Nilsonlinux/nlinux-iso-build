@@ -66,7 +66,7 @@ O instalador:
    - **2/10** Disco de destino (via `lsblk`; ignora `loop`/`zram`);
    - **3/10** Modo: **Apagar tudo** ou **Dual boot** (preserva a ESP e instala em
      espaço livre, com redução opcional de uma partição NTFS do Windows);
-   - **4/10** Sistema de arquivos: `ext4` ou `btrfs`;
+   - **4/10** Sistema de arquivos: `btrfs` (padrão) ou `ext4`;
    - **5/10** **Espelho de repositórios**: UFSCar, Leaseweb, Dogado, Kyoto ou
      Automático (padrão);
    - **6/10** **Tipo de instalação**: **Rápida (offline)** — padrão, copia o
