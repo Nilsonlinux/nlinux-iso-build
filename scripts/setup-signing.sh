@@ -1,7 +1,7 @@
 #!/bin/bash
 # SPDX-License-Identifier: GPL-3.0-or-later
 #
-# Configura a assinatura GPG de commits e tags do FalconOS.
+# Configura a assinatura GPG de commits e tags do NLinux.
 #
 # Modelo usado (recomendado para chave de releases):
 #
@@ -25,17 +25,17 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
-CONFIG_DIR="${FALCONOS_SIGNING_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/falconos-signing}"
+CONFIG_DIR="${NLINUX_SIGNING_DIR:-${XDG_CONFIG_HOME:-$HOME/.config}/nlinux-signing}"
 KEYS_ENV="$CONFIG_DIR/keys.env"
 PUBLIC_ASC="$CONFIG_DIR/public.asc"
 
 # Identidade e validade da chave. Podem ser sobrescritas por variáveis de
 # ambiente, mas o padrão é o que o README e o GitHub esperam.
-KEY_NAME="${FALCONOS_SIGNING_NAME:-FalconOS Releases}"
-KEY_EMAIL="${FALCONOS_SIGNING_EMAIL:-nilsonlinux@gmail.com}"
-KEY_EXPIRE="${FALCONOS_SIGNING_EXPIRE:-2y}"
-GIT_NAME="${FALCONOS_GIT_NAME:-Nilsonlinux}"
-GIT_EMAIL="${FALCONOS_GIT_EMAIL:-$KEY_EMAIL}"
+KEY_NAME="${NLINUX_SIGNING_NAME:-NLinux Releases}"
+KEY_EMAIL="${NLINUX_SIGNING_EMAIL:-nilsonlinux@gmail.com}"
+KEY_EXPIRE="${NLINUX_SIGNING_EXPIRE:-2y}"
+GIT_NAME="${NLINUX_GIT_NAME:-Nilsonlinux}"
+GIT_EMAIL="${NLINUX_GIT_EMAIL:-$KEY_EMAIL}"
 
 MACHINE=""
 OTHER_MACHINE=""
@@ -60,14 +60,14 @@ Comandos:
   verify      Faz um commit e uma tag de teste num repo temporário e
               confere as assinaturas.
   publish     Copia a chave pública nova para o repo, preserva a antiga em
-              falconos-releases-gpg-pub-legacy.asc e atualiza o README.
+              nlinux-releases-gpg-pub-legacy.asc e atualiza o README.
   doctor      Mostra o estado da chave, do agente, do Git e das tags.
   help        Esta ajuda.
 
 Opções do bootstrap:
   --machine NOME   Nome desta máquina (padrão: pergunta). Ex.: casa
   --other NOME     Nome da outra máquina (padrão: pergunta). Ex.: trabalho
-  --name NOME      Nome real da chave (padrão: FalconOS Releases)
+  --name NOME      Nome real da chave (padrão: NLinux Releases)
   --email EMAIL    E-mail/UID da chave (padrão: nilsonlinux@gmail.com)
   --expire PRAZO   Validade (padrão: 2y)
   --force          Refaz a configuração mesmo se já existir uma chave local
@@ -152,8 +152,8 @@ configure_pinentry() {
     # Para git em terminal, pinentry-curses é o mais confiável: funciona em
     # Wayland, X11, SSH e console. Pinentry gráfico só entra se não houver
     # nenhum pinentry de terminal (ou se o usuário pedir por variável).
-    if [[ -n "${FALCONOS_PINENTRY:-}" ]]; then
-      pin="$(command -v "${FALCONOS_PINENTRY}" || true)"
+    if [[ -n "${NLINUX_PINENTRY:-}" ]]; then
+      pin="$(command -v "${NLINUX_PINENTRY}" || true)"
     fi
     if [[ -z "$pin" ]]; then
       for candidate in pinentry-curses pinentry-tty pinentry; do
@@ -186,19 +186,19 @@ configure_pinentry() {
     local rc
     for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
       [[ -f "$rc" ]] || continue
-      if ! grep -q 'FALCONOS_SIGNING_GPG_TTY' "$rc"; then
+      if ! grep -q 'NLINUX_SIGNING_GPG_TTY' "$rc"; then
         {
           echo ''
-          echo '# FALCONOS_SIGNING_GPG_TTY: pinentry no terminal precisa do tty'
+          echo '# NLINUX_SIGNING_GPG_TTY: pinentry no terminal precisa do tty'
           echo 'export GPG_TTY="$(tty 2>/dev/null || true)"'
         } >> "$rc"
       fi
     done
     rc="$HOME/.config/fish/config.fish"
-    if [[ -f "$rc" ]] && ! grep -q 'FALCONOS_SIGNING_GPG_TTY' "$rc"; then
+    if [[ -f "$rc" ]] && ! grep -q 'NLINUX_SIGNING_GPG_TTY' "$rc"; then
       {
         echo ''
-        echo '# FALCONOS_SIGNING_GPG_TTY: pinentry no terminal precisa do tty'
+        echo '# NLINUX_SIGNING_GPG_TTY: pinentry no terminal precisa do tty'
         echo 'set -gx GPG_TTY (tty 2>/dev/null)'
       } >> "$rc"
     fi
@@ -241,7 +241,7 @@ secret_summary() {
 
 validate_backup() {
   local backup="$1" fpr="$2" tmp sub_count
-  tmp="$(mktemp -d "${TMPDIR:-/tmp}/falconos-signing-check.XXXXXX")"
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/nlinux-signing-check.XXXXXX")"
   chmod 700 "$tmp"
   # shellcheck disable=SC2064
   trap "rm -rf '$tmp'" RETURN
@@ -440,7 +440,7 @@ cmd_verify() {
     || die "chave secreta $FPR não está disponível nesta máquina."
 
   local tmp
-  tmp="$(mktemp -d "${TMPDIR:-/tmp}/falconos-signing-test.XXXXXX")"
+  tmp="$(mktemp -d "${TMPDIR:-/tmp}/nlinux-signing-test.XXXXXX")"
   # shellcheck disable=SC2064
   trap "rm -rf '$tmp'" RETURN
 
@@ -491,29 +491,29 @@ cmd_publish() {
   fpr_fmt="$(gpg --with-colons --list-keys "$FPR" | awk -F: '/^fpr:/{print $10; exit}' \
     | sed 's/\(....\)/\1 /g' | sed 's/ $//')"
 
-  if [[ -f "$REPO_DIR/falconos-releases-gpg-pub.asc" ]] \
-     && ! cmp -s "$PUBLIC_ASC" "$REPO_DIR/falconos-releases-gpg-pub.asc"; then
-    if [[ ! -f "$REPO_DIR/falconos-releases-gpg-pub-legacy.asc" ]]; then
-      cp "$REPO_DIR/falconos-releases-gpg-pub.asc" \
-         "$REPO_DIR/falconos-releases-gpg-pub-legacy.asc"
-      info "chave antiga preservada em falconos-releases-gpg-pub-legacy.asc"
+  if [[ -f "$REPO_DIR/nlinux-releases-gpg-pub.asc" ]] \
+     && ! cmp -s "$PUBLIC_ASC" "$REPO_DIR/nlinux-releases-gpg-pub.asc"; then
+    if [[ ! -f "$REPO_DIR/nlinux-releases-gpg-pub-legacy.asc" ]]; then
+      cp "$REPO_DIR/nlinux-releases-gpg-pub.asc" \
+         "$REPO_DIR/nlinux-releases-gpg-pub-legacy.asc"
+      info "chave antiga preservada em nlinux-releases-gpg-pub-legacy.asc"
     fi
   fi
 
-  cp "$PUBLIC_ASC" "$REPO_DIR/falconos-releases-gpg-pub.asc"
-  chmod 644 "$REPO_DIR/falconos-releases-gpg-pub.asc"
+  cp "$PUBLIC_ASC" "$REPO_DIR/nlinux-releases-gpg-pub.asc"
+  chmod 644 "$REPO_DIR/nlinux-releases-gpg-pub.asc"
 
   # Atualiza as linhas da seção "Assinatura das releases (GPG)".
   perl -0pi -e "s/^- Chave: \`[0-9A-F]+\`\$/- Chave: \`$short\`/m" "$REPO_DIR/README.md"
   perl -0pi -e "s/^- Impressão digital: \`[0-9A-F ]+\`\$/- Impressão digital: \`$fpr_fmt\`/m" "$REPO_DIR/README.md"
 
-  if ! grep -q 'falconos-releases-gpg-pub-legacy.asc' "$REPO_DIR/README.md"; then
-    perl -0pi -e 's/(- Impressão digital: `[^`]+`\n)/$1- Chave legada (releases antigas): [`falconos-releases-gpg-pub-legacy.asc`](falconos-releases-gpg-pub-legacy.asc)\n/' \
+  if ! grep -q 'nlinux-releases-gpg-pub-legacy.asc' "$REPO_DIR/README.md"; then
+    perl -0pi -e 's/(- Impressão digital: `[^`]+`\n)/$1- Chave legada (releases antigas): [`nlinux-releases-gpg-pub-legacy.asc`](nlinux-releases-gpg-pub-legacy.asc)\n/' \
       "$REPO_DIR/README.md"
   fi
 
-  if ! grep -q 'gpg --import falconos-releases-gpg-pub-legacy.asc' "$REPO_DIR/README.md"; then
-    perl -0pi -e 's/(gpg --import falconos-releases-gpg-pub\.asc[^\n]*\n)/$1gpg --import falconos-releases-gpg-pub-legacy.asc   # opcional: releases antigas\n/' \
+  if ! grep -q 'gpg --import nlinux-releases-gpg-pub-legacy.asc' "$REPO_DIR/README.md"; then
+    perl -0pi -e 's/(gpg --import nlinux-releases-gpg-pub\.asc[^\n]*\n)/$1gpg --import nlinux-releases-gpg-pub-legacy.asc   # opcional: releases antigas\n/' \
       "$REPO_DIR/README.md"
   fi
 
@@ -522,12 +522,12 @@ cmd_publish() {
   echo "  Chave: $short"
   echo "  Impressão digital: $fpr_fmt"
   echo
-  git -C "$REPO_DIR" --no-pager diff --stat -- README.md falconos-releases-gpg-pub.asc falconos-releases-gpg-pub-legacy.asc || true
+  git -C "$REPO_DIR" --no-pager diff --stat -- README.md nlinux-releases-gpg-pub.asc nlinux-releases-gpg-pub-legacy.asc || true
   echo
   echo "Revise com: git -C \"$REPO_DIR\" diff"
   echo "Depois assine e commite:"
-  echo "  git -C \"$REPO_DIR\" add falconos-releases-gpg-pub.asc falconos-releases-gpg-pub-legacy.asc README.md"
-  echo "  git -C \"$REPO_DIR\" commit -S -m 'assinatura: nova chave de releases FalconOS'"
+  echo "  git -C \"$REPO_DIR\" add nlinux-releases-gpg-pub.asc nlinux-releases-gpg-pub-legacy.asc README.md"
+  echo "  git -C \"$REPO_DIR\" commit -S -m 'assinatura: nova chave de releases NLinux'"
 }
 
 cmd_doctor() {

@@ -1,0 +1,2639 @@
+{
+  "accessories": {
+    "ghostty": {
+      "name": "Ghostty",
+      "summary": "Fast, native, feature-rich terminal emulator pushing modern features",
+      "description": "Fast, native, feature-rich terminal emulator pushing modern features",
+      "icon": "assets/ghostty.png",
+      "screenshots": [],
+      "developer-name": "Ghostty org",
+      "developer-url": "https://github.com/ghostty-org/ghostty",
+      "urls": {
+        "info": "https://github.com/ghostty-org/ghostty",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "ghostty",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "ghostty",
+          "install-packages": [
+            "ghostty"
+          ],
+          "remove-packages": [
+            "ghostty"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "ventoy": {
+      "name": "Ventoy",
+      "summary": "A new bootable USB solution",
+      "description": "Ventoy is an open source tool to create bootable USB drive for ISO/WIM/IMG/VHD(x)/EFI files.\nWith Ventoy, you don't need to format the disk over and over, just drag-and-drop files to the USB drive and boot them directly.",
+      "icon": "assets/ventoy.png",
+      "screenshots": [
+        "assets/ventoy-1.png"
+      ],
+      "developer-name": "ventoy.net",
+      "developer-url": "https://www.ventoy.net/en/index.html",
+      "urls": {
+        "info": "https://www.ventoy.net/en/index.html",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "ventoy-bin",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "ventoy-bin",
+          "install-packages": [
+            "ventoy-bin"
+          ],
+          "remove-packages": [
+            "ventoy-bin"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "etcher": {
+      "name": "Etcher",
+      "summary": "Flash OS images to SD cards & USB drives, safely and easily",
+      "description": "Etcher is a cross-platform tool for writing images to USB drives and SD cards, aiming to be really simple to prevent accidental damage to hard drives while checking every bit of data was written correctly.",
+      "icon": "assets/etcher.png",
+      "screenshots": [
+        "assets/etcher-1.jpg"
+      ],
+      "developer-name": "ali.molaei",
+      "developer-url": "https://www.balena.io/team",
+      "urls": {
+        "info": "https://etcher.balena.io/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "etcher-bin",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "etcher-bin",
+          "install-packages": [
+            "etcher-bin"
+          ],
+          "remove-packages": [
+            "etcher-bin"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "guvcview": {
+      "name": "Guvcview",
+      "summary": "Simple GTK interface for capturing and viewing video from V4L2 devices",
+      "description": "Simple GTK interface for capturing and viewing video from V4L2 devices",
+      "icon": "assets/guvcview.png",
+      "screenshots": [
+        "assets/guvcview-1.png"
+      ],
+      "developer-name": "",
+      "developer-url": "https://guvcview.sourceforge.net/",
+      "urls": {
+        "info": "https://guvcview.sourceforge.net/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "guvcview",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "guvcview",
+          "install-packages": [
+            "guvcview"
+          ],
+          "remove-packages": [
+            "guvcview"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    }
+  },
+  "development": {
+    "geany": {
+      "name": "Geany",
+      "summary": "Simple and lightweight IDE with powerful extensions",
+      "description": "Small and lightweight integrated development environment. It was developed to provide a small and fast IDE, which has only a few dependencies from other packages. The basic features of Geany are: syntax highlighting, code completion, auto completion,call tips, folding, symbol lists, embedded terminal emulation and many supported languages C/C++, HTML/CSS, Java. Markdown, Pascal, PHP, Python, Perl, Pascal.",
+      "icon": "assets/geany.png",
+      "screenshots": [
+        "assets/geany-1.jpg"
+      ],
+      "developer-name": "Alexander Rødseth",
+      "developer-url": "https://www.geany.org/Main/Authors",
+      "urls": {
+        "info": "http://www.geany.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "geany",
+      "arch": [
+        "x86_64",
+        "i686",
+        "aarch64",
+        "armv7h"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "geany",
+          "install-packages": [
+            "geany"
+          ],
+          "remove-packages": [
+            "geany"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "antigravity": {
+      "name": "Antigravity IDE",
+      "summary": "An agentic development platform from Google, evolving the IDE into the agent-first era",
+      "description": "An agentic development platform from Google, evolving the IDE into the agent-first era",
+      "icon": "assets/antigravity.png",
+      "screenshots": [],
+      "developer-name": "Google",
+      "developer-url": "https://about.google/",
+      "urls": {
+        "info": "https://antigravity.google/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "antigravity-ide",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "antigravity-ide",
+          "install-packages": [
+            "antigravity-ide"
+          ],
+          "remove-packages": [
+            "antigravity-ide"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "opencode": {
+      "name": "Opencode",
+      "summary": "The open source coding agent",
+      "description": "The open source coding agent",
+      "icon": "assets/opencode.webp",
+      "screenshots": [
+        "assets/opencode-1.png",
+        "assets/opencode-2.png"
+      ],
+      "developer-name": "https://opencode.ai/",
+      "developer-url": "https://github.com/anomalyco/opencode",
+      "urls": {
+        "info": "https://github.com/anomalyco/opencode",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "opencode",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "opencode",
+          "install-packages": [
+            "opencode"
+          ],
+          "remove-packages": [
+            "opencode"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "antigravity-cli": {
+      "name": "Antigravity cli",
+      "summary": "Google's agentic development platform (CLI companion)",
+      "description": "The terminal-first surface to interact with Antigravity agents. Stay in your flow without context switching.",
+      "icon": "assets/antigravity-cli.webp",
+      "screenshots": [
+        "assets/antigravity-cli-1.png"
+      ],
+      "developer-name": "Google",
+      "developer-url": "https://about.google/",
+      "urls": {
+        "info": "https://antigravity.google/product/antigravity-cli?ref=producthunt",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "antigravity-cli",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "antigravity-cli",
+          "install-packages": [
+            "antigravity-cli"
+          ],
+          "remove-packages": [
+            "antigravity-cli"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "code": {
+      "name": "Code",
+      "summary": "The Open Source build of Visual Studio Code (vscode) editor",
+      "description": "The Open Source build of Visual Studio Code (vscode) editor",
+      "icon": "assets/code.png",
+      "screenshots": [],
+      "developer-name": "Microsoft Corporation",
+      "developer-url": "https://github.com/microsoft",
+      "urls": {
+        "info": "https://github.com/microsoft/vscode",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "code",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "code",
+          "install-packages": [
+            "code"
+          ],
+          "remove-packages": [
+            "code"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "vscode": {
+      "name": "Visual Studio Code",
+      "summary": "Cross-platform source code editor from Microsoft.",
+      "description": "Visual Studio Code is a lightweight but powerful source code editor which runs on your desktop and is available for Windows, macOS and Linux. It comes with built-in support for JavaScript, TypeScript and Node.js and has a rich ecosystem of extensions for other languages (such as C++, C#, Python, PHP, Go) and runtimes (such as .NET and Unity).",
+      "icon": "assets/vscode.png",
+      "screenshots": [
+        "assets/vscode-1.png"
+      ],
+      "developer-name": "Microsoft Corporation",
+      "developer-url": "https://www.microsoft.com/",
+      "urls": {
+        "info": "https://code.visualstudio.com/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "code",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "visual-studio-code-bin",
+          "install-packages": [
+            "visual-studio-code-bin"
+          ],
+          "remove-packages": [
+            "visual-studio-code-bin"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    }
+  },
+  "education": {
+    "stellarium": {
+      "name": "Stellarium",
+      "summary": "Software which renders realistic skies in real time with OpenGL",
+      "description": "A planetarium for your computer that renders 3D photo-realistic skies in real-time so you really see what you can see with your eyes, binoculars or a small telescope. It features a default star catalogue with over 600 thousand stars, information about the brightest stars (spectral type, distance, etc.), downloadable star catalogue extensions, for up to 210 million stars, all New General Catalogue (NGC) objects, images of almost all Messier objects and the Milky Way, real time positions of the planets and their satellites, 13 different cultures with their constellations, artistic illustrations of the 88 Western constellations, very realistic atmosphere, sunrise and sunset, and 7 panoramic landscapes (more can be made or downloaded from the website). Stellarium should not be used for very high accurate calculation or ephemerids like eclipse predictions. However, it is the ideal program to prepare an observation evening with naked eye, binocular, or small telescope.",
+      "icon": "assets/stellarium.png",
+      "screenshots": [
+        "assets/stellarium-1.jpg"
+      ],
+      "developer-name": "Various Contributors",
+      "developer-url": "https://github.com/Stellarium/stellarium/blob/master/AUTHORS",
+      "urls": {
+        "info": "https://stellarium.org",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "stellarium",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "stellarium",
+          "install-packages": [
+            "stellarium"
+          ],
+          "remove-packages": [
+            "stellarium"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "tuxpaint": {
+      "name": "Tux Paint",
+      "summary": "Drawing program designed for young children",
+      "description": "An award-winning drawing program designed for children aged 3 to 12. It provides an easy to use interface, fun sound effects and Tux as the cartoon mascot to guide the children throughout the program.",
+      "icon": "assets/tuxpaint.png",
+      "screenshots": [
+        "assets/tuxpaint-1.png"
+      ],
+      "developer-name": "Bill Kendrick",
+      "developer-url": "https://tuxpaint.org/developers/",
+      "urls": {
+        "info": "https://tuxpaint.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "tuxpaint",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "tuxpaint",
+          "install-packages": [
+            "tuxpaint"
+          ],
+          "remove-packages": [
+            "tuxpaint"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    }
+  },
+  "games": {
+    "0ad": {
+      "name": "0 A.D",
+      "summary": "Cross-platform real-time strategy (RTS) game of ancient warfare",
+      "description": "A free, open-source,  In short, it is a historically-based war/economy game that allows players to relive or rewrite the history of Western civilisations, focusing on the years between 500 B.C. and 500 A.D. The project is highly ambitious, involving state-of-the-art 3D graphics, detailed artwork, sound, and a flexible and powerful custom-built game engine.",
+      "icon": "assets/0ad.png",
+      "screenshots": [],
+      "developer-name": "Wildfire Games",
+      "developer-url": "https://trac.wildfiregames.com/",
+      "urls": {
+        "info": "http://play0ad.com/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "0ad",
+      "arch": [
+        "x86_64",
+        "i686"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "0ad",
+          "install-packages": [
+            "0ad"
+          ],
+          "remove-packages": [
+            "0ad"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "pysolfc": {
+      "name": "PySolFC",
+      "summary": "A collection of more than 1000 solitaire card games",
+      "description": "There are games that use the 52 card International Pattern deck, games for the 78 card Tarock deck, eight and ten suit Ganjifa games, Hanafuda games, Matrix games, Mahjongg games, and games for an original hexadecimal-based deck. Its features include modern look and feel, multiple cardsets and tableau backgrounds, sound, unlimited undo, player statistics, a hint system, demo games, a solitaire wizard, support for user written plug-ins, an integrated HTML help browser, and lots of documentation.",
+      "icon": "assets/pysolfc.png",
+      "screenshots": [
+        "assets/pysolfc-1.jpg"
+      ],
+      "developer-name": "Various Contributors",
+      "developer-url": "https://github.com/shlomif/PySolFC/blob/master/AUTHORS",
+      "urls": {
+        "info": "http://pysolfc.sourceforge.net/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "pysolfc",
+      "arch": [
+        "x86_64",
+        "i686",
+        "aarch64",
+        "armv7h"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "pysolfc",
+          "install-packages": [
+            "pysolfc"
+          ],
+          "remove-packages": [
+            "pysolfc"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "supertuxkart": {
+      "name": "SuperTuxKart",
+      "summary": "3D kart racing game featuring Tux and other mascots",
+      "description": "A free 3D kart racing game, with a focus on having fun over realism. You can play with up to 4 friends on one PC, racing against each other or just trying to beat the computer; single-player mode is also available. See the great lighthouse or drive through the sand and visit the pyramids. Race underground or in space, watching the stars pass by. Or rest under the palm trees on the beach, watching the other karts overtake you. But don&#8217;t eat the bananas! Watch for bowling balls, plungers, bubble gum and cakes thrown by your opponents. You can do a single race against other karts, compete in one of several Grand Prix, try to beat the high score in time trials on your own, play battle mode against your friends, and more!",
+      "icon": "assets/supertuxkart.png",
+      "screenshots": [],
+      "developer-name": "SuperTuxKart Team",
+      "developer-url": "https://supertuxkart.net/Team",
+      "urls": {
+        "info": "http://supertuxkart.sourceforge.net/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "supertuxkart",
+      "arch": [
+        "x86_64",
+        "i686",
+        "aarch64",
+        "armv7h"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "supertuxkart",
+          "install-packages": [
+            "supertuxkart"
+          ],
+          "remove-packages": [
+            "supertuxkart"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "warzone2100": {
+      "name": "Warzone 2100",
+      "summary": "3D real-time strategy game",
+      "description": "Requires you to command the forces of &#8217;The Project&#8217; in a battle to rebuild the world after mankind has almost been destroyed by nuclear missiles. The game offers campaign, tutorial, multi-player and single-player skirmish modes. An extensive tech tree with over 400 different technologies, combined with the unit design system, allows for a wide variety of possible units and tactics. <u>The campaign video sequences are not yet distributed here, please see the Warzone 2100 website for details on downloading and installing them.</u>",
+      "icon": "assets/warzone2100.png",
+      "screenshots": [],
+      "developer-name": "Pumpkin Studios and Contributors",
+      "developer-url": "https://github.com/Warzone2100/warzone2100/blob/master/AUTHORS",
+      "urls": {
+        "info": "https://wz2100.net/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "warzone2100",
+      "arch": [
+        "x86_64",
+        "i686"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "warzone2100",
+          "install-packages": [
+            "warzone2100"
+          ],
+          "remove-packages": [
+            "warzone2100"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "wesnoth": {
+      "name": "The Battle for Wesnoth",
+      "summary": "Turn-based tactical strategy game with a high fantasy theme",
+      "description": "Build up a great army, gradually turning raw recruits into hardened veterans. In later games, recall your toughest warriors and form a deadly host that none can stand against! Choose units from a large pool of specialists, and hand-pick a force with the right strengths to fight well on different terrains against all manner of opposition.",
+      "icon": "assets/wesnoth.png",
+      "screenshots": [],
+      "developer-name": "Various Contributors",
+      "developer-url": "https://github.com/wesnoth/wesnoth/graphs/contributors",
+      "urls": {
+        "info": "http://wesnoth.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "wesnoth",
+      "arch": [
+        "x86_64",
+        "i686"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "wesnoth",
+          "install-packages": [
+            "wesnoth"
+          ],
+          "remove-packages": [
+            "wesnoth"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "wine-devel": {
+      "name": "Wine Development Builds",
+      "summary": "Compatibility layer for running Windows games and applications",
+      "description": "The latest, official development builds of the Wine Compatibility Layer. These allow you to play a wider range of Windows games and software as soon as new versions of Wine are released.",
+      "icon": "assets/wine-devel.png",
+      "screenshots": [],
+      "developer-name": "Wine Team and Many Contributors",
+      "developer-url": "https://source.winehq.org/source/AUTHORS",
+      "urls": {
+        "info": "https://www.winehq.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "wine",
+      "arch": [
+        "x86_64",
+        "i686"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "wine",
+          "install-packages": [
+            "wine"
+          ],
+          "remove-packages": [
+            "wine"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "freeciv": {
+      "name": "Freeciv",
+      "summary": "Clone of the turn based strategy game Civilization",
+      "description": "In this game, each player becomes leader of a civilisation, fighting to obtain the ultimate goal: the extinction of all other civilisations.",
+      "icon": "assets/freeciv.png",
+      "screenshots": [
+        "assets/freeciv-1.jpg"
+      ],
+      "developer-name": "Various Contributors",
+      "developer-url": "http://freeciv.wikia.com/wiki/People",
+      "urls": {
+        "info": "http://www.freeciv.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "freeciv-gtk3.22",
+      "arch": [
+        "x86_64",
+        "i686",
+        "aarch64",
+        "armv7h"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "freeciv-gtk3",
+          "install-packages": [
+            "freeciv-gtk3"
+          ],
+          "remove-packages": [
+            "freeciv-gtk3"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "aisleriot": {
+      "name": "Desktop Games Collection",
+      "summary": "A variety of styles and genre games, such as Chess and Minesweeper",
+      "description": "A collection of more desktop games including 80 popular card games, Mahjongg, Mines and Sudoku.",
+      "icon": "assets/aisleriot.png",
+      "screenshots": [],
+      "developer-name": "GNOME Team",
+      "developer-url": "https://www.gnome.org/about/",
+      "urls": {
+        "info": "https://wiki.gnome.org/action/show/Attic/Games",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "gnome-games",
+      "arch": [
+        "x86_64",
+        "i686",
+        "aarch64",
+        "armv7h"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "gnome-games",
+          "install-packages": [
+            "gnome-games"
+          ],
+          "remove-packages": [
+            "gnome-games"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "extremetuxracer": {
+      "name": "Extreme Tux Racer",
+      "summary": "Simple racing game featuring Tux",
+      "description": "A simple OpenGL racing game featuring Tux, the Linux mascot. The goal of the game is to slide down a snow- and ice-covered mountain as quickly as possible, avoiding the trees and rocks that will slow you down. Collect herrings and other goodies while sliding down the hill, but avoid fish bones.",
+      "icon": "assets/extremetuxracer.png",
+      "screenshots": [
+        "assets/extremetuxracer-1.jpg"
+      ],
+      "developer-name": "Extreme Tux Racer Team",
+      "developer-url": "https://launchpad.net/~etracer",
+      "urls": {
+        "info": "http://sourceforge.net/projects/extremetuxracer/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "extremetuxracer",
+      "arch": [
+        "x86_64",
+        "i686",
+        "aarch64",
+        "armv7h"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "extremetuxracer",
+          "install-packages": [
+            "extremetuxracer"
+          ],
+          "remove-packages": [
+            "extremetuxracer"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "frozenbubble": {
+      "name": "Frozen-Bubble",
+      "summary": "Clone of Puzzle Bobble",
+      "description": "A clone of the popular <i>Puzzle Bobble</i> game, in which you attempt to shoot bubbles into groups of the same color to cause them to pop. Players compete as penguins and must use the arrow keys to aim a colored bubble at groups of bubbles. The objective is to clear all the bubbles off the screen before a bubble passes below a line at the bottom. It features 100 single-player levels, a two-player mode, music and striking graphics. A level editor is also included to allow players to create and play their own levels.",
+      "icon": "assets/frozenbubble.png",
+      "screenshots": [
+        "assets/frozenbubble-1.jpg"
+      ],
+      "developer-name": "The Frozen-Bubble Team",
+      "developer-url": "http://www.frozen-bubble.org/downloads/",
+      "urls": {
+        "info": "http://frozen-bubble.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "frozen-bubble",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "frozen-bubble",
+          "install-packages": [
+            "frozen-bubble"
+          ],
+          "remove-packages": [
+            "frozen-bubble"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "neverball": {
+      "name": "Neverball",
+      "summary": "Tilt the floor to roll a ball through an obstacle course before time runs out",
+      "description": "Guide a rolling ball through dangerous territory in the grand tradition of Marble Madness and Super Monkey Ball. Balance on narrow bridges, navigate mazes, ride moving platforms, and dodge pushers and shovers to get to the goal. Race against the clock to collect coins to earn extra balls.",
+      "icon": "assets/neverball.png",
+      "screenshots": [],
+      "developer-name": "Various Contributors",
+      "developer-url": "http://neverball.org/contributors.php",
+      "urls": {
+        "info": "http://neverball.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "neverball",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "neverball",
+          "install-packages": [
+            "neverball"
+          ],
+          "remove-packages": [
+            "neverball"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "playonlinux": {
+      "name": "PlayOnLinux",
+      "summary": "Frontend for managing the Wine Compatibility Layer",
+      "description": "It enables you to easily install and configure Windows games and software on Linux with the use of tried and tested scripts as well as managing your own prefixes.",
+      "icon": "assets/playonlinux.png",
+      "screenshots": [
+        "assets/playonlinux-1.jpg",
+        "assets/playonlinux-2.jpg"
+      ],
+      "developer-name": "PlayOnLinux Team",
+      "developer-url": "https://github.com/orgs/PlayOnLinux/people",
+      "urls": {
+        "info": "https://www.playonlinux.com/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "playonlinux",
+      "arch": [
+        "x86_64",
+        "i686"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "playonlinux",
+          "install-packages": [
+            "playonlinux"
+          ],
+          "remove-packages": [
+            "playonlinux"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "retroarch": {
+      "name": "RetroArch",
+      "summary": "Frontend for emulators for various systems",
+      "description": "RetroArch is an open source, multi-platform frontend for the libretro API. It is designed to be a fast, lightweight, and portable multi-system emulator.",
+      "icon": "assets/retroarch.png",
+      "screenshots": [
+        "assets/retroarch-1.jpg",
+        "assets/retroarch-2.jpg"
+      ],
+      "developer-name": "Maxime Gauduin",
+      "developer-url": "https://github.com/orgs/libretro/people",
+      "urls": {
+        "info": "http://retroarch.com",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "retroarch",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "retroarch",
+          "install-packages": [
+            "retroarch"
+          ],
+          "remove-packages": [
+            "retroarch"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "chromiumbsu": {
+      "name": "Chromium B.S.U",
+      "summary": "Top down fast paced high action scrolling space shooter",
+      "description": "In this game you are the captain of the cargo ship Chromium B.S.U. and are responsible for delivering supplies to the troops on the front line. Your ship has a small fleet of robotic fighters which you control from the relative safety of the Chromium vessel.",
+      "icon": "assets/chromiumbsu.png",
+      "screenshots": [
+        "assets/chromiumbsu-1.jpg"
+      ],
+      "developer-name": "Mark B. Allan",
+      "developer-url": "http://chromium-bsu.sourceforge.net/about.html",
+      "urls": {
+        "info": "http://chromium-bsu.sourceforge.net/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "chromium-bsu",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "chromium-bsu",
+          "install-packages": [
+            "chromium-bsu"
+          ],
+          "remove-packages": [
+            "chromium-bsu"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "steam": {
+      "name": "Steam",
+      "summary": "Valve's digital software delivery system",
+      "description": "The ultimate entertainment platform. Play games, connect with friends, even create and share content of your own. Join 50 million of your closest friends on Steam. Enjoy exclusive deals, automatic game updates, and cross-platform multiplayer. Plus, now you take advantage of Big Picture mode, designed for use with your TV and game controller.",
+      "icon": "assets/steam.webp",
+      "screenshots": [],
+      "developer-name": "Valve Corporation",
+      "developer-url": "https://www.valvesoftware.com/",
+      "urls": {
+        "info": "https://store.steampowered.com/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "steam",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "steam",
+          "install-packages": [
+            "steam"
+          ],
+          "remove-packages": [
+            "steam"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "lutris": {
+      "name": "Lutris",
+      "summary": "Open gaming platform for organising games",
+      "description": "Lutris is an open gaming platform for Linux. It helps you install and manage your games in a unified interface.",
+      "icon": "assets/lutris.png",
+      "screenshots": [
+        "assets/lutris-1.jpg"
+      ],
+      "developer-name": "Lutris Gaming",
+      "developer-url": "https://github.com/orgs/lutris/people",
+      "urls": {
+        "info": "http://lutris.net",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "lutris",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "lutris",
+          "install-packages": [
+            "lutris"
+          ],
+          "remove-packages": [
+            "lutris"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    }
+  },
+  "graphics": {
+    "inkscape": {
+      "name": "Inkscape",
+      "summary": "SVG Editor",
+      "description": "Loads and saves a subset of the SVG (Scalable Vector Graphics) format, a standard maintained by the WWW consortium.  Inkscape user interface should be familiar from CorelDraw and similar drawing programs. There are rectangles, ellipses, text items, bitmap images and freehand curves. As an added bonus, both vector and bitmap objects can have alpha transparency and can be arbitrarily transformed.  Inkscape supports multiple opened files and multiple views per file. Graphics can be printed and exported to png bitmaps.  Some of the import and export features are provided using the packages dia, libwmf-bin, pstoedit, skencil, imagemagick, and perlmagick. ",
+      "icon": "assets/inkscape.png",
+      "screenshots": [
+        "assets/inkscape-1.jpg"
+      ],
+      "developer-name": "Inkscape Team",
+      "developer-url": "https://inkscape.org/en/credits/",
+      "urls": {
+        "info": "https://inkscape.org/",
+        "android-app": null,
+        "ios-app": null
+      },
+      "launch-cmd": "inkscape",
+      "arch": [
+        "i686",
+        "x86_64",
+        "armv7h",
+        "aarch64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "inkscape",
+          "install-packages": [
+            "inkscape"
+          ],
+          "remove-packages": [
+            "inkscape"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": "Adobe&reg; Illustrator",
+      "listed": true
+    },
+    "gimp": {
+      "name": "GIMP",
+      "summary": "GNU Image Manipulation Program - an advanced graphic editor.",
+      "description": "GIMP can edit, enhance, and retouch photos and scans, create drawings, and make your own images. It has a large collection of professional-level editing tools and filters, similar to the ones you might find in Photoshop. Numerous fine-control settings and features like layers, paths, masks, and scripting give you total control over your images. Many image file formats are supported, including JPEG, Photoshop (.psd), and Paint Shop Pro (.psp) files. It can also be used to scan and print photos. <u>The CMYK plug-ins are also included.</u>",
+      "icon": "assets/gimp.png",
+      "screenshots": [
+        "assets/gimp-1.jpg",
+        "assets/gimp-2.jpg"
+      ],
+      "developer-name": "The GIMP Team",
+      "developer-url": "https://www.gimp.org/about/authors.html",
+      "urls": {
+        "info": "http://www.gimp.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "gimp",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "gimp",
+          "install-packages": [
+            "gimp"
+          ],
+          "remove-packages": [
+            "gimp"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "blender": {
+      "name": "Blender",
+      "summary": "3D suite for models, animation and rendering",
+      "description": "An integrated 3D suite for modelling, animation, rendering, post-production, interactive creation and playback (games). Blender has its own particular user interface, which is implemented entirely in OpenGL and designed with speed in mind. Python bindings are available for scripting; import/export features for popular file formats like 3D Studio and Wavefront Obj are implemented as scripts by the community. Stills, animations, models for games or other third party engines and interactive content in the form of a standalone binary are common products of Blender use.",
+      "icon": "assets/blender.png",
+      "screenshots": [
+        "assets/blender-1.jpg",
+        "assets/blender-2.jpg"
+      ],
+      "developer-name": "Various Contributors",
+      "developer-url": "https://www.blender.org/get-involved/",
+      "urls": {
+        "info": "https://www.blender.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "blender",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "blender",
+          "install-packages": [
+            "blender"
+          ],
+          "remove-packages": [
+            "blender"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    }
+  },
+  "internet": {
+    "telegram": {
+      "name": "Telegram",
+      "summary": "Messaging app with focus on speed and security",
+      "description": "A messaging app with a focus on speed and security, it&#8217;s super fast, simple and free. You can use Telegram on all your devices at the same time - your messages sync seamlessly across any of your phones, tablets or computers. With Telegram, you can send messages, photos, videos and files of any type (doc, zip, mp3, etc), as well as create groups for up to 200 people. You can write to your phone contacts and find people by their usernames. As a result, Telegram is like SMS and email combined - and can take care of all your personal or business messaging needs.",
+      "icon": "assets/telegram.png",
+      "screenshots": [
+        "assets/telegram-1.png"
+      ],
+      "developer-name": "Telegram Team",
+      "developer-url": "https://telegram.org/faq#q-who-are-the-people-behind-telegram",
+      "urls": {
+        "info": "https://telegram.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "telegram-desktop",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "telegram-desktop",
+          "install-packages": [
+            "telegram-desktop"
+          ],
+          "remove-packages": [
+            "telegram-desktop"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "brave": {
+      "name": "Brave",
+      "summary": "Web browser that blocks ads and trackers",
+      "description": "Browse faster and safer with Brave. The new Brave browser automatically blocks ads and trackers, making it faster and safer than your current browser. Start supporting publishers today with our new Brave Payments system.",
+      "icon": "assets/brave.png",
+      "screenshots": [],
+      "developer-name": "Brave Software Inc.",
+      "developer-url": "https://brave.com/about/",
+      "urls": {
+        "info": "https://brave.com",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "brave-bin",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "brave-bin",
+          "install-packages": [
+            "brave-bin"
+          ],
+          "remove-packages": [
+            "brave-bin"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "whatsapp-desktop": {
+      "name": "Whatsapp Desktop",
+      "summary": "An unofficial WhatsApp Linux Desktop application",
+      "description": "An unofficial WhatsApp Linux Desktop application",
+      "icon": "assets/whatsapp-desktop.png",
+      "screenshots": [
+        "assets/whatsapp-desktop-1.png"
+      ],
+      "developer-name": "sayedulsayem",
+      "developer-url": "",
+      "urls": {
+        "info": "https://github.com/sayedulsayem/whatsapp-linux-desktop",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "whatsapp-linux-desktop-bin",
+          "install-packages": [
+            "whatsapp-linux-desktop-bin"
+          ],
+          "remove-packages": [
+            "whatsapp-linux-desktop-bin"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "filezilla": {
+      "name": "FileZilla",
+      "summary": "File transfer tool for FTP, FTPS and SFTP (SSH).",
+      "description": "A full-featured FTP client with an easy-to-use GUI. Supports FTP, FTP over SSL/TLS (FTPS) and SSH File Transfer Protocol (SFTP). IPv6 support. Available in more than 40 languages. Supports resume and transfer of large files >4GB. Easy to use Site Manager and transfer queue. Bookmarks. Drag & drop support. Speed limits. Filename filters. Directory comparison. Network configuration wizard. Remote file editing. Keep-alive. HTTP/1.1, SOCKS5 and FTP Proxy support. Logging to file. Synchronized directory browsing. Remote file search. Tabbed interface to connect to multiple servers.",
+      "icon": "assets/filezilla.png",
+      "screenshots": [
+        "assets/filezilla-1.jpg"
+      ],
+      "developer-name": "Tim Kosse and Contributors",
+      "developer-url": "https://github.com/zedfoxus/filezilla-client/blob/master/AUTHORS",
+      "urls": {
+        "info": "https://filezilla-project.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "filezilla",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "filezilla",
+          "install-packages": [
+            "filezilla"
+          ],
+          "remove-packages": [
+            "filezilla"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "slack": {
+      "name": "Slack",
+      "summary": "Team communication and collaboration",
+      "description": "Slack brings team communication and collaboration into one place so you can get more work done, whether you belong to a large enterprise or a small business. Check off your to-do list and move your projects forward by bringing the right people, conversations, tools, and information you need together.",
+      "icon": "assets/slack.png",
+      "screenshots": [],
+      "developer-name": "Slack Technologies",
+      "developer-url": "https://slack.com/",
+      "urls": {
+        "info": "https://slack.com/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "slack-desktop",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "slack-desktop",
+          "install-packages": [
+            "slack-desktop"
+          ],
+          "remove-packages": [
+            "slack-desktop"
+          ]
+        }
+      },
+      "proprietary": true,
+      "alternate-to": null,
+      "listed": true
+    },
+    "vivaldi": {
+      "name": "Vivaldi",
+      "summary": "An advanced browser made with the power user in mind.",
+      "description": "Vivaldi browser is made with power users in mind by people who love the Web.",
+      "icon": "assets/vivaldi.png",
+      "screenshots": [
+        "assets/vivaldi-1.jpg"
+      ],
+      "developer-name": "Ike Devolder",
+      "developer-url": "https://vivaldi.com",
+      "urls": {
+        "info": "https://vivaldi.com",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "vivaldi",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "vivaldi",
+          "install-packages": [
+            "vivaldi"
+          ],
+          "remove-packages": [
+            "vivaldi"
+          ]
+        }
+      },
+      "proprietary": true,
+      "alternate-to": null,
+      "listed": false
+    },
+    "thunderbird": {
+      "name": "Thunderbird",
+      "summary": "Full-featured email, RSS and newsgroup client",
+      "description": "Thunderbird is a full-featured email, RSS and newsgroup client that makes emailing safer, faster and easier than ever before. It supports different mail accounts (POP, IMAP, Gmail), has a simple mail account setup wizard, one-click address book, tabbed interface, an integrated learning spam filter, advanced search and indexing capabilities, and offers easy organization of mails with tagging and virtual folders. It also features unrivalled extensibility.",
+      "icon": "assets/thunderbird.png",
+      "screenshots": [
+        "assets/thunderbird-1.jpg"
+      ],
+      "developer-name": "Mozilla",
+      "developer-url": "https://www.mozilla.org/",
+      "urls": {
+        "info": "https://www.mozilla.org/en-US/thunderbird/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "thunderbird",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "thunderbird",
+          "install-packages": [
+            "thunderbird"
+          ],
+          "remove-packages": [
+            "thunderbird"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "firefox": {
+      "name": "Firefox",
+      "summary": "Safe and easy web browsing",
+      "description": "Firefox delivers safe, easy web browsing. A familiar user interface, enhanced security features including protection from online identity theft, and integrated search let you get the most out of the web.  If you are a <b>Netflix</b> subscriber then Firefox fully supports Netflix.",
+      "icon": "assets/firefox.png",
+      "screenshots": [
+        "assets/firefox-1.png"
+      ],
+      "developer-name": "Mozilla",
+      "developer-url": "https://www.mozilla.org",
+      "urls": {
+        "info": "https://www.mozilla.org/firefox",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "firefox",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "firefox",
+          "install-packages": [
+            "firefox"
+          ],
+          "remove-packages": [
+            "firefox"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "hexchat": {
+      "name": "Hexchat",
+      "summary": "Graphical IRC client",
+      "description": "HexChat is a graphical IRC client with a GTK+ GUI. Features include Python and Perl scripting support, a plugin API, multiple server/channel windows, spell checking, multiple authentication methods including SASL, and customizable notifications.",
+      "icon": "assets/hexchat.png",
+      "screenshots": [],
+      "developer-name": "Various Contributors",
+      "developer-url": "https://github.com/hexchat/hexchat/graphs/contributors",
+      "urls": {
+        "info": "https://hexchat.github.io/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "hexchat",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "hexchat",
+          "install-packages": [
+            "hexchat"
+          ],
+          "remove-packages": [
+            "hexchat"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "zenmap": {
+      "name": "Zenmap",
+      "summary": "Frontend for Nmap, for network discovery and security auditing",
+      "description": "A frontend for Nmap, a utility for network discovery and security auditing, that is meant to be useful for advanced users and to make Nmap easy to use by beginners.",
+      "icon": "assets/zenmap.png",
+      "screenshots": [
+        "assets/zenmap-1.jpg"
+      ],
+      "developer-name": "Levente Polyak, Carl Smedstad, Hyacinthe Cartiaux",
+      "developer-url": "https://nmap.org/",
+      "urls": {
+        "info": "https://nmap.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "zenmap",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "zenmap",
+          "install-packages": [
+            "zenmap"
+          ],
+          "remove-packages": [
+            "zenmap"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "discord": {
+      "name": "Discord",
+      "summary": "All-in-one voice and text chat for gamers",
+      "description": "All-in-one voice and text chat for gamers",
+      "icon": "assets/discord.png",
+      "screenshots": [],
+      "developer-name": "Discord Inc",
+      "developer-url": "https://discord.com",
+      "urls": {
+        "info": "https://discord.com",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "discord",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "discord",
+          "install-packages": [
+            "discord"
+          ],
+          "remove-packages": [
+            "discord"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "chromium": {
+      "name": "Chromium",
+      "summary": "The open source version of Google Chrome",
+      "description": "The project aims to build a safer, faster, and more stable way for all Internet users to experience the web.",
+      "icon": "assets/chromium.png",
+      "screenshots": [
+        "assets/chromium-1.jpg"
+      ],
+      "developer-name": "The Chromium Projects, controlled by Google",
+      "developer-url": "https://www.chromium.org/chromium-projects/",
+      "urls": {
+        "info": "https://www.chromium.org/Home",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "chromium",
+      "arch": [
+        "x86_64",
+        "i686",
+        "armv7h"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "chromium",
+          "install-packages": [
+            "chromium"
+          ],
+          "remove-packages": [
+            "chromium"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "google-chrome": {
+      "name": "Google Chrome",
+      "summary": "The popular web browser by Google (Stable Channel)",
+      "description": "The popular web browser by Google (Stable Channel)",
+      "icon": "assets/google-chrome.png",
+      "screenshots": [],
+      "developer-name": "Google",
+      "developer-url": "https://www.google.com/intl/en/chrome/",
+      "urls": {
+        "info": "https://www.google.com/chrome",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "google-chrome",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "google-chrome",
+          "install-packages": [
+            "google-chrome"
+          ],
+          "remove-packages": [
+            "google-chrome"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    }
+  },
+  "multimedia": {
+    "vlc": {
+      "name": "VLC",
+      "summary": "Popular libre and open source media player and multimedia engine",
+      "description": "VLC is the VideoLAN project&#8217;s media player. It plays MPEG, MPEG-2, MPEG-4, DivX, MOV, WMV, QuickTime, WebM, FLAC, MP3, Ogg/Vorbis files, DVDs, VCDs, podcasts, and multimedia streams from various network sources. ",
+      "icon": "assets/vlc.png",
+      "screenshots": [],
+      "developer-name": "VideoLAN Team and Contributors",
+      "developer-url": "https://github.com/videolan/vlc/blob/master/AUTHORS",
+      "urls": {
+        "info": "http://www.videolan.org/",
+        "android-app": "https://play.google.com/store/apps/details?id=org.videolan.vlc",
+        "ios-app": "https://itunes.apple.com/gb/app/vlc-for-mobile/id650377962"
+      },
+      "launch-cmd": "vlc",
+      "arch": [
+        "i686",
+        "x86_64",
+        "armv7h",
+        "aarch64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "vlc",
+          "install-packages": [
+            "vlc"
+          ],
+          "remove-packages": [
+            "vlc"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "audacity": {
+      "name": "Audacity",
+      "summary": "Multi-track audio editor",
+      "description": "Audacity is designed for easy recording, playing and editing of digital audio. Audacity features digital effects and spectrum analysis tools. Editing is very fast and provides unlimited undo/redo.",
+      "icon": "assets/audacity.png",
+      "screenshots": [
+        "assets/audacity-1.jpg"
+      ],
+      "developer-name": "David Runge, Christian Heusel",
+      "developer-url": "http://www.audacityteam.org/about/credits/",
+      "urls": {
+        "info": "http://audacityteam.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "audacity",
+      "arch": [
+        "x86_64",
+        "i686",
+        "aarch64",
+        "armv7h"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "audacity",
+          "install-packages": [
+            "audacity"
+          ],
+          "remove-packages": [
+            "audacity"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "kdenlive": {
+      "name": "kdenlive",
+      "summary": "Non-linear video editing suite",
+      "description": "A non-linear video editing suite, which supports DV, HDV and many more formats. Its main features are: <ul><li>Guides and marker for organizing timelines</li> <li>Copy and paste support for clips, effects and transitions</li> <li>Real time changes</li> <li>FireWire and Video4Linux capture</li> <li>Screen grabbing</li> <li>Exporting to any by FFMPEG supported format</li>",
+      "icon": "assets/kdenlive.png",
+      "screenshots": [
+        "assets/kdenlive-1.jpg"
+      ],
+      "developer-name": "Kdenlive Authors",
+      "developer-url": "https://cgit.kde.org/kdenlive.git/tree/AUTHORS",
+      "urls": {
+        "info": "http://www.kdenlive.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "kdenlive",
+      "arch": [
+        "x86_64",
+        "i686",
+        "aarch64",
+        "armv7h"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "kdenlive",
+          "install-packages": [
+            "kdenlive"
+          ],
+          "remove-packages": [
+            "kdenlive"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "rhythmbox": {
+      "name": "Rhythmbox",
+      "summary": "Media player and music management application",
+      "description": "Rhythmbox is a very easy to use music playing and management program which supports a wide range of audio formats (including mp3 and ogg). Originally inspired by Apple&#8217;s iTunes, the current version also supports Internet Radio, iPod integration and generic portable audio player support, Audio CD burning, Audio CD playback, music sharing, and Podcasts.",
+      "icon": "assets/rhythmbox.png",
+      "screenshots": [
+        "assets/rhythmbox-1.jpg"
+      ],
+      "developer-name": "GNOME Team and Contributors",
+      "developer-url": "https://github.com/GNOME/rhythmbox/blob/master/AUTHORS",
+      "urls": {
+        "info": "https://wiki.gnome.org/Apps/Rhythmbox",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "rhythmbox",
+      "arch": [
+        "x86_64",
+        "i686",
+        "aarch64",
+        "armv7h"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "rhythmbox",
+          "install-packages": [
+            "rhythmbox"
+          ],
+          "remove-packages": [
+            "rhythmbox"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "spotify": {
+      "name": "Spotify",
+      "summary": "Digital music service that gives access to millions of songs",
+      "description": "A digital music service that gives you access to millions of songs.",
+      "icon": "assets/spotify.png",
+      "screenshots": [
+        "assets/spotify-1.jpg"
+      ],
+      "developer-name": "Spotify AB",
+      "developer-url": "https://www.spotify.com/uk/about-us/contact/",
+      "urls": {
+        "info": "https://www.spotify.com",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "spotify",
+      "arch": [
+        "x86_64",
+        "i686"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "spotify-launcher",
+          "install-packages": [
+            "spotify-launcher"
+          ],
+          "remove-packages": [
+            "spotify-launcher"
+          ]
+        }
+      },
+      "proprietary": true,
+      "alternate-to": null,
+      "listed": true
+    },
+    "kodi": {
+      "name": "Kodi",
+      "summary": "Media player perfect for HTPCs and home theatres",
+      "description": "A media player application for your computer, it has been designed to be the perfect companion for your HTPC. Supporting an almost endless range of remote controls, and combined with its beautiful interface and powerful skinning engine, Kodi feels very natural to use from the couch and is the ideal solution for your home theater. Once installed, your computer will become a fully functional multimedia jukebox.",
+      "icon": "assets/kodi.png",
+      "screenshots": [
+        "assets/kodi-1.jpg"
+      ],
+      "developer-name": "Kodi Team",
+      "developer-url": "https://kodi.tv/kodi-team",
+      "urls": {
+        "info": "https://kodi.tv/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "kodi",
+      "arch": [
+        "x86_64",
+        "i686"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "kodi",
+          "install-packages": [
+            "kodi"
+          ],
+          "remove-packages": [
+            "kodi"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "simplescreenrecorder": {
+      "name": "SimpleScreenRecorder",
+      "summary": "Feature rich screen recorder",
+      "description": "A feature-rich screen recorder that can record the entire screen or part of it, or record OpenGL applications directly. The recording can be paused and resumed at any time. Many different file formats and codecs are supported.",
+      "icon": "assets/simplescreenrecorder.png",
+      "screenshots": [
+        "assets/simplescreenrecorder-1.jpg"
+      ],
+      "developer-name": "Maarten Baert and Contributors",
+      "developer-url": "https://github.com/MaartenBaert/ssr/blob/master/AUTHORS.md",
+      "urls": {
+        "info": "http://www.maartenbaert.be/simplescreenrecorder/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "simplescreenrecorder",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "simplescreenrecorder",
+          "install-packages": [
+            "simplescreenrecorder"
+          ],
+          "remove-packages": [
+            "simplescreenrecorder"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "obs-studio": {
+      "name": "OBS Studio",
+      "summary": "Record and produce a live stream",
+      "description": "Free and Open Source software for video recording and live streaming. Supported features include, encoding using H264 (x264) and AAC, support for Intel Quick Sync Video (QSV) and NVENC, unlimited number of scenes and sources. Live RTMP streaming to Twitch, YouTube, DailyMotion, Hitbox and more. File output to MP4 or FLV, GPU-based game capture for high performance game streaming, capture device support (webcams, capture cards, etc), bi-linear or lanczos3 resampling.",
+      "icon": "assets/obs-studio.png",
+      "screenshots": [
+        "assets/obs-studio-1.jpg"
+      ],
+      "developer-name": "Various Contributors",
+      "developer-url": "https://github.com/jp9000/obs-studio/blob/master/AUTHORS",
+      "urls": {
+        "info": "https://obsproject.com",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "obs",
+      "arch": [
+        "x86_64",
+        "i686"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "obs-studio",
+          "install-packages": [
+            "obs-studio"
+          ],
+          "remove-packages": [
+            "obs-studio"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "amberol": {
+      "name": "Amberol",
+      "summary": "Small and simple sound and music player that is well integrated with GNOME",
+      "description": "Small and simple sound and music player that is well integrated with GNOME",
+      "icon": "assets/amberol.png",
+      "screenshots": [
+        "assets/amberol-1.png"
+      ],
+      "developer-name": "Balló György",
+      "developer-url": "https://apps.gnome.org/Amberol/",
+      "urls": {
+        "info": "https://apps.gnome.org/Amberol/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "amberol",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "amberol",
+          "install-packages": [
+            "amberol"
+          ],
+          "remove-packages": [
+            "amberol"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "ear-tag": {
+      "name": "Ear Tag",
+      "summary": "Simple audio file tag editor",
+      "description": "Simple audio file tag editor",
+      "icon": "assets/ear-tag.png",
+      "screenshots": [
+        "assets/ear-tag-1.png"
+      ],
+      "developer-name": "",
+      "developer-url": "https://apps.gnome.org/EarTag/",
+      "urls": {
+        "info": "https://apps.gnome.org/EarTag/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "eartag",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "eartag",
+          "install-packages": [
+            "eartag"
+          ],
+          "remove-packages": [
+            "eartag"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    }
+  },
+  "office": {
+    "calibre": {
+      "name": "Calibre",
+      "summary": "Easy and powerful e-book manager",
+      "description": "A complete e-library solution. It includes library management, format conversion, news feeds to e-book conversion as well as e-book reader sync features. Calibre is primarily an e-book cataloging program. It manages your e-book collection for you. Calibre can convert from a huge number of formats to a huge number of formats. It supports all the major e-book formats. Calibre supports syncing to a large number of e-reader device. Syncing supports updating metadata on the device from metadata in the library and creation of collections on the device based on the tags defined in the library. Calibre automatically chooses the best format when uploading to the device, auto-converting if required. Calibre has also a built-in e-book viewer that can display all the major e-book formats.",
+      "icon": "assets/calibre.png",
+      "screenshots": [
+        "assets/calibre-1.jpg"
+      ],
+      "developer-name": "Various Contributors",
+      "developer-url": "https://calibre-ebook.com/about#contributors",
+      "urls": {
+        "info": "http://calibre-ebook.com/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "calibre",
+      "arch": [
+        "x86_64",
+        "i686",
+        "aarch64",
+        "armv7h"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "calibre",
+          "install-packages": [
+            "calibre"
+          ],
+          "remove-packages": [
+            "calibre"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "libreoffice": {
+      "name": "LibreOffice",
+      "summary": "LibreOffice branch which contains new features and program enhancements",
+      "description": "The formula editor for the LibreOffice suite. Mathmatical formatting can be invoked in your text documents, spreadsheets, presentations and drawings, to enable you to insert perfectly-formatted mathematical and scientific formulas. Your formulas can include a wide range of elements, from fractions, terms with exponents and indices, integrals, and mathematical functions, to inequalities, systems of equations, and matrices.",
+      "icon": "assets/libreoffice-math.png",
+      "screenshots": [
+        "assets/libreoffice-math-1.png"
+      ],
+      "developer-name": "LibreOffice Team",
+      "developer-url": "https://www.libreoffice.org/",
+      "urls": {
+        "info": "https://www.libreoffice.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "libreoffice --math",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "libreoffice-fresh",
+          "install-packages": [
+            "libreoffice-fresh"
+          ],
+          "remove-packages": [
+            "libreoffice-fresh"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "free-office": {
+      "name": "FreeOffice",
+      "summary": "A complete, reliable, lightning-fast and Microsoft Office-compatible office suite with a word processor...",
+      "description": "A complete, reliable, lightning-fast and Microsoft Office-compatible office suite with a word processor, spreadsheet, and presentation graphics software.",
+      "icon": "assets/free-office.png",
+      "screenshots": [
+        "assets/free-office-1.webp"
+      ],
+      "developer-name": "SoftMaker",
+      "developer-url": "http://www.freeoffice.com/",
+      "urls": {
+        "info": "http://www.freeoffice.com/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "freeoffice",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "freeoffice",
+          "install-packages": [
+            "freeoffice"
+          ],
+          "remove-packages": [
+            "freeoffice"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "open-office": {
+      "name": "OpenOffice",
+      "summary": "The Free and Open Productivity Suite",
+      "description": "The Free and Open Productivity Suite",
+      "icon": "assets/open-office.png",
+      "screenshots": [],
+      "developer-name": "Apache",
+      "developer-url": "https://www.openoffice.org",
+      "urls": {
+        "info": "https://www.openoffice.org",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "openoffice-bin",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "openoffice-bin",
+          "install-packages": [
+            "openoffice-bin"
+          ],
+          "remove-packages": [
+            "openoffice-bin"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    }
+  },
+  "system": {
+    "btop": {
+      "name": "btop",
+      "summary": "A monitor of system resources, bpytop ported to C++",
+      "description": "A monitor of system resources, bpytop ported to C++",
+      "icon": "assets/btop.webp",
+      "screenshots": [
+        "assets/btop-1.png"
+      ],
+      "developer-name": "Caleb Maclennan, Jaroslav Lichtblau",
+      "developer-url": "https://github.com/aristocratos/btop",
+      "urls": {
+        "info": "https://github.com/aristocratos/btop",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "btop",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "btop",
+          "install-packages": [
+            "btop"
+          ],
+          "remove-packages": [
+            "btop"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "virtualbox": {
+      "name": "Oracle VirtualBox",
+      "summary": "Powerful x86 virtualization for enterprise as well as home use",
+      "description": "A powerful PC virtualization solution allowing you to run a wide range of PC operating systems on your Linux system. This includes Windows, Linux, FreeBSD, DOS, OpenBSD and others. VirtualBox comes with a broad feature set and excellent performance, making it the premier virtualization software solution on the market.",
+      "icon": "assets/virtualbox.png",
+      "screenshots": [
+        "assets/virtualbox-1.png",
+        "assets/virtualbox-2.png"
+      ],
+      "developer-name": "Christian Hesse",
+      "developer-url": "https://virtualbox.org/",
+      "urls": {
+        "info": "https://virtualbox.org/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "virtualbox",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "virtualbox",
+          "install-packages": [
+            "virtualbox"
+          ],
+          "remove-packages": [
+            "virtualbox"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    }
+  },
+  "more-software": {
+    "gnome-software": {
+      "name": "Gnome Software",
+      "summary": "Allows you to find and install new apps",
+      "description": "Software lets you install and update applications and system extensions. It is the same software centre found on other Linux distributions like mainstream Ubuntu.",
+      "icon": "assets/gnome-software.png",
+      "screenshots": [],
+      "developer-name": "Jan Alexander Steffens, Fabian Bornschein",
+      "developer-url": "https://apps.gnome.org/Software",
+      "urls": {
+        "info": "https://wiki.gnome.org/Apps/Software",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "gnome-software",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "gnome-software",
+          "install-packages": [
+            "gnome-software"
+          ],
+          "remove-packages": [
+            "gnome-software"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    },
+    "bazaar": {
+      "name": "bazaar",
+      "summary": "A fast and modern store for GNOME with focus on Flatpaks, particularly from Flathub",
+      "description": "A fast and modern app store for Linux with a focus on discovering and installing Flatpak apps and add-ons, particularly from Flathub.",
+      "icon": "assets/bazaar.png",
+      "screenshots": [],
+      "developer-name": "by The Bazaar Contributors",
+      "developer-url": "https://apps.gnome.org/Bazaar/",
+      "urls": {
+        "info": "https://apps.gnome.org/Bazaar/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "bazaar",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "bazaar",
+          "install-packages": [
+            "bazaar"
+          ],
+          "remove-packages": [
+            "bazaar"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
+    }
+  },
+  "connectivity": {
+    "anydesk": {
+      "name": "AnyDesk",
+      "summary": "The Fast Remote Desktop Application",
+      "description": "The Fast Remote Desktop Application",
+      "icon": "assets/anydesk.png",
+      "screenshots": [],
+      "developer-name": "D3SOX (severach)",
+      "developer-url": "",
+      "urls": {
+        "info": "https://anydesk.com",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "anydesk-bin",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "aur",
+          "main-package": "anydesk-bin",
+          "install-packages": [
+            "anydesk-bin"
+          ],
+          "remove-packages": [
+            "anydesk-bin"
+          ]
+        }
+      },
+      "proprietary": true,
+      "alternate-to": null,
+      "listed": true
+    }
+  },
+  "stats": {
+    "version": 7,
+    "revision": 374,
+    "compiled": 1793745474,
+    "apps": 63,
+    "categories": 11
+  },
+  "distro": {
+    "name": "NLinux",
+    "info_url": "https://nilsonlinux.github.io/",
+    "support_url": "https://nilsonlinux.github.io"
+  },
+  "supported": {
+    "arch": [
+      "x86_64",
+      "i686",
+      "aarch64"
+    ],
+    "releases": [
+      "rolling"
+    ]
+  }
+}

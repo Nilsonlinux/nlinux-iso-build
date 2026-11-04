@@ -1,7 +1,7 @@
 # Sons de interface. Dois temas entram em cena:
 #
-#   - "falconos" (em ~/.local/share/sounds/falconos, via config/.local) troca só o
-#     som de notificação pelo arquivo do FalconOS. O resto vem por
+#   - "nlinux" (em ~/.local/share/sounds/nlinux, via config/.local) troca só o
+#     som de notificação pelo arquivo do NLinux. O resto vem por
 #     `Inherits=freedesktop` no index.theme, e é por isso que o pacote
 #     sound-theme-freedesktop continua obrigatório: ele fornece o bip de volume
 #     (audio-volume-change), que é CC-BY-SA e não entra no repositório. O
@@ -23,14 +23,14 @@
 # usuário vê depois de mexer no ajuste.
 [audio]
 enable_overdrive = true
-sound_theme = "falconos"
+sound_theme = "nlinux"
 sound_volume = 0.99999997764825821
 
 # ── Print: um som só ──────────────────────────────────────────────────────────
 # O atalho de captura do Noctalia dispara DOIS eventos de som por construção, e
 # nenhum ajuste de áudio desliga o segundo:
 #   - `screen-capture`, o clique da câmera, tocado em playCaptureSound() antes de
-#     congelar a tela (cai no freedesktop, já que o tema falconos não traz esse
+#     congelar a tela (cai no freedesktop, já que o tema nlinux não traz esse
 #     arquivo);
 #   - `message-new-instant`, porque depois de gravar o arquivo o serviço de
 #     captura posta addInternal("Noctalia", "Screenshot saved", <caminho>).
@@ -44,7 +44,7 @@ sound_volume = 0.99999997764825821
 # propósito. E `match = "noctalia"` sozinho não serviria: o serviço também posta
 # "Screenshot failed", que é Critical e vale continuar soando — é o `^...$` que
 # separa os dois.
-[notification.filter.falconos_captura_salva]
+[notification.filter.nlinux_captura_salva]
 enabled       = true
 match         = "noctalia"
 match_content = "^Screenshot saved$"
@@ -87,7 +87,7 @@ pinned = [
     "kitty",
     "org.gnome.Nautilus",
     "spotify-launcher",
-    "falconosstore",
+    "nlinuxstore",
 ]
 reserve_space = false
 show_dots = true

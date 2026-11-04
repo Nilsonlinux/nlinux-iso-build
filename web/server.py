@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 # SPDX-License-Identifier: GPL-3.0-or-later
-"""Instalador web do FalconOS — servidor local (127.0.0.1).
+"""Instalador web do NLinux — servidor local (127.0.0.1).
 
 Serve a interface (HTML/CSS/JS), coleta as escolhas e executa o install.sh
 em subprocesso (GUI_DRIVEN=1), transmitindo o progresso para o navegador
@@ -47,12 +47,12 @@ ROOT = os.path.dirname(os.path.abspath(__file__))
 STATIC = os.path.join(ROOT, "static")
 INSTALL_SH = os.path.join(os.path.dirname(ROOT), "install.sh")
 HOST = "127.0.0.1"
-PORT = int(os.environ.get("FALCONOS_WEB_PORT", "8765"))
+PORT = int(os.environ.get("NLINUX_WEB_PORT", "8765"))
 
 # Log da execução atual e "checkpoint" do estado (reanexação após queda do
 # servidor). Ambos no /tmp do live.
-LOG_PATH = os.environ.get("FALCONOS_LOG_PATH", "/tmp/falconos-install.log")
-STATE_PATH = os.environ.get("FALCONOS_STATE_PATH", "/tmp/falconos-install-state.json")
+LOG_PATH = os.environ.get("NLINUX_LOG_PATH", "/tmp/nlinux-install.log")
+STATE_PATH = os.environ.get("NLINUX_STATE_PATH", "/tmp/nlinux-install-state.json")
 
 # Reusa as traduções (install/translations.py): as etapas do install.sh chegam
 # como CHAVES (ex.: stage.copy.offline) e aqui são traduzidas para o idioma
@@ -147,7 +147,7 @@ MIN_TOTAL = 1024**2
 # o mesmo. Medir a soma dos dois conta tudo o que foi baixado, sem depender do
 # idioma do pacman nem do formato das linhas dele.
 CACHE_DIRS = [d for d in os.environ.get(
-    "FALCONOS_CACHE_DIRS", "/mnt/var/cache/pacman/pkg:/var/cache/pacman/pkg").split(":") if d]
+    "NLINUX_CACHE_DIRS", "/mnt/var/cache/pacman/pkg:/var/cache/pacman/pkg").split(":") if d]
 
 LOG_MAX_LINES = 400        # linhas de log mantidas para ressincronizar a tela
 LOG_SENT_LINES = 300       # linhas enviadas a cada cliente
@@ -578,7 +578,7 @@ def _start_pace():
         if _pace_thread["thread"] is not None and _pace_thread["thread"].is_alive():
             return
         _pace_thread["thread"] = threading.Thread(
-            target=_pace_thread_loop, name="falconos-pace", daemon=True)
+            target=_pace_thread_loop, name="nlinux-pace", daemon=True)
     _pace_thread["thread"].start()
 
 
@@ -1178,7 +1178,7 @@ def _begin_run(mode="offline"):
     _reset_download()
     try:
         # Log da execução anterior fica em .1 (o install.sh consulta
-        # /tmp/falconos-install.log para gravar o marcador de erro no disco).
+        # /tmp/nlinux-install.log para gravar o marcador de erro no disco).
         if os.path.exists(LOG_PATH):
             os.replace(LOG_PATH, LOG_PATH + ".1")
     except OSError:
@@ -1207,7 +1207,7 @@ def run_install(config):
     for k, v in config.items():
         env[str(k)] = str(v)
     env["GUI_DRIVEN"] = "1"
-    env["FALCONOS_WEB"] = "1"
+    env["NLINUX_WEB"] = "1"
     env["NLLANG"] = _ui_lang
     proc = None
     try:
@@ -1247,7 +1247,7 @@ def run_install(config):
 
 class Handler(BaseHTTPRequestHandler):
     protocol_version = "HTTP/1.1"
-    server_version = "FalconOS/1.0"
+    server_version = "NLinux/1.0"
 
     def log_message(self, *args):
         pass
@@ -1396,7 +1396,7 @@ def main():
     # Retoma uma instalação que sobreviveu à queda do servidor (se houver).
     adopt_running_install()
     srv = ThreadingHTTPServer((HOST, PORT), Handler)
-    print("FalconOS web installer em http://%s:%d" % (HOST, PORT), flush=True)
+    print("NLinux web installer em http://%s:%d" % (HOST, PORT), flush=True)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:

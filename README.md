@@ -1,4 +1,4 @@
-# FalconOS
+# NLinux
 
 Distro-instalador do Arch Linux + Noctalia, reproduzível em qualquer máquina.
 O projeto gera um **ISO próprio** (base `archiso`/releng) que **boota direto
@@ -13,21 +13,21 @@ Resultado instalado / ao vivo:
 - **greetd** + **noctalia-greeter** — tela de login Wayland (AUR)
 - **systemd-boot**, **LUKS2 opcional**, **ext4 ou btrfs** (subvolumes `@`, `@home`, `@log`, `@pkg`)
 - **Shell padrão do usuário: fish**; terminal padrão: **kitty** (`Mod+T` / `Mod+Shift+T`)
-- **FalconOS Software** (falconos-software com PackageKit + metadados AppStream)
+- **NLinux Software** (nlinux-software com PackageKit + metadados AppStream)
 - **Boas-vindas no primeiro login** do sistema instalado (janela única, `zenity`)
-- **fastfetch** mostra a logo do FalconOS (PNG via protocolo kitty em `config/.config/fastfetch/img/falconos.png`) + especificações do sistema em pt-BR
-- **Desktop no live** com os mesmos apps da instalação (Firefox, kitty, FalconOS Software…)
+- **fastfetch** mostra a logo do NLinux (PNG via protocolo kitty em `config/.config/fastfetch/img/nlinux.png`) + especificações do sistema em pt-BR
+- **Desktop no live** com os mesmos apps da instalação (Firefox, kitty, NLinux Software…)
 
 ---
 
-<img width="1376" height="768" alt="FalconOS" src="https://github.com/user-attachments/assets/a6f7d6c8-be19-4737-bb08-500d743beffa" />
+<img width="1376" height="768" alt="NLinux" src="https://github.com/user-attachments/assets/a6f7d6c8-be19-4737-bb08-500d743beffa" />
 
 
 ## Estrutura do projeto
 
 ```
 build-iso.sh                     gera a ISO (precisa de sudo; limpa mounts de builds interrompidas)
-make-splash.sh                   gera splash.png a partir de FalconOS.jpg (menu de boot BIOS)
+make-splash.sh                   gera splash.png a partir de NLinux.jpg (menu de boot BIOS)
 install.sh                       instalador principal (web-installed; GUI_DRIVEN=1 do servidor web)
 install/translations.py           tabela de traduções (7 idiomas) usada pelo instalador web
 install/chroot/                  etapas executadas dentro do chroot do sistema instalado
@@ -38,8 +38,8 @@ iso/packages.live                pacotes extras do live (ISO)
 iso/airootfs/                    camada over de arquivos do live (branding, auto-run, personalize)
 iso/profiledef.sh                metadados da ISO (nome, label, versão)
 config/                          dotfiles aplicados ao usuário (live e instalado)
-falconos-software/                 loja de software embarcada em /opt (build publicado; ver "Atualizar a loja")
-FalconOS.jpg / splash.png          arte do menu de boot
+nlinux-software/                 loja de software embarcada em /opt (build publicado; ver "Atualizar a loja")
+NLinux.jpg / splash.png          arte do menu de boot
 ```
 
 ---
@@ -57,7 +57,7 @@ O instalador:
 1. **Pré-checagens** (`preflight`): exige root, UEFI e internet (avisa se sem rede);
    garante `gdisk`/`cryptsetup`.
 2. **Escolhas do assistente web** (forma exclusiva de instalar, no desktop do
-   live via `falconos-installer-gui`): o mesmo passo a passo abaixo roda no
+   live via `nlinux-installer-gui`): o mesmo passo a passo abaixo roda no
    navegador; o `install.sh` é disparado pelo servidor web com `GUI_DRIVEN=1`.
    Os 10 passos correspondem às etapas do wizard (`web/static/app.js`):
    - **1/10** **Idioma, teclado e fuso** (uma escolha define os três):
@@ -94,7 +94,7 @@ O instalador:
      `INSTALL_USER`, `INSTALL_USER_PASS`, `ROOT_PASS`, `NLLANG`, `GUI_DRIVEN=1`),
      que são as mesmas aceitas na linha de comando (ver "Variáveis substituem o
      menu"). A senha informada vale para o usuário **e** para o root; LUKS e
-     hostname têm padrão (`falconos`).
+     hostname têm padrão (`nlinux`).
    - Navegação: **Enter** (ou o botão) avança; o painel não recua sozinho — ele
      acompanha a instalação.
 - **Fallback (legado, não usado no boot)**: se `install.sh` for chamado
@@ -105,11 +105,11 @@ O instalador:
      topo do `mirrorlist`** + `DisableDownloadTimeout` no `pacman.conf`.
 3. **Particionamento**: GPT — `1G` EFI (FAT32, montada em `/boot`) + restante na
    partição raiz (tipo `8309` com LUKS, ou `8304` sem). A partição raiz é nomeada
-   `FalconOS` no GPT em ambos os casos; com LUKS, o mapper continua sendo
+   `NLinux` no GPT em ambos os casos; com LUKS, o mapper continua sendo
    `cryptroot`.
 
 No modo **dual boot**, o instalador preserva a ESP existente e cria a partição
-FalconOS em espaço livre. Se não houver espaço livre suficiente, a interface web
+NLinux em espaço livre. Se não houver espaço livre suficiente, a interface web
 pode reduzir uma partição Windows NTFS com um controle deslizante. A redução só
 é aplicada após confirmação; faça backup e desative BitLocker e Inicialização
 Rápida/hibernação do Windows antes de prosseguir. O Windows pode executar uma
@@ -135,9 +135,9 @@ copiado para `/var/log/offline-rsync.log` no sistema instalado.
 
 Nos dois modos o chroot roda `10-system.sh` (gera `systemd-boot` + `initramfs`),
 cria o usuário, aplica dotfiles e habilita os serviços — o boot **Sempre** tem a
-opção "FalconOS". Ao final, o instalador deixa a entrada da NVRAM com o rótulo
-**"FalconOS"** e grava o **fallback `/EFI/BOOT/BOOTX64.EFI`** — assim o disco
-aparece como **"FalconOS"** na lista do firmware **e**, em firmwares sem NVRAM,
+opção "NLinux". Ao final, o instalador deixa a entrada da NVRAM com o rótulo
+**"NLinux"** e grava o **fallback `/EFI/BOOT/BOOTX64.EFI`** — assim o disco
+aparece como **"NLinux"** na lista do firmware **e**, em firmwares sem NVRAM,
 como opção genérica `UEFI: <disco>`.
 
 A entrada é criada pelo `bootctl install` e só o **rótulo** é reescrito depois.
@@ -159,15 +159,15 @@ o `/EFI/BOOT/BOOTX64.EFI` já cobre o papel de fallback. Isso importa porque a
 consiga resolver**: uma entrada que aponta para um arquivo inexistente não
 aparece no menu, e simplesmente some. Por isso o instalador escolhe a entrada
 pelo **arquivo em disco**, e não pelo número — renomear a entrada do fallback
-faz o rótulo "FalconOS" sumir no boot seguinte.
+faz o rótulo "NLinux" sumir no boot seguinte.
 
 Duas consequências práticas:
 
-- `efibootmgr -b 0001 -L "FalconOS"` **não renomeia nada** nesta versão — o
+- `efibootmgr -b 0001 -L "NLinux"` **não renomeia nada** nesta versão — o
   `--label` só é lido por `--create` e por `--delete`. É o que a maioria das wiki
   manda fazer, e é um no-op.
 - O instalador **não** apaga entradas de outras distribuições. Só remove as que
-  apontam para o systemd-boot **na ESP do FalconOS** (a do fallback e sobras de
+  apontam para o systemd-boot **na ESP do NLinux** (a do fallback e sobras de
   instalações antigas), preservando a que ele mesmo acabou de renomear. O
   "Windows Boot Manager" nunca é tocado, e o `UEFI: <disco>` de outro S.O.
   também não.
@@ -176,10 +176,10 @@ Se a reescrita falhar, o instalador **mantém a entrada do `bootctl`** (é melho
 um rótulo impessoal do que uma máquina sem entrada alguma além do fallback) e
 avisa; o fallback `/EFI/BOOT/BOOTX64.EFI` continua cobrindo esse caso. A NVRAM
 completa é despejada no log antes e depois — nada é engolido em `/dev/null`. Para
-investigar, ver `/var/log/falconos-install.log` no sistema instalado.
+investigar, ver `/var/log/nlinux-install.log` no sistema instalado.
 4. **Sistema de arquivos**: LUKS2 (mapeador `cryptroot`) quando escolhido; btrfs
    com subvolumes `@`, `@home`, `@log`, `@pkg`, ou ext4. O nome da partição no
-   GPT e o label do filesystem são `FalconOS`.
+   GPT e o label do filesystem são `NLinux`.
 5. **Instalação dos pacotes** (ver tabela acima): modo **rápido offline** copia o
    sistema do pendrive; modo **completo online** usa `pacstrap`
    (`base.packages` + `desktop.packages` + drivers de GPU intel/amd/nvidia/vm +
@@ -202,9 +202,9 @@ Variáveis e padrões (`install.sh`, linha 26+):
 
 | Variável | Padrão |
 |---|---|
-| `INSTALL_USER` / `INSTALL_USER_PASS` | perguntados no menu (padrão do script: `falconos` / `falconos`) |
-| `ROOT_PASS` / `LUKS_PASS` | mesma senha do usuário / `falconos` |
-| `HOSTNAME` | `falconos` |
+| `INSTALL_USER` / `INSTALL_USER_PASS` | perguntados no menu (padrão do script: `nlinux` / `nlinux`) |
+| `ROOT_PASS` / `LUKS_PASS` | mesma senha do usuário / `nlinux` |
+| `HOSTNAME` | `nlinux` |
 | `LOCALE` / `KEYMAP` / `ZONEINFO` | `pt_BR.UTF-8` / `br-abnt2` / `America/Sao_Paulo` |
 | `MIRROR` | espelho de repositórios (URL base ou vazio = padrão); definido no menu |
 | `OFFLINE` | `1` = instalação rápida offline (padrão), `0` = completa online |
@@ -225,14 +225,14 @@ O que ele faz:
 
 1. Instala `archiso` se faltar e **regenera** `iso/profile/` do zero a partir do
    releng instalado (compatível com a versão do `mkarchiso`);
-2. Aplica os metadados de `iso/profiledef.sh` (nome/label/versão = `falconos`);
+2. Aplica os metadados de `iso/profiledef.sh` (nome/label/versão = `nlinux`);
 3. Anexa `iso/packages.live` à lista de pacotes do live;
 4. Copia a camada `iso/airootfs/` (autologin, auto-run, branding, serviços do live);
 5. **Embuta este projeto** em `/opt/noctalia-installer` no live:
    `install.sh`, `install/`, `config/`, `packages/`, `web/`;
 6. Transforma o boot: **systemd-boot** (UEFI), **GRUB** (UEFI/BIOS boot) e
-   **syslinux** (BIOS) — títulos, items e a splash FalconOS;
-7. Roda `mkarchiso -v` → ISO em `iso/out/falconos-<data>-x86_64.iso`.
+   **syslinux** (BIOS) — títulos, items e a splash NLinux;
+7. Roda `mkarchiso -v` → ISO em `iso/out/nlinux-<data>-x86_64.iso`.
 
 > **Não rode `build-iso.sh` enquanto outro build está ativo.** A compilação roda
 > em um namespace de mounts privado, evitando que ferramentas do host varram
@@ -258,31 +258,31 @@ sudo dd if=iso/out/*.iso of=/dev/sdX bs=4M status=progress conv=fsync
 
 ### Menu de boot
 
-- **UEFI** (systemd-boot, padrão): **FalconOS ao vivo** (padrão) · **FalconOS ao vivo - leitor de tela** · **Memtest86+**. O GRUB (menu alternativo) tem as mesmas opções.
-- **BIOS** (syslinux): título **"Bem-vindo ao FalconOS"** com a arte `splash.png`
-  (gerada de `FalconOS.jpg`) e o item **"Iniciar FalconOS"** + Memtest/HDT/reboot.
+- **UEFI** (systemd-boot, padrão): **NLinux ao vivo** (padrão) · **NLinux ao vivo - leitor de tela** · **Memtest86+**. O GRUB (menu alternativo) tem as mesmas opções.
+- **BIOS** (syslinux): título **"Bem-vindo ao NLinux"** com a arte `splash.png`
+  (gerada de `NLinux.jpg`) e o item **"Iniciar NLinux"** + Memtest/HDT/reboot.
 
 ### O que acontece ao bootar
 
 - Toda opção de boot (UEFI/GRUB/BIOS) leva ao **desktop no live**: autologin
   root no tty1 inicia o greetd (vt7) + noctalia-greeter + Umbriel/Noctalia, sem
-  prompt de instalação no console. Login do live: usuário **`falconos`**, senha
-  **`falconos`**. Traz NetworkManager, PipeWire e cursor Bibata.
+  prompt de instalação no console. Login do live: usuário **`nlinux`**, senha
+  **`nlinux`**. Traz NetworkManager, PipeWire e cursor Bibata.
 - **Som de interface**: o Noctalia só dispara os eventos do shell (volume,
   notificação) se encontrar um tema de som. Os dois eventos que ele usa são
-  `audio-volume-change` e `message-new-instant`. Vem o tema **`falconos`**
-  (`config/.local/share/sounds/falconos/`, com o som de notificação do FalconOS) e
+  `audio-volume-change` e `message-new-instant`. Vem o tema **`nlinux`**
+  (`config/.local/share/sounds/nlinux/`, com o som de notificação do NLinux) e
   ele herda o resto por `Inherits=freedesktop` — do pacote
   **sound-theme-freedesktop**, que é sem dependências e por isso nunca entrava
   sozinho. O pacote continua obrigatório justamente por causa do bip de volume:
   o `audio-volume-change.oga` dele é CC-BY-SA e por isso não foi copiado para o
   repositório, só apontado. O Noctalia só resolve `.oga`/`.ogg`/`.wav`, nunca
-  `.mp3`, então o arquivo do FalconOS foi convertido para ogg/vorbis a 48 kHz.
+  `.mp3`, então o arquivo do NLinux foi convertido para ogg/vorbis a 48 kHz.
   O tema vem apontado em `config.toml`
-  (`[audio] sound_theme = "falconos"`), não no `settings.toml` de estado:
+  (`[audio] sound_theme = "nlinux"`), não no `settings.toml` de estado:
   assim o usuário continua podendo trocar o tema pela interface.
-- **Instalar** (somente pelo live): atalho **Instalar FalconOS** do desktop/menu
-  (roda `/usr/local/bin/falconos-installer-gui`) abre o Firefox em kiosk apontando
+- **Instalar** (somente pelo live): atalho **Instalar NLinux** do desktop/menu
+  (roda `/usr/local/bin/nlinux-installer-gui`) abre o Firefox em kiosk apontando
   para o servidor web local (`http://127.0.0.1:8765`, root via sudo). Não há
   instalador TUI. O servidor roda sob um **supervisor** (reinicia em 2 s se
   cair) e a instalação é desacoplada dele: uma queda não interrompe nem
@@ -292,7 +292,7 @@ sudo dd if=iso/out/*.iso of=/dev/sdX bs=4M status=progress conv=fsync
 
 ### Banco de dados do pacman sincronizado no boot
 
-A unit `falconos-pacman-refresh.service` roda `pacman -Sy` a cada inicializacao
+A unit `nlinux-pacman-refresh.service` roda `pacman -Sy` a cada inicializacao
 do **live**. O arquivo mora no airootfs
 (`iso/airootfs/etc/systemd/system/`) e o `customize_airootfs.sh` so o habilita.
 
@@ -309,7 +309,7 @@ do live — nesse modo o sistema instalado fica **sem** a unit.
 - `TimeoutStartSec=300`, `IOSchedulingClass=idle`, `CPUSchedulingPolicy=idle` e
   `Nice=10` para nao competir I/O/CPU com o desktop subindo;
 - sem rede o pacman falha rapido e a unidade fica em `failed` no journal — nao
-  trava o boot. Para ver: `journalctl -b -u falconos-pacman-refresh.service`;
+  trava o boot. Para ver: `journalctl -b -u nlinux-pacman-refresh.service`;
 - no live o `/var/lib/pacman/sync` fica no overlay em RAM: a sincronizacao vale
   so para a sessao, que e o que se quer num live.
 
@@ -318,20 +318,20 @@ do live — nesse modo o sistema instalado fica **sem** a unit.
 > alguem rodar `pacman -S <pacote>` (ou a loja), o pacote pode vir compilado
 > contra bibliotecas que o sistema ainda nao tem, e quebrar em tempo de
 > execucao. Para atualizar de verdade, o comando e `pacman -Syu`. O
-> `falconos-software` usa `pacman -S --noconfirm --needed`, que cai exatamente
+> `nlinux-software` usa `pacman -S --noconfirm --needed`, que cai exatamente
 > nesse caso.
 
 ### Branding no ISO (live e instalado)
 
-- `/etc/os-release` → `NAME="FalconOS"`, `PRETTY_NAME="FalconOS"` (mantendo
+- `/etc/os-release` → `NAME="NLinux"`, `PRETTY_NAME="NLinux"` (mantendo
   `ID=arch`/`ID_LIKE=arch` para AUR/pacman) — no live via `iso/airootfs/etc/os-release`
   e no instalado via `10-system.sh`;
-- `/etc/issue` → `FalconOS \r (\l)` (live e instalado);
-- `/etc/motd` → ASCII-art "Bem-vindo ao FalconOS!";
-- título do bootloader instalado → `FalconOS` (systemd-boot `arch.conf`);
-- entrada na NVRAM → `FalconOS` (ver acima; fica só uma nesta ESP, e o rótulo é
+- `/etc/issue` → `NLinux \r (\l)` (live e instalado);
+- `/etc/motd` → ASCII-art "Bem-vindo ao NLinux!";
+- título do bootloader instalado → `NLinux` (systemd-boot `arch.conf`);
+- entrada na NVRAM → `NLinux` (ver acima; fica só uma nesta ESP, e o rótulo é
   reescrito depois do `bootctl install`);
-- nome da partição no GPT e label do filesystem raiz → `FalconOS`.
+- nome da partição no GPT e label do filesystem raiz → `NLinux`.
 
 ---
 
@@ -343,10 +343,10 @@ subprocesso com `GUI_DRIVEN=1`. O painel do navegador acompanha o progresso por
 **SSE** (`/api/stream`).
 
 **Regra central: a instalação não depende do navegador nem do servidor.** A saída
-do `install.sh` vai para um **arquivo** de log (`/tmp/falconos-install.log`) que o
+do `install.sh` vai para um **arquivo** de log (`/tmp/nlinux-install.log`) que o
 servidor apenas acompanha — não um pipe — e o estado (etapa, %, últimas linhas,
 código de saída) fica no servidor, com checkpoint em
-`/tmp/falconos-install-state.json` a cada 5 s. Consequências:
+`/tmp/nlinux-install-state.json` a cada 5 s. Consequências:
 
 | Situação | O que acontece |
 |---|---|
@@ -356,7 +356,7 @@ código de saída) fica no servidor, com checkpoint em
 | Formulário enviado duas vezes | `POST /api/install` devolve **409** com o estado atual e a página volta ao painel: ninguém apaga o disco por cima da instalação que roda. |
 | `install.sh` morre sem escrever o resultado (morto por sinal/OOM) | Watchdog da execução reanexada encerra o painel como falha explícita, em vez de girar para sempre. |
 | Erro de verdade na instalação | `die` no `install.sh` → `_save_error_marker` grava `/var/log/install-error.log` **no disco instalado** (com as últimas 150 linhas do log) antes de desmontar. |
-| Instalação termina mas algo no boot ficou errado | O log inteiro é copiado para `/var/log/falconos-install.log` no sistema instalado (`_save_install_log`). O log do live vive em `/tmp`, que é tmpfs e morre no reboot — por isso a cópia é feita **também no caminho de sucesso**, não só no de falha. |
+| Instalação termina mas algo no boot ficou errado | O log inteiro é copiado para `/var/log/nlinux-install.log` no sistema instalado (`_save_install_log`). O log do live vive em `/tmp`, que é tmpfs e morre no reboot — por isso a cópia é feita **também no caminho de sucesso**, não só no de falha. |
 | Falha de espelho no modo online | `pacstrap` tenta até 3 vezes (o pacman reaproveita o cache) antes de abortar com dica de rede/mirror. |
 
 ### Protocolo (SSE) e API
@@ -521,7 +521,7 @@ anel, que anda dentro da etapa, passaria à frente da lista.
   base tirada no início da execução e guardada no checkpoint — assim uma
   execução reanexada continua contando do ponto em que parou, e o total não
   zera. Não depende do idioma do pacman nem do formato das linhas dele.
-  Os caminhos podem ser sobrescritos com `FALCONOS_CACHE_DIRS` (separados por
+  Os caminhos podem ser sobrescritos com `NLINUX_CACHE_DIRS` (separados por
   `:`).
   O **total é um número, não uma soma**: das linhas com a forma
   `…: 1658,48 MiB` (o valor vem logo depois de `:` e fecha a linha, sem casar
@@ -558,7 +558,7 @@ web/tests/run-tests.sh --install    # baixa o node_modules antes (precisa de red
 | `css_test.js` | `web/static/style.css` | sintaxe do CSS, as regras de que o anel e o relógio dependem, a linha do download e a ausência da caixinha azul sobre o log (css-tree) |
 
 As duas Python usam só a biblioteca padrão, não pedem root e não encostam nos
-arquivos de `/tmp/falconos-*` (criam uma pasta temporária). As duas de
+arquivos de `/tmp/nlinux-*` (criam uma pasta temporária). As duas de
 JavaScript precisam de node + `npm install` em `web/tests/`. Detalhes em
 [`web/tests/README.md`](web/tests/README.md). Nada disso é usado pelo build do
 ISO.
@@ -567,24 +567,24 @@ ISO.
 
 | Caminho (live) | Papel |
 |---|---|
-| `/tmp/falconos-install.log` | saída completa da execução atual (o `install.sh` a relê ao falhar, para gravar o marcador de erro no disco) |
-| `/tmp/falconos-install.log.1` | log da execução anterior (rotacionado a cada novo `POST /api/install`) |
-| `/tmp/falconos-install-state.json` | checkpoint do estado (reanexação após queda do servidor) |
-| `/tmp/falconos-web.log` | stdout/stderr do servidor, com marcador de cada reinício do supervisor |
+| `/tmp/nlinux-install.log` | saída completa da execução atual (o `install.sh` a relê ao falhar, para gravar o marcador de erro no disco) |
+| `/tmp/nlinux-install.log.1` | log da execução anterior (rotacionado a cada novo `POST /api/install`) |
+| `/tmp/nlinux-install-state.json` | checkpoint do estado (reanexação após queda do servidor) |
+| `/tmp/nlinux-web.log` | stdout/stderr do servidor, com marcador de cada reinício do supervisor |
 | `/var/log/install-error.log` (instalado) | resumo da falha + últimas linhas do log, para ler depois sem o live |
-| `/var/log/falconos-install.log` (instalado) | o log completo, inclusive quando a instalação deu certo |
+| `/var/log/nlinux-install.log` (instalado) | o log completo, inclusive quando a instalação deu certo |
 
-Variáveis de ambiente do servidor: `FALCONOS_WEB_PORT` (padrão `8765`),
-`FALCONOS_LOG_PATH` e `FALCONOS_STATE_PATH` (útil para testar fora do live),
-`FALCONOS_CACHE_DIRS` (diretórios do cache do pacman usados como contador de
+Variáveis de ambiente do servidor: `NLINUX_WEB_PORT` (padrão `8765`),
+`NLINUX_LOG_PATH` e `NLINUX_STATE_PATH` (útil para testar fora do live),
+`NLINUX_CACHE_DIRS` (diretórios do cache do pacman usados como contador de
 download, separados por `:`).
 
 ### Diagnóstico
 
 ```bash
 curl -s http://127.0.0.1:8765/api/status   # estado real da execução (pct, etapa, code)
-tail -f /tmp/falconos-install.log            # log vivo da instalação
-tail -f /tmp/falconos-web.log                # reinícios e erros do servidor
+tail -f /tmp/nlinux-install.log            # log vivo da instalação
+tail -f /tmp/nlinux-web.log                # reinícios e erros do servidor
 ```
 
 O live também tem **swap em RAM comprimida**: `iso/airootfs/etc/systemd/zram-generator.conf`
@@ -609,8 +609,8 @@ avisa é o `all.sh`, com `cstage`/`cnote`/`cact` (ver
 | 2 | `20-aur.sh` | usuário de sistema `greeter`; usuário temporário `builder` (sudo sem senha) para instalar **yay-bin** (makepkg) e rodar `yay -S` dos `aur.packages`; remove o `builder` no final |
 | 3 | `30-greetd.sh` | `/etc/greetd/config.toml` com o **noctalia-greeter** (sessão padrão `umbriel`) + setup do pacote |
 | 4 | `40-user-config.sh` | copia `config/.config` → `~/.config` do usuário (`.tpl` resolvidos com `__KEYBOARD_LAYOUT__` derivado do keymap) e `config/.local` → `~/.local` (ícones/cursor Bibata, logo do fastfetch), delega ao usuário |
-| 5 | `41-welcome.sh` | marca `/etc/falconos-installed` e instala `/usr/local/bin/falconos-welcome` (janela de boas-vindas única no 1º login; no live é inócuo) — acionado pelo autostart do Umbriel |
-| 6 | `50-services.sh` | habilita NetworkManager, bluetooth, greetd, accounts-daemon, **packagekit**, **rtkit-daemon**; **desabilita o `systemd-networkd`** e confere que só o NetworkManager ficou de gerente (o preset do Arch habilita os dois, e eles disputam o link); adiciona o **Flathub** para o usuário (loja FalconOS Software); **`appstreamcli refresh --force`** (metadados para a loja); `/etc/environment` (Wayland + `XCURSOR_THEME=Bibata-Modern-Ice`); NTP (`systemd-timesyncd`) |
+| 5 | `41-welcome.sh` | marca `/etc/nlinux-installed` e instala `/usr/local/bin/nlinux-welcome` (janela de boas-vindas única no 1º login; no live é inócuo) — acionado pelo autostart do Umbriel |
+| 6 | `50-services.sh` | habilita NetworkManager, bluetooth, greetd, accounts-daemon, **packagekit**, **rtkit-daemon**; **desabilita o `systemd-networkd`** e confere que só o NetworkManager ficou de gerente (o preset do Arch habilita os dois, e eles disputam o link); adiciona o **Flathub** para o usuário (loja NLinux Software); **`appstreamcli refresh --force`** (metadados para a loja); `/etc/environment` (Wayland + `XCURSOR_THEME=Bibata-Modern-Ice`); NTP (`systemd-timesyncd`) |
 
 ---
 
@@ -619,7 +619,7 @@ avisa é o `all.sh`, com `cstage`/`cnote`/`cact` (ver
 | Lista | Conteúdo |
 |---|---|
 | `packages/base.packages` | kernel, firmware, rede, áudio (PipeWire + **sound-theme-freedesktop**), ferramentas (fzf/ripgrep/starship…), `cryptsetup`, `btrfs-progs`, `efibootmgr`, fontes |
-| `packages/desktop.packages` | stack Noctalia + apps: firefox, **kitty** e fish, starship, fastfetch, nautilus, gnome-text-editor, **FalconOS Software** (Python + GTK3/WebKit + PackageKit + AppStream + Flatpak, com **zenity** para as boas-vindas), **timeshift** (snapshots do sistema), **mpv-mpris** (controles de mídia), spotify-launcher, discord, telegram-desktop, gpu-screen-recorder, **opencode** (agente de IA no terminal), swaylock/idle, zram-generator, mpv/ffmpeg/imagemagick |
+| `packages/desktop.packages` | stack Noctalia + apps: firefox, **kitty** e fish, starship, fastfetch, nautilus, gnome-text-editor, **NLinux Software** (Python + GTK3/WebKit + PackageKit + AppStream + Flatpak, com **zenity** para as boas-vindas), **timeshift** (snapshots do sistema), **mpv-mpris** (controles de mídia), spotify-launcher, discord, telegram-desktop, gpu-screen-recorder, **opencode** (agente de IA no terminal), swaylock/idle, zram-generator, mpv/ffmpeg/imagemagick |
 | `packages/aur.packages` | `umbriel-git`, `noctalia-greeter`, `xwayland-satellite-git` (X11 no Umbriel), `whatsapp-linux-desktop-bin` — via `yay` no chroot |
 | `iso/packages.live` | ferramentas do instalador (cryptsetup/gdisk/btrfs-progs/parted/python…), `noctalia`, `greetd`, NetworkManager, e os mesmos apps do desktop (inclui **opencode**, **timeshift** e **mpv-mpris**) + Flatpak/packagekit/appstream para o live |
 
@@ -629,7 +629,7 @@ avisa é o `all.sh`, com `cstage`/`cnote`/`cact` (ver
 > final dessa lista existe só para garantir essa paridade. Ao adicionar um
 > pacote para a instalação, adicione-o ao live na mesma mudança.
 
-`FalconOS Software` lista apps de repositório via
+`NLinux Software` lista apps de repositório via
 **PackageKit** e Flatpaks via **Flathub** (adicionado automaticamente ao usuário
 no live e na instalação). Para a loja listar programas, o live (no build) e a
 instalação rodam **`appstreamcli refresh --force`** para baixar os metadados
@@ -663,16 +663,16 @@ entrada no menu.
 
 ## Dotfiles (`config/`)
 
-Aplicados ao usuário do **live** (`~/home/falconos`) e do **sistema instalado**
+Aplicados ao usuário do **live** (`~/home/nlinux`) e do **sistema instalado**
 (`~/.config` do `INSTALL_USER`):
 
 - `config/.config/kitty/kitty.conf` + `themes/noctalia.conf`
 - `config/.config/fish/config.fish`
 - `config/.config/starship.toml`
-- `config/.config/fastfetch/config.jsonc` + `img/falconos.png` (logo via protocolo kitty; fallback ANSI em `config/.local/share/fastfetch/logos/falconos.txt`)
+- `config/.config/fastfetch/config.jsonc` + `img/nlinux.png` (logo via protocolo kitty; fallback ANSI em `config/.local/share/fastfetch/logos/nlinux.txt`)
 - `config/.config/umbriel/…` (`config.toml`, `noctalia.toml`, `src/*`)
 - `config/.local/share/icons/Bibata-Modern-{Ice,Amber,Classic}` (cursor; Ice é o padrão via `/etc/environment`)
-- `config/.local/share/sounds/falconos/` (`index.theme` + `stereo/message-new-instant.oga`) — tema de som próprio, herda o resto de `freedesktop`
+- `config/.local/share/sounds/nlinux/` (`index.theme` + `stereo/message-new-instant.oga`) — tema de som próprio, herda o resto de `freedesktop`
 
 > Arquivo com sufixo `.tpl` é template: `__KEYBOARD_LAYOUT__` é substituído pelo
 > layout derivado do keymap escolhido (`br-abnt2` → `br`, `us` → `us`, …).
@@ -682,12 +682,12 @@ Aplicados ao usuário do **live** (`~/home/falconos`) e do **sistema instalado**
 
 ## Splash do boot (BIOS)
 
-- `FalconOS.jpg` (fonte) → `splash.png` (640×480 PNG, crop central 4:3).
-- Gerar/atualizar: `./make-splash.sh` (usa `FalconOS.jpg` da raiz, ou passe um
+- `NLinux.jpg` (fonte) → `splash.png` (640×480 PNG, crop central 4:3).
+- Gerar/atualizar: `./make-splash.sh` (usa `NLinux.jpg` da raiz, ou passe um
   caminho). Requer Python + Pillow; opcionalmente passe a imagem como argumento.
 - O `build-iso.sh` copia `splash.png` para o perfil syslinux e mantém
   `MENU BACKGROUND splash.png` no `archiso_head.cfg` (título permanece
-  "Bem-vindo ao FalconOS").
+  "Bem-vindo ao NLinux").
 
 ---
 
@@ -700,23 +700,23 @@ Aplicados ao usuário do **live** (`~/home/falconos`) e do **sistema instalado**
   `root/customize_airootfs.sh` (roda no chroot do build), `root/.bash_profile`,
   `root/.zprofile`, `etc/systemd/system/getty@tty1.service.d/autologin.conf`,
   `etc/systemd/zram-generator.conf` (swap em RAM comprimida),
-  `usr/local/bin/falconos-installer{,-gui}`.
+  `usr/local/bin/nlinux-installer{,-gui}`.
 - **Etapas da instalação**: `install/chroot/*.sh`.
 - **Textos do instalador web** (7 idiomas): `install/translations.py` — é a fonte
   única; o `web/server.py` e o `web/static/app.js` só pedem as chaves
   (`stage.*`, `web.*`, `tui.*`, `part.*`).
-- Trocar o logo/arte do menu de boot: substitua `FalconOS.jpg` e rode
+- Trocar o logo/arte do menu de boot: substitua `NLinux.jpg` e rode
   `./make-splash.sh`.
 
 ### Atualizar a loja embarcada
 
-`falconos-software/` é a cópia do build publicado da loja
-(`github.com/Nilsonlinux/falconos-software`) que o `build-iso.sh` embute em
-`/opt/falconos-software` dentro da imagem.
+`nlinux-software/` é a cópia do build publicado da loja
+(`github.com/Nilsonlinux/nlinux-software`) que o `build-iso.sh` embute em
+`/opt/nlinux-software` dentro da imagem.
 
 **Não é preciso fazer isso à mão.** A curadoria sincroniza esta pasta sozinha: ao
 gerar a versão da loja, o passo 8 do build (`sync_iso_store`) apaga, recopla e
-**commita** `falconos-software/` a partir do build recém-gerado, antes de publicar.
+**commita** `nlinux-software/` a partir do build recém-gerado, antes de publicar.
 Basta abrir a curadoria e clicar em **"Gerar versão da loja"**.
 
 O commit importa: o `build-iso.sh` monta a imagem a partir do que está
@@ -727,7 +727,7 @@ editando outras coisas do projeto da ISO, elas ficam pendentes, intactas.
 Confira depois, se quiser:
 
 ```bash
-grep revision falconos-software/catalog-head.json
+grep revision nlinux-software/catalog-head.json
 git log -1 --oneline
 ```
 
@@ -741,23 +741,23 @@ Se a curadoria falhar ao espelhar (ela avisa no stdout, e o build continua —
 o pacote já foi publicado), o caminho manual continua valendo:
 
 ```bash
-cd /home/nilsonlinux/Projetos/falconos-iso-build
-rm -rf falconos-software && mkdir falconos-software
-git clone --depth 1 https://github.com/Nilsonlinux/falconos-software.git /tmp/loja
-cp -a /tmp/loja/. falconos-software/
-rm -rf falconos-software/.git falconos-software/*.tar.gz falconos-software/*.tar.gz.asc
+cd /home/nilsonlinux/Projetos/nlinux-iso-build
+rm -rf nlinux-software && mkdir nlinux-software
+git clone --depth 1 https://github.com/Nilsonlinux/nlinux-software.git /tmp/loja
+cp -a /tmp/loja/. nlinux-software/
+rm -rf nlinux-software/.git nlinux-software/*.tar.gz nlinux-software/*.tar.gz.asc
 ```
 
-Confirme com `cat falconos-software/catalog-head.json` (a revisão tem que ser a
+Confirme com `cat nlinux-software/catalog-head.json` (a revisão tem que ser a
 mais recente) e conferindo que a assinatura bate:
-`gpg --verify falconos-software/falconos-software-v<N>.tar.gz.asc falconos-software/falconos-software-v<N>.tar.gz`
+`gpg --verify nlinux-software/nlinux-software-v<N>.tar.gz.asc nlinux-software/nlinux-software-v<N>.tar.gz`
 (precisa do `.tar.gz`, que só existe no repositório, não na pasta embute).
 
 > A pasta é apagada antes de recoplar. É o que impede programs removidos do
 > catálogo de continuarem embarcados na imagem por causa de um espelho parcial.
 
 Desde a v117 o app **não grava mais dentro do `/opt`**: o catálogo e a mídia
-vão para `~/.local/share/falconos/store/apps` e o `/opt` é só a semente. Por
+vão para `~/.local/share/nlinux/store/apps` e o `/opt` é só a semente. Por
 isso `customize_airootfs.sh` (live) e `40-user-config.sh` (instalado) semeiam
 essa pasta do usuário em vez de dar escrita no `/opt`.
 
@@ -773,12 +773,13 @@ essa pasta do usuário em vez de dar escrita no `/opt`.
 ## Assinatura das releases (GPG)
 
 As tags de release e os commits deste repositório são assinados com a chave GPG
-**FalconOS Releases**:
+de releases do projeto (UID atual `FalconOS Releases`, criado antes da
+renomeação; chaves novas usam `NLinux Releases`):
 
 - Chave: `FFDFD46A8DE7F79F`
 - Impressão digital: `247C C0FF CA3C C9ED 0F0C 3027 FFDF D46A 8DE7 F79F`
-- Chave legada (releases antigas): [`falconos-releases-gpg-pub-legacy.asc`](falconos-releases-gpg-pub-legacy.asc)
-- Chave pública: [`falconos-releases-gpg-pub.asc`](falconos-releases-gpg-pub.asc)
+- Chave legada (releases antigas): [`nlinux-releases-gpg-pub-legacy.asc`](nlinux-releases-gpg-pub-legacy.asc)
+- Chave pública: [`nlinux-releases-gpg-pub.asc`](nlinux-releases-gpg-pub.asc)
 - Configuração das máquinas de release: [`SIGNING.md`](SIGNING.md)
 
 > A chave antiga (`69B8B38D1DFF6CDA`) assinou as releases até 2026.10.15 e está
@@ -789,8 +790,8 @@ As tags de release e os commits deste repositório são assinados com a chave GP
 Para verificar localmente:
 
 ```bash
-gpg --import falconos-releases-gpg-pub.asc   # só na primeira vez
-gpg --import falconos-releases-gpg-pub-legacy.asc   # opcional: releases antigas
+gpg --import nlinux-releases-gpg-pub.asc   # só na primeira vez
+gpg --import nlinux-releases-gpg-pub-legacy.asc   # opcional: releases antigas
 git tag -v 2026.10.09                       # verifica uma tag de release
 git verify-commit <commit>                  # verifica um commit
 ```
@@ -806,7 +807,7 @@ posterior** (GPL-3.0-or-later). Veja o arquivo [`LICENSE`](LICENSE) para o texto
 completo.
 
 ```
-FalconOS ISO build
+NLinux ISO build
 Copyright (C) 2026 Nilson Linux
 
 Este programa é software livre: você pode redistribuí-lo e/ou modificá-lo sob

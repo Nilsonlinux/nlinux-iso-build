@@ -1,6 +1,6 @@
 # Assinatura de commits e tags
 
-Este documento descreve como configurar a assinatura GPG do FalconOS nas duas
+Este documento descreve como configurar a assinatura GPG do NLinux nas duas
 máquinas (casa e trabalho), como publicar a chave e como fazer backup/rotação.
 
 O script que faz o trabalho pesado é
@@ -31,8 +31,15 @@ chave primária  (só certifica; guardada OFFLINE, fora das duas máquinas)
 - O GitHub mostra **Verified** para commits/tags assinados por qualquer uma das
   subchaves, porque a verificação sobe até a chave primária publicada.
 
-O UID da chave é `FalconOS Releases <nilsonlinux@gmail.com>`. Esse e-mail precisa
-estar verificado na sua conta do GitHub para o selo aparecer.
+O UID padrão de chaves novas é `NLinux Releases <nilsonlinux@gmail.com>`. A
+chave de releases atual foi criada antes da renomeação e ainda usa o UID
+`FalconOS Releases <nilsonlinux@gmail.com>`; o e-mail precisa estar verificado
+na sua conta do GitHub para o selo aparecer.
+
+```bash
+# conferir o UID da chave que está no repositório
+gpg --show-keys --with-colons nlinux-releases-gpg-pub.asc | grep '^uid'
+```
 
 ## Pré-requisitos
 
@@ -40,11 +47,11 @@ Em qualquer Linux com `bash`, `gpg` 2.2+ e `git` 2.20+:
 
 | Distro | Pacotes |
 | --- | --- |
-| Arch/FalconOS | `gnupg pinentry git` |
+| Arch/NLinux | `gnupg pinentry git` |
 | Debian/Ubuntu | `gnupg pinentry-curses git` |
 | Fedora | `gnupg2 pinentry git` |
 
-No Arch/FalconOS:
+No Arch/NLinux:
 
 ```bash
 sudo pacman -S --needed gnupg pinentry git
@@ -57,7 +64,7 @@ Não é preciso ser root para usar o script.
 Escolha uma máquina para ser a primeira (o exemplo usa `casa`). No repositório:
 
 ```bash
-cd ~/Projetos/falconos-iso-build     # ajuste o caminho
+cd ~/Projetos/nlinux-iso-build     # ajuste o caminho
 git pull
 ./scripts/setup-signing.sh bootstrap --machine casa --other trabalho
 ```
@@ -69,13 +76,13 @@ O script vai:
 2. criar a chave primária (só certificação, validade de 2 anos);
 3. criar duas subchaves de assinatura (uma para cada máquina);
 4. exportar os pacotes, o backup completo e o certificado de revogação em
-   `~/.config/falconos-signing/`;
+   `~/.config/nlinux-signing/`;
 5. validar o backup importando-o num chaveiro temporário;
 6. apagar desta máquina a chave primária secreta e a subchave da outra máquina;
 7. configurar o Git global (`user.signingkey`, `commit.gpgsign`,
    `tag.gpgSign`, `log.showSignature`) e o pinentry do GnuPG.
 
-No fim, a pasta `~/.config/falconos-signing/` terá algo como:
+No fim, a pasta `~/.config/nlinux-signing/` terá algo como:
 
 | Arquivo | O que é | Onde guardar |
 | --- | --- | --- |
@@ -111,7 +118,7 @@ nada disso no repositório.
 Na máquina 2:
 
 ```bash
-cd ~/Projetos/falconos-iso-build     # ajuste o caminho
+cd ~/Projetos/nlinux-iso-build     # ajuste o caminho
 git pull
 ./scripts/setup-signing.sh join \
   --bundle /caminho/para/machine-trabalho.asc \
@@ -130,10 +137,10 @@ guarde-o no mesmo cofre offline do backup).
 Isso é feito **uma vez só**, em qualquer uma das máquinas:
 
 1. Abra <https://github.com/settings/gpg/new>.
-2. Cole o conteúdo de `~/.config/falconos-signing/public.asc`:
+2. Cole o conteúdo de `~/.config/nlinux-signing/public.asc`:
 
    ```bash
-   cat ~/.config/falconos-signing/public.asc
+   cat ~/.config/nlinux-signing/public.asc
    ```
 
 3. Confirme em <https://github.com/settings/emails> que
@@ -152,8 +159,8 @@ Ainda na máquina 1:
 
 O comando:
 
-- preserva a chave antiga em `falconos-releases-gpg-pub-legacy.asc`;
-- copia a chave nova para `falconos-releases-gpg-pub.asc`;
+- preserva a chave antiga em `nlinux-releases-gpg-pub-legacy.asc`;
+- copia a chave nova para `nlinux-releases-gpg-pub.asc`;
 - atualiza a seção “Assinatura das releases (GPG)” do `README.md`;
 - mostra o `git diff` (não commita nada).
 
@@ -161,8 +168,8 @@ Revise e commite **com assinatura**:
 
 ```bash
 git diff
-git add falconos-releases-gpg-pub.asc falconos-releases-gpg-pub-legacy.asc README.md
-git commit -S -m "assinatura: nova chave de releases FalconOS"
+git add nlinux-releases-gpg-pub.asc nlinux-releases-gpg-pub-legacy.asc README.md
+git commit -S -m "assinatura: nova chave de releases NLinux"
 git push
 ```
 
@@ -172,7 +179,7 @@ Sempre que for marcar uma release:
 
 ```bash
 # tag assinada (o -s já cria uma tag anotada)
-git tag -s 2026.12.01 -m "FalconOS 2026.12.01"
+git tag -s 2026.12.01 -m "NLinux 2026.12.01"
 
 # confira antes de enviar
 git tag -v 2026.12.01
@@ -187,14 +194,14 @@ usadas em release. A tag `2026.11.03` atual é lightweight; se quiser corrigi-la
 # ATENÇÃO: recria uma tag já publicada. Só faça se puder mexer no remoto.
 git tag -d 2026.11.03
 git push origin :refs/tags/2026.11.03
-git tag -s 2026.11.03 -m "FalconOS 2026.11.03"
+git tag -s 2026.11.03 -m "NLinux 2026.11.03"
 git push origin 2026.11.03
 ```
 
 Para verificar tags antigas depois da troca, importe também a chave legada:
 
 ```bash
-gpg --import falconos-releases-gpg-pub-legacy.asc
+gpg --import nlinux-releases-gpg-pub-legacy.asc
 git tag -v 2026.10.15
 ```
 

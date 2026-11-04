@@ -1,7 +1,0 @@
-[Sound Theme]
-Name=FalconOS
-Inherits=freedesktop
-Directories=stereo
-
-[stereo]
-OutputProfile=stereo

@@ -11,10 +11,10 @@ BASE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 die() { echo -e "\e[31m[erro]\e[0m $*" >&2; exit 1; }
 info() { echo -e "\e[36m[splash]\e[0m $*"; }
 
-SRC="${1:-$BASE/FalconOS.jpg}"
+SRC="${1:-$BASE/NLinux.jpg}"
 
 if [[ ! -f "$SRC" ]]; then
-  die "Imagem não encontrada: $SRC (passe o caminho como argumento ou salve como $BASE/FalconOS.jpg)"
+  die "Imagem não encontrada: $SRC (passe o caminho como argumento ou salve como $BASE/NLinux.jpg)"
 fi
 
 if ! command -v magick >/dev/null 2>&1; then

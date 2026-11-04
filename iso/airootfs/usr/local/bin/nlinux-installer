@@ -1,0 +1,3 @@
+#!/bin/sh
+# Instalador NLinux — exclusivamente o instalador web (requer o desktop do live).
+exec /usr/local/bin/nlinux-installer-gui

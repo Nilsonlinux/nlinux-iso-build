@@ -26,18 +26,18 @@ import time
 # Raiz do repositório: web/tests/ -> web/ -> <repo>.
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Log/estado/cache de mentira, numa pasta temporária: a instalação de verdade
-# (que usa /tmp/falconos-*) não é encostada.
-TMP = tempfile.mkdtemp(prefix="falconos-e2e-")
+# (que usa /tmp/nlinux-*) não é encostada.
+TMP = tempfile.mkdtemp(prefix="nlinux-e2e-")
 atexit.register(shutil.rmtree, TMP, True)
 LOG = os.path.join(TMP, "install.log")
 STATE = os.path.join(TMP, "state.json")
 CACHE = os.path.join(TMP, "cache")
 PORT = 0
 
-os.environ["FALCONOS_LOG_PATH"] = LOG
-os.environ["FALCONOS_STATE_PATH"] = STATE
-os.environ["FALCONOS_CACHE_DIRS"] = CACHE
-os.environ["FALCONOS_PORT"] = str(PORT)
+os.environ["NLINUX_LOG_PATH"] = LOG
+os.environ["NLINUX_STATE_PATH"] = STATE
+os.environ["NLINUX_CACHE_DIRS"] = CACHE
+os.environ["NLINUX_PORT"] = str(PORT)
 
 spec = importlib.util.spec_from_file_location("srv", os.path.join(REPO, "web", "server.py"))
 srv = importlib.util.module_from_spec(spec)

@@ -4,9 +4,9 @@
 #.... #...# #.... #...# #...# #..## #...# ....#
 #.... #...# ##### .###. .###. #...# .###. ####.
 
-Bem-vindo ao FalconOS!
+Bem-vindo ao NLinux!
 
   - Ambiente ao vivo: desktop completo (Umbriel + Noctalia).
-  - Para instalar, abra "Instalar FalconOS" no menu do desktop
+  - Para instalar, abra "Instalar NLinux" no menu do desktop
     ou execute como root:  bash /opt/noctalia-installer/install.sh
-  - Usuário do live: falconos    senha: falconos
+  - Usuário do live: nlinux    senha: nlinux

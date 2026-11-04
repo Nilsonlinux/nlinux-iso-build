@@ -1,5 +1,5 @@
 {
-  "name": "falconos-installer-tests",
+  "name": "nlinux-installer-tests",
   "private": true,
   "description": "Suites do instalador web (painel, CSS e ponta a ponta). Só para desenvolvimento: nada aqui entra no ISO.",
   "scripts": {

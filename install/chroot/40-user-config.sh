@@ -47,38 +47,38 @@ if [[ ! -f "$user_home/.config/user-dirs.dirs" ]]; then
 fi
 
 # Atalho da loja de software na Área de Trabalho do usuário.
-if [[ -f /usr/share/applications/falconosstore.desktop ]]; then
+if [[ -f /usr/share/applications/nlinuxstore.desktop ]]; then
   mkdir -p "$user_home/Desktop"
-  cp -a /usr/share/applications/falconosstore.desktop "$user_home/Desktop/"
-  chmod +x "$user_home/Desktop/falconosstore.desktop" 2>/dev/null || true
+  cp -a /usr/share/applications/nlinuxstore.desktop "$user_home/Desktop/"
+  chmod +x "$user_home/Desktop/nlinuxstore.desktop" 2>/dev/null || true
   chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/Desktop" 2>/dev/null || true
 fi
 
 # Atalho de boas-vindas (janela da distro) na Área de Trabalho do usuário.
-if [[ -f /usr/share/applications/falconos-welcome.desktop ]]; then
+if [[ -f /usr/share/applications/nlinux-welcome.desktop ]]; then
   mkdir -p "$user_home/Desktop"
-  cp -a /usr/share/applications/falconos-welcome.desktop "$user_home/Desktop/"
-  chmod +x "$user_home/Desktop/falconos-welcome.desktop" 2>/dev/null || true
+  cp -a /usr/share/applications/nlinux-welcome.desktop "$user_home/Desktop/"
+  chmod +x "$user_home/Desktop/nlinux-welcome.desktop" 2>/dev/null || true
   chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/Desktop" 2>/dev/null || true
 fi
 
 # Loja gravável pelo usuário: desde a v117 o app não escreve mais em /opt — o
-# catálogo e a mídia foram para ~/.local/share/falconos/store e o /opt é só a
+# catálogo e a mídia foram para ~/.local/share/nlinux/store e o /opt é só a
 # semente. Semear a pasta do usuário deixa a propriedade certa desde o início e
 # a primeira abertura não espera a cópia.
-if [[ -d /opt/falconos-software/src/apps ]]; then
-  store_data="$user_home/.local/share/falconos/store"
+if [[ -d /opt/nlinux-software/src/apps ]]; then
+  store_data="$user_home/.local/share/nlinux/store"
   mkdir -p "$store_data"
   if [[ ! -d "$store_data/apps" ]]; then
-    cp -a /opt/falconos-software/src/apps "$store_data/apps"
+    cp -a /opt/nlinux-software/src/apps "$store_data/apps"
   fi
-  chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/.local/share/falconos"
-  chmod -R u+rwX "$user_home/.local/share/falconos"
+  chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/.local/share/nlinux"
+  chmod -R u+rwX "$user_home/.local/share/nlinux"
 fi
 
 # Marca os atalhos da Área de Trabalho como confiáveis (senão o GNOME cobra
 # permissão a cada clique e dá impressão de que o app "não abre").
-command -v gio >/dev/null 2>&1 && for d in falconos-installer falconosstore falconos-welcome; do
+command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinuxstore nlinux-welcome; do
   gio set "$user_home/Desktop/$d.desktop" metadata::trusted true 2>/dev/null || true
 done
 

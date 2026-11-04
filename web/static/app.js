@@ -1,5 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
-/* Instalador web FalconOS — lógica do assistente + SSE. */
+/* Instalador web NLinux — lógica do assistente + SSE. */
 "use strict";
 
 const $ = (s) => document.querySelector(s);
@@ -57,8 +57,8 @@ const state = {
   USE_LUKS: "",
   LUKS_PASS: "",
   GPU: "",
-  HOSTNAME: "falconos",
-  INSTALL_USER: "falconos",
+  HOSTNAME: "nlinux",
+  INSTALL_USER: "nlinux",
   INSTALL_USER_PASS: "",
   ROOT_SAME: true,
   ROOT_PASS: "",
@@ -168,13 +168,13 @@ function render() {
 
 /* ---------- telas ---------- */
 const WELCOMES = [
-  "Bem-vindo ao instalador do FalconOS",
-  "Welcome to the FalconOS installer",
-  "Bienvenido al instalador de FalconOS",
-  "Bienvenue à l'installateur FalconOS",
-  "Willkommen beim FalconOS-Installer",
-  "Benvenuto nell'installatore FalconOS",
-  "FalconOSインストーラーへようこそ",
+  "Bem-vindo ao instalador do NLinux",
+  "Welcome to the NLinux installer",
+  "Bienvenido al instalador de NLinux",
+  "Bienvenue à l'installateur NLinux",
+  "Willkommen beim NLinux-Installer",
+  "Benvenuto nell'installatore NLinux",
+  "NLinuxインストーラーへようこそ",
 ];
 let welcomeIdx = 0;
 setInterval(() => {
@@ -328,7 +328,7 @@ async function openResizeDialog() {
       const rootGiB = Number(slider.value);
       const shrinkBytes = Math.round(rootGiB * GIB) + 2 * MIB;
       const remainingWindows = Math.max(0, part.size - shrinkBytes);
-      detail.textContent = `${t("web.resize.capacity")}: ${rootGiB.toFixed(1)} GiB FalconOS · ` +
+      detail.textContent = `${t("web.resize.capacity")}: ${rootGiB.toFixed(1)} GiB NLinux · ` +
         `${t("web.resize.remaining")}: ${(remainingWindows / GIB).toFixed(1)} GiB Windows`;
     };
     slider.oninput = updateDetail;
@@ -439,7 +439,7 @@ function localeStep() {
         `<h1 id="welcome-anim" class="welcome-anim">${WELCOMES[0]}</h1>` +
         `<div class="brand"><div class="logo-ring">` +
         `<span class="pulse"></span><span class="pulse delay-1"></span>` +
-        `<div class="logo-circle"><img src="/static/logo.png" alt="FalconOS"></div>` +
+        `<div class="logo-circle"><img src="/static/logo.png" alt="NLinux"></div>` +
         `</div></div>` +
         `</div>`;
       // Uma única escolha define idioma, teclado e fuso horário juntos.

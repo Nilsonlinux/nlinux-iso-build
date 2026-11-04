@@ -1,0 +1,7 @@
+[Sound Theme]
+Name=NLinux
+Inherits=freedesktop
+Directories=stereo
+
+[stereo]
+OutputProfile=stereo

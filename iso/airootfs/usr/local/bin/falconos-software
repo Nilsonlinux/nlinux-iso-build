@@ -1,5 +1,0 @@
-#!/bin/sh
-# Launcher da Loja de Software FalconOS (live e sistema instalado).
-# Chama o interpretador diretamente com o main.py como argumento: dispensa o
-# bit de execução do script em /opt e qualquer noexec do ponto de montagem.
-exec /usr/bin/python3 /opt/falconos-software/src/main.py "$@"

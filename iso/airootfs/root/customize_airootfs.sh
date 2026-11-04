@@ -3,11 +3,11 @@
 # Rodado pelo mkarchiso dentro do chroot do live system durante o build
 # (mecanismo oficial "customize_airootfs.sh"). Prepara o ambiente ao vivo
 # para o modo "Experimentar": pacotes AUR, greetd + noctalia-greeter e o
-# usuário "falconos" com o desktop Umbriel + Noctalia.
+# usuário "nlinux" com o desktop Umbriel + Noctalia.
 set -euo pipefail
 
-log() { echo -e "\e[36m[falconos-live]\e[0m $*"; }
-die() { echo -e "\e[31m[falconos-live][erro]\e[0m $*" >&2; exit 1; }
+log() { echo -e "\e[36m[nlinux-live]\e[0m $*"; }
+die() { echo -e "\e[31m[nlinux-live][erro]\e[0m $*" >&2; exit 1; }
 
 log "==> Iniciando configuração do live system"
 
@@ -43,8 +43,8 @@ fi
 chmod -R 700 /etc/pacman.d/gnupg 2>/dev/null || true
 chown -R root:root /etc/pacman.d/gnupg 2>/dev/null || true
 
-# multilib: programas 32-bit. A loja do FalconOS já esperava por isso — o
-# REPO_FILES dela (falconos-software/src/falconos/pacman_db.py) lê core, extra e
+# multilib: programas 32-bit. A loja do NLinux já esperava por isso — o
+# REPO_FILES dela (nlinux-software/src/nlinux/pacman_db.py) lê core, extra e
 # multilib — mas sem a seção no pacman.conf o sync db do multilib nunca baixa e
 # a loja fica sem os pacotes de lá, incluindo o Steam.
 # ATENÇÃO: este mesmo bloco está em install/chroot/10-system.sh, para o sistema
@@ -92,7 +92,7 @@ done
 # So no live: aqui a rede e garantida (o build ja baixa do AUR e de espelhos).
 # No chroot da instalacao o sync NAO e feito de proposito — na instalacao
 # offline pode nao haver rede e isso quebraria a instalacao; e o db chega pelo
-# clone do live ou pelo falconos-pacman-refresh.service no primeiro boot.
+# clone do live ou pelo nlinux-pacman-refresh.service no primeiro boot.
 log "Sincronizando bancos de pacotes (inclui o db do multilib)"
 pacman -Sy
 test -f /var/lib/pacman/sync/multilib.db \
@@ -108,8 +108,8 @@ log "Nota: fase check desativada via --mflags '--nocheck' nos builds do yay"
 # --- Pacotes AUR: umbriel-git, xdg-desktop-portal-umbriel-git, noctalia-greeter
 log "Criando usuário temporário para build de pacotes AUR"
 useradd -m -s /bin/bash builder
-echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/10-falconos-builder
-chmod 440 /etc/sudoers.d/10-falconos-builder
+echo 'builder ALL=(ALL) NOPASSWD: ALL' > /etc/sudoers.d/10-nlinux-builder
+chmod 440 /etc/sudoers.d/10-nlinux-builder
 
 log "Instalando yay (yay-bin) via makepkg"
 # O git:// do AUR cai com 502 o suficiente para abortar o build inteiro, e sem
@@ -162,7 +162,7 @@ runuser -u builder -- bash -c '
 
 log "Removendo usuário temporário builder"
 userdel -r builder 2>/dev/null || true
-rm -f /etc/sudoers.d/10-falconos-builder
+rm -f /etc/sudoers.d/10-nlinux-builder
 rm -rf /tmp/yay-bin /tmp/gocache /tmp/cargo
 
 # --- greetd + noctalia-greeter
@@ -187,15 +187,15 @@ NOCTALIA_GREETER_SESSION_BIN=/usr/bin/noctalia-greeter-session \
 
 chmod 0750 /var/lib/noctalia-greeter 2>/dev/null || true
 
-# --- Usuário do live (login no greeter: falconos / falconos)
-log "Criando usuário 'falconos' (grupos de mídia/input/sudo)"
-id falconos >/dev/null 2>&1 || useradd -m -G wheel,video,input,audio,storage,network,users -s /usr/bin/fish falconos
-echo "falconos:falconos" | chpasswd
+# --- Usuário do live (login no greeter: nlinux / nlinux)
+log "Criando usuário 'nlinux' (grupos de mídia/input/sudo)"
+id nlinux >/dev/null 2>&1 || useradd -m -G wheel,video,input,audio,storage,network,users -s /usr/bin/fish nlinux
+echo "nlinux:nlinux" | chpasswd
 
-# --- Sudo para o usuário do live (senha: falconos)
-log "Adicionando usuário 'falconos' ao sudoers (sem senha — instalador web live)"
-echo 'falconos ALL=(ALL:ALL) NOPASSWD: ALL' > /etc/sudoers.d/10-falconos-user
-chmod 440 /etc/sudoers.d/10-falconos-user
+# --- Sudo para o usuário do live (senha: nlinux)
+log "Adicionando usuário 'nlinux' ao sudoers (sem senha — instalador web live)"
+echo 'nlinux ALL=(ALL:ALL) NOPASSWD: ALL' > /etc/sudoers.d/10-nlinux-user
+chmod 440 /etc/sudoers.d/10-nlinux-user
 
 # --- Rede no live: NetworkManager assume as interfaces
 log "Habilitando NetworkManager e desativando o systemd-networkd do releng"
@@ -209,20 +209,20 @@ systemctl disable systemd-networkd-wait-online.service 2>/dev/null || true
 # /etc/systemd, entao o sistema instalado herda a unit e o symlink de
 # habilitação — nao e preciso instalar nada no chroot.
 log "Habilitando sincronizacao do banco do pacman no boot"
-if [[ -f /etc/systemd/system/falconos-pacman-refresh.service ]]; then
-  systemctl enable falconos-pacman-refresh.service 2>/dev/null || true
-  log "habilitado: falconos-pacman-refresh.service (pacman -Sy no boot)"
+if [[ -f /etc/systemd/system/nlinux-pacman-refresh.service ]]; then
+  systemctl enable nlinux-pacman-refresh.service 2>/dev/null || true
+  log "habilitado: nlinux-pacman-refresh.service (pacman -Sy no boot)"
 else
   log "aviso: unit do pacman-refresh ausente; a sincronizacao no boot ficou desativada"
 fi
 
 # --- Configurações do Umbriel e ícones (cursor) para o desktop no live
-log "Configurando dotfiles do usuário falconos (umbriel, Bibata)"
-mkdir -p /home/falconos/.config
+log "Configurando dotfiles do usuário nlinux (umbriel, Bibata)"
+mkdir -p /home/nlinux/.config
 if [[ -d /opt/noctalia-installer/config/.config ]]; then
   while IFS= read -r -d '' f; do
     rel="${f#/opt/noctalia-installer/config/.config/}"
-    target="/home/falconos/.config/$rel"
+    target="/home/nlinux/.config/$rel"
     mkdir -p "$(dirname "$target")"
     if grep -q '__KEYBOARD_LAYOUT__' "$f"; then
       sed 's/__KEYBOARD_LAYOUT__/us/g' "$f" > "${target%.tpl}"
@@ -233,23 +233,23 @@ if [[ -d /opt/noctalia-installer/config/.config ]]; then
 fi
 
 # As boas-vindas são instaladas e iniciadas somente após a instalação do sistema.
-LIVE_UMBRIEL_CONFIG="/home/falconos/.config/umbriel/src/general.toml"
+LIVE_UMBRIEL_CONFIG="/home/nlinux/.config/umbriel/src/general.toml"
 if [[ -f "$LIVE_UMBRIEL_CONFIG" ]]; then
-  sed -i '/^[[:space:]]*"falconos-welcome",[[:space:]]*$/d' "$LIVE_UMBRIEL_CONFIG"
+  sed -i '/^[[:space:]]*"nlinux-welcome",[[:space:]]*$/d' "$LIVE_UMBRIEL_CONFIG"
 fi
 
 # Ícones/cursor (.local): cópia íntegra (binários e symlinks preservados)
 if [[ -d /opt/noctalia-installer/config/.local ]]; then
-  mkdir -p /home/falconos/.local
-  cp -a /opt/noctalia-installer/config/.local/. /home/falconos/.local/
+  mkdir -p /home/nlinux/.local
+  cp -a /opt/noctalia-installer/config/.local/. /home/nlinux/.local/
 fi
-chown -R falconos:falconos /home/falconos/.config /home/falconos/.local 2>/dev/null || true
+chown -R nlinux:nlinux /home/nlinux/.config /home/nlinux/.local 2>/dev/null || true
 
-# Dock no live: fixa também o instalador FalconOS. No sistema instalado ele é
+# Dock no live: fixa também o instalador NLinux. No sistema instalado ele é
 # removido (install.sh), então o pin vive só aqui; o arquivo é carregado por
 # último pelo Noctalia e sobrescreve o "pinned" do config.toml base.
-if [[ -f /home/falconos/.config/noctalia/config.toml ]]; then
-  cat > /home/falconos/.config/noctalia/z-live.toml <<'EOF'
+if [[ -f /home/nlinux/.config/noctalia/config.toml ]]; then
+  cat > /home/nlinux/.config/noctalia/z-live.toml <<'EOF'
 [dock]
 pinned = [
     "org.telegram.desktop",
@@ -259,25 +259,25 @@ pinned = [
     "kitty",
     "org.gnome.Nautilus",
     "spotify-launcher",
-    "falconosstore",
-    "falconos-installer",
+    "nlinuxstore",
+    "nlinux-installer",
 ]
 EOF
-  chown falconos:falconos /home/falconos/.config/noctalia/z-live.toml
+  chown nlinux:nlinux /home/nlinux/.config/noctalia/z-live.toml
 fi
 
-# --- PipeWire/WirePlumber no live: habilita a session de usuário do 'falconos'
+# --- PipeWire/WirePlumber no live: habilita a session de usuário do 'nlinux'
 # (o umbriel sobe via systemd --user, então basta ativar os sockets/services
 # no default.target da sessão do usuário)
-log "Habilitando PipeWire + WirePlumber na sessão do usuário falconos"
-mkdir -p /home/falconos/.config/systemd/user/default.target.wants
+log "Habilitando PipeWire + WirePlumber na sessão do usuário nlinux"
+mkdir -p /home/nlinux/.config/systemd/user/default.target.wants
 ln -sf /usr/lib/systemd/user/pipewire.socket \
-  /home/falconos/.config/systemd/user/default.target.wants/pipewire.socket
+  /home/nlinux/.config/systemd/user/default.target.wants/pipewire.socket
 ln -sf /usr/lib/systemd/user/pipewire-pulse.socket \
-  /home/falconos/.config/systemd/user/default.target.wants/pipewire-pulse.socket
+  /home/nlinux/.config/systemd/user/default.target.wants/pipewire-pulse.socket
 ln -sf /usr/lib/systemd/user/wireplumber.service \
-  /home/falconos/.config/systemd/user/default.target.wants/wireplumber.service
-chown -R falconos:falconos /home/falconos/.config/systemd 2>/dev/null || true
+  /home/nlinux/.config/systemd/user/default.target.wants/wireplumber.service
+chown -R nlinux:nlinux /home/nlinux/.config/systemd 2>/dev/null || true
 
 log "Variáveis de ambiente do live (Wayland + cursor Bibata)"
 {
@@ -289,50 +289,50 @@ log "Variáveis de ambiente do live (Wayland + cursor Bibata)"
 } >> /etc/environment
 
 # --- Atalho do instalador no menu (e na Área de Trabalho do live)
-log "Instalando atalho 'Instalar FalconOS' (menu + Desktop do live)"
-if [[ -f /usr/share/applications/falconos-installer.desktop ]]; then
-  mkdir -p /home/falconos/Desktop
-  cp -a /usr/share/applications/falconos-installer.desktop /home/falconos/Desktop/
-  chmod +x /home/falconos/Desktop/falconos-installer.desktop 2>/dev/null || true
+log "Instalando atalho 'Instalar NLinux' (menu + Desktop do live)"
+if [[ -f /usr/share/applications/nlinux-installer.desktop ]]; then
+  mkdir -p /home/nlinux/Desktop
+  cp -a /usr/share/applications/nlinux-installer.desktop /home/nlinux/Desktop/
+  chmod +x /home/nlinux/Desktop/nlinux-installer.desktop 2>/dev/null || true
 fi
 
 # --- Loja de software no menu e na Área de Trabalho do live
 log "Instalando atalho 'Loja de Software' (menu + Desktop do live)"
-if [[ -f /usr/share/applications/falconosstore.desktop ]]; then
-  mkdir -p /home/falconos/Desktop
-  cp -a /usr/share/applications/falconosstore.desktop /home/falconos/Desktop/
-  chmod +x /home/falconos/Desktop/falconosstore.desktop 2>/dev/null || true
+if [[ -f /usr/share/applications/nlinuxstore.desktop ]]; then
+  mkdir -p /home/nlinux/Desktop
+  cp -a /usr/share/applications/nlinuxstore.desktop /home/nlinux/Desktop/
+  chmod +x /home/nlinux/Desktop/nlinuxstore.desktop 2>/dev/null || true
 fi
-chmod +x /usr/local/bin/falconos-software 2>/dev/null || true
-chmod 0755 /opt/falconos-software/falconos-software 2>/dev/null || true
+chmod +x /usr/local/bin/nlinux-software 2>/dev/null || true
+chmod 0755 /opt/nlinux-software/nlinux-software 2>/dev/null || true
 
 # --- Loja gravável: o app NÃO escreve mais em /opt. Desde a v117 o catálogo e a
-# mídia da loja foram para ~/.local/share/falconos/store e o /opt é só a semente
+# mídia da loja foram para ~/.local/share/nlinux/store e o /opt é só a semente
 # embarcada, então a árvore pode ficar no root (o app só precisa ler). Semear
 # a pasta do usuário aqui evita que a primeira abertura espere a cópia.
-if [[ -d /opt/falconos-software/src/apps ]]; then
-  store_data="/home/falconos/.local/share/falconos/store"
+if [[ -d /opt/nlinux-software/src/apps ]]; then
+  store_data="/home/nlinux/.local/share/nlinux/store"
   mkdir -p "$store_data"
   if [[ ! -d "$store_data/apps" ]]; then
-    cp -a /opt/falconos-software/src/apps "$store_data/apps"
+    cp -a /opt/nlinux-software/src/apps "$store_data/apps"
   fi
-  chown -R falconos:falconos /home/falconos/.local/share/falconos
-  chmod -R u+rwX /home/falconos/.local/share/falconos
+  chown -R nlinux:nlinux /home/nlinux/.local/share/nlinux
+  chmod -R u+rwX /home/nlinux/.local/share/nlinux
 fi
 
 # --- Marca os atalhos da Área de Trabalho como confiáveis (GNOME pediria
 # permissão a cada clique e poderia "não abrir" o app).
-command -v gio >/dev/null 2>&1 && for d in falconos-installer falconosstore; do
-  gio set "/home/falconos/Desktop/$d.desktop" metadata::trusted true 2>/dev/null || true
+command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinuxstore; do
+  gio set "/home/nlinux/Desktop/$d.desktop" metadata::trusted true 2>/dev/null || true
 done
-chown -R falconos:falconos /home/falconos/Desktop 2>/dev/null || true
+chown -R nlinux:nlinux /home/nlinux/Desktop 2>/dev/null || true
 
 # Identidade da distro gerada no build (persiste no sistema instalado via
 # cópia offline). Usa a mesma numeração do profiledef (Y.M.D da ISO).
 {
-  echo 'FALCONOS_NAME="FalconOS"'
-  echo "FALCONOS_VERSION=\"$(date +%Y.%m.%d)\""
-  echo "FALCONOS_BUILT=\"$(date -Is)\""
-} > /etc/falconos-release
+  echo 'NLINUX_NAME="NLinux"'
+  echo "NLINUX_VERSION=\"$(date +%Y.%m.%d)\""
+  echo "NLINUX_BUILT=\"$(date -Is)\""
+} > /etc/nlinux-release
 
-log "==> Live system configurado. Desktop disponível via greetd (usuário falconos)."
+log "==> Live system configurado. Desktop disponível via greetd (usuário nlinux)."

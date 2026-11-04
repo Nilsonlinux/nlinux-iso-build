@@ -23,15 +23,15 @@ import time
 # Raiz do repositório: web/tests/ -> web/ -> <repo>.
 REPO = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 # Nada é escrito fora da pasta temporária: os testes podem rodar em paralelo e
-# não dependem de /tmp/falconos-*, que pertence à instalação de verdade.
-TMP = tempfile.mkdtemp(prefix="falconos-tests-")
+# não dependem de /tmp/nlinux-*, que pertence à instalação de verdade.
+TMP = tempfile.mkdtemp(prefix="nlinux-tests-")
 atexit.register(shutil.rmtree, TMP, True)
 LOG = os.path.join(TMP, "install.log")
 STATE = os.path.join(TMP, "state.json")
 CACHE = os.path.join(TMP, "cache")
-os.environ["FALCONOS_LOG_PATH"] = LOG
-os.environ["FALCONOS_STATE_PATH"] = STATE
-os.environ["FALCONOS_CACHE_DIRS"] = CACHE
+os.environ["NLINUX_LOG_PATH"] = LOG
+os.environ["NLINUX_STATE_PATH"] = STATE
+os.environ["NLINUX_CACHE_DIRS"] = CACHE
 
 fails = []
 
@@ -565,7 +565,7 @@ fresh(m, ONLINE_PLAN, total_s=4.0, interval=0.1)
 feed(m, "NLPROGRESS|38|stage.chroot.system")
 time.sleep(0.5)
 check("thread do anel anda sozinha", m.STATE["pct"] > 38, m.STATE["pct"])
-check("thread do anel está nomeada", m._pace_thread["thread"].name == "falconos-pace")
+check("thread do anel está nomeada", m._pace_thread["thread"].name == "nlinux-pace")
 m._finish(0)
 check("100% ao terminar com sucesso", m.STATE["pct"] == 100, m.STATE["pct"])
 check("evento done emitido", events(m, "done")[-1]["code"] == 0)

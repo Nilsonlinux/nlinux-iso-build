@@ -1,5 +1,10 @@
 # FalconOS — release 2026.11.03
 
+> **Nota de renomeação (2026-11-04):** a distribuição passou a se chamar
+> **NLinux**. Estas notas documentam a release **2026.11.03**, publicada
+> originalmente sob o nome **FalconOS**; nomes de arquivos, URLs e
+> identificadores dessa versão são mantidos como registro histórico.
+
 <h2 align="center">⬇️ Download</h2>
 
 <p align="center">

@@ -33,8 +33,8 @@ repositório, mas é utilizado e adaptado durante a geração da ISO).
 
 ## 3. sound-theme-freedesktop — som de volume `audio-volume-change.oga`
 
-Referenciado (e **não** embutido) pelo tema de som `falconos`, via
-`Inherits=freedesktop` em `config/.local/share/sounds/falconos/index.theme`. O
+Referenciado (e **não** embutido) pelo tema de som `nlinux`, via
+`Inherits=freedesktop` em `config/.local/share/sounds/nlinux/index.theme`. O
 pacote `sound-theme-freedesktop` é uma dependência declarada em
 `packages/base.packages`.
 
@@ -44,20 +44,20 @@ pacote `sound-theme-freedesktop` é uma dependência declarada em
   **não** copiado para este repositório, justamente por causa da licença
   CC-BY-SA. Ele é fornecido pelo pacote acima.
 
-## 4. falconos-software — `falconos-software/`
+## 4. nlinux-software — `nlinux-software/`
 
-Cópia do build publicado da loja de software do FalconOS, embutida na ISO em
+Cópia do build publicado da loja de software do NLinux, embutida na ISO em
 `/opt`, a partir de outro repositório do mesmo autor.
 
-- **Origem:** https://github.com/Nilsonlinux/falconos-software
+- **Origem:** https://github.com/Nilsonlinux/nlinux-software
 - **Licença:** consulte o repositório de origem (é um projeto do próprio autor
   deste repositório). Distribuída aqui como componente do sistema.
 
-## 5. Arte do projeto — `FalconOS.jpg`, `splash.png`, logo do fastfetch, tema de som `falconos`
+## 5. Arte do projeto — `NLinux.jpg`, `splash.png`, logo do fastfetch, tema de som `nlinux`
 
-Imagens, splash do boot, logo (`config/.config/fastfetch/img/falconos.png` e
-`config/.local/share/fastfetch/logos/falconos.txt`) e o tema de som próprio
-(`config/.local/share/sounds/falconos/`) são de autoria do projeto e ficam
+Imagens, splash do boot, logo (`config/.config/fastfetch/img/nlinux.png` e
+`config/.local/share/fastfetch/logos/nlinux.txt`) e o tema de som próprio
+(`config/.local/share/sounds/nlinux/`) são de autoria do projeto e ficam
 cobertos pela licença GPL-3.0-or-later deste repositório, salvo indicação em
 contrário.
 

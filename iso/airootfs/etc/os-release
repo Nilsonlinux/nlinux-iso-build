@@ -1,5 +1,5 @@
-NAME="FalconOS"
-PRETTY_NAME="FalconOS"
+NAME="NLinux"
+PRETTY_NAME="NLinux"
 ID=arch
 ID_LIKE=arch
 BUILD_ID=rolling
@@ -8,4 +8,4 @@ HOME_URL="https://nlinux.org"
 DOCUMENTATION_URL="https://wiki.archlinux.org/"
 SUPPORT_URL="https://bbs.archlinux.org/"
 BUG_REPORT_URL="https://gitlab.archlinux.org/"
-LOGO=falconos
+LOGO=nlinux

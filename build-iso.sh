@@ -35,7 +35,7 @@ catalog_rev() {
 }
 
 # A loja embarcada é conteúdo versionado: nada garante que a pasta
-# falconos-software/ esteja na revisão mais recente publicada, e a imagem sai
+# nlinux-software/ esteja na revisão mais recente publicada, e a imagem sai
 # com ela sem mais questionamento. Já aconteceu: a pasta ficou na v198 enquanto
 # a publicada era v211, e a ISO embarcaria uma loja velha — com programas já
 # removidos do catálogo — sem nenhum aviso.
@@ -43,10 +43,10 @@ check_store_up_to_date() {
   local store="$1" local_rev remote_rev url
   local_rev="$(catalog_rev "$store/catalog-head.json")"
   if [[ -z "$local_rev" ]]; then
-    warn "falconos-software/catalog-head.json ausente ou ilegível; não dá para conferir a revisão da loja."
+    warn "nlinux-software/catalog-head.json ausente ou ilegível; não dá para conferir a revisão da loja."
     return 0
   fi
-  url="https://raw.githubusercontent.com/Nilsonlinux/falconos-software/main/catalog-head.json"
+  url="https://raw.githubusercontent.com/Nilsonlinux/nlinux-software/main/catalog-head.json"
   if ! command -v curl >/dev/null 2>&1; then
     info "curl ausente; pulando a conferência da revisão da loja."
     return 0
@@ -66,7 +66,7 @@ check_store_up_to_date() {
   if (( remote_rev > local_rev )); then
     warn "a loja embarcada está na revisão $local_rev, mas a publicada é $remote_rev."
     warn "a imagem vai sair com a loja velha. Gere a versão pela curadoria"
-    warn "(ela espelha e commita falconos-software/) e rode de novo:"
+    warn "(ela espelha e commita nlinux-software/) e rode de novo:"
     warn "  grep revision $store/catalog-head.json"
   elif (( remote_rev < local_rev )); then
     info "a loja embarcada (v$local_rev) está à frente da publicada (v$remote_rev); prosseguindo."
@@ -142,7 +142,7 @@ for var in iso_name iso_label iso_publisher iso_application iso_version; do
   val_line="$(grep -E "^${var}=" "$BASE/iso/profiledef.sh")"
   sed -i "s|^${var}=.*|${val_line}|" "$PROFILE_DIR/profiledef.sh"
 done
-sed -i 's|^)$|  ["/opt/noctalia-installer/install.sh"]="0:0:755"\n  ["/opt/noctalia-installer/web/server.py"]="0:0:755"\n  ["/usr/local/bin/falconos-installer"]="0:0:755"\n  ["/usr/local/bin/falconos-installer-gui"]="0:0:755"\n  ["/usr/share/applications/falconos-installer.desktop"]="0:0:644"\n  ["/usr/share/pixmaps/falconos-installer.png"]="0:0:644"\n)|' "$PROFILE_DIR/profiledef.sh"
+sed -i 's|^)$|  ["/opt/noctalia-installer/install.sh"]="0:0:755"\n  ["/opt/noctalia-installer/web/server.py"]="0:0:755"\n  ["/usr/local/bin/nlinux-installer"]="0:0:755"\n  ["/usr/local/bin/nlinux-installer-gui"]="0:0:755"\n  ["/usr/share/applications/nlinux-installer.desktop"]="0:0:644"\n  ["/usr/share/pixmaps/nlinux-installer.png"]="0:0:644"\n)|' "$PROFILE_DIR/profiledef.sh"
 
 info "Aplicando pacotes customizados do live"
 cat "$BASE/iso/packages.live" >> "$PROFILE_DIR/packages.x86_64"
@@ -161,33 +161,33 @@ cp -a "$BASE/install.sh" "$BASE/install" "$BASE/config" "$BASE/packages" "$BASE/
 rm -rf "$INSTALLER_DST/web/tests"
 run_root chown -R "$(id -u):$(id -g)" "$PROFILE_DIR"
 
-info "Embutindo a loja de software em /opt/falconos-software"
-# A loja vive no repo (falconos-software/) e é a fonte usada no build.
-if [[ -d "$BASE/falconos-software" ]]; then
-  SOFT_SRC="$BASE/falconos-software"
-elif [[ -d /opt/falconos-software ]]; then
-  info "falconos-software/ ausente no repo; usando /opt/falconos-software"
-  SOFT_SRC=/opt/falconos-software
+info "Embutindo a loja de software em /opt/nlinux-software"
+# A loja vive no repo (nlinux-software/) e é a fonte usada no build.
+if [[ -d "$BASE/nlinux-software" ]]; then
+  SOFT_SRC="$BASE/nlinux-software"
+elif [[ -d /opt/nlinux-software ]]; then
+  info "nlinux-software/ ausente no repo; usando /opt/nlinux-software"
+  SOFT_SRC=/opt/nlinux-software
 else
   SOFT_SRC=""
 fi
 if [[ -n "$SOFT_SRC" ]]; then
   check_store_up_to_date "$SOFT_SRC"
-  SOFT_DST="$PROFILE_DIR/airootfs/opt/falconos-software"
+  SOFT_DST="$PROFILE_DIR/airootfs/opt/nlinux-software"
   mkdir -p "$SOFT_DST"
   cp -a "$SOFT_SRC/." "$SOFT_DST/"
-  rm -rf "$SOFT_DST/src/falconos/__pycache__"
+  rm -rf "$SOFT_DST/src/nlinux/__pycache__"
   chmod -R a+rX "$SOFT_DST"
-  chmod 0755 "$SOFT_DST/falconos-software"
+  chmod 0755 "$SOFT_DST/nlinux-software"
   # Ícone da loja para o atalho (.desktop) do menu e do Desktop.
   mkdir -p "$PROFILE_DIR/airootfs/usr/share/pixmaps"
-  cp -f "$SOFT_DST/src/apps/falconos-logo.png" "$PROFILE_DIR/airootfs/usr/share/pixmaps/falconos-software.png"
+  cp -f "$SOFT_DST/src/apps/nlinux-logo.png" "$PROFILE_DIR/airootfs/usr/share/pixmaps/nlinux-software.png"
   run_root chown -R "$(id -u):$(id -g)" "$PROFILE_DIR"
 else
-  info "aviso: falconos-software e /opt/falconos-software ausentes; a loja NÃO será incluída na ISO"
+  info "aviso: nlinux-software e /opt/nlinux-software ausentes; a loja NÃO será incluída na ISO"
 fi
 
-info "Criando o menu de boot 'FalconOS ao vivo' (sem opção separada de instalação; o instalador é só web, no desktop do live)"
+info "Criando o menu de boot 'NLinux ao vivo' (sem opção separada de instalação; o instalador é só web, no desktop do live)"
 
 transform_systemdboot_entries() {
   local ent="$PROFILE_DIR/efiboot/loader/entries"
@@ -196,19 +196,19 @@ transform_systemdboot_entries() {
   local main="$ent/01-archiso-linux.conf"
   if [[ -f "$main" ]]; then
     sed -i \
-      -e 's|^title.*|title    FalconOS ao vivo (%ARCH%, UEFI)|' \
+      -e 's|^title.*|title    NLinux ao vivo (%ARCH%, UEFI)|' \
       -e 's|^sort-key.*|sort-key 01|' \
       "$main"
-    mv "$main" "$ent/01-falconos-live.conf"
+    mv "$main" "$ent/01-nlinux-live.conf"
   fi
 
   local speech="$ent/02-archiso-speech-linux.conf"
   if [[ -f "$speech" ]]; then
     sed -i \
-      -e 's|^title.*|title    FalconOS ao vivo (%ARCH%, UEFI) - leitor de tela|' \
+      -e 's|^title.*|title    NLinux ao vivo (%ARCH%, UEFI) - leitor de tela|' \
       -e 's|^sort-key.*|sort-key 02|' \
       "$speech"
-    mv "$speech" "$ent/02-falconos-live-voz.conf"
+    mv "$speech" "$ent/02-nlinux-live-voz.conf"
   fi
 
   if [[ -f "$ent/03-archiso-memtest86+x64.conf" ]]; then
@@ -216,7 +216,7 @@ transform_systemdboot_entries() {
   fi
 
   local loader="$PROFILE_DIR/efiboot/loader/loader.conf"
-  [[ -f "$loader" ]] && sed -i 's|^default .*|default 01-falconos-live.conf|' "$loader"
+  [[ -f "$loader" ]] && sed -i 's|^default .*|default 01-nlinux-live.conf|' "$loader"
 }
 
 transform_syslinux_entries() {
@@ -225,7 +225,7 @@ transform_syslinux_entries() {
 
   if [[ -f "$d/archiso_head.cfg" ]]; then
     sed -i \
-      -e 's|^MENU TITLE .*|MENU TITLE Bem-vindo ao FalconOS|' \
+      -e 's|^MENU TITLE .*|MENU TITLE Bem-vindo ao NLinux|' \
       "$d/archiso_head.cfg"
   fi
 
@@ -237,9 +237,9 @@ transform_syslinux_entries() {
   for f in "$d"/archiso_sys-linux.cfg "$d"/archiso_pxe-linux.cfg; do
     [[ -f "$f" ]] || continue
     sed -i \
-      -e 's|Arch Linux|FalconOS|g' \
-      -e 's|FalconOS install medium|Iniciar FalconOS|g' \
-      -e 's|FalconOS live medium|Iniciar FalconOS|g' \
+      -e 's|Arch Linux|NLinux|g' \
+      -e 's|NLinux install medium|Iniciar NLinux|g' \
+      -e 's|NLinux live medium|Iniciar NLinux|g' \
       "$f"
   done
 }
@@ -252,14 +252,14 @@ transform_grub_cfg() {
   {
     awk '
       /^default=archlinux$/ {
-        print "default=falconos-live"
+        print "default=nlinux-live"
         next
       }
       /--id .archlinux. \{/ {
         q = sprintf("%c", 39)
         line = $0
-        sub(/menuentry "[^"]*"/, "menuentry \"FalconOS ao vivo (%ARCH%, ${archiso_platform})\"", line)
-        sub(/--id .archlinux./, "--id " q "falconos-live" q, line)
+        sub(/menuentry "[^"]*"/, "menuentry \"NLinux ao vivo (%ARCH%, ${archiso_platform})\"", line)
+        sub(/--id .archlinux./, "--id " q "nlinux-live" q, line)
         print line
         next
       }

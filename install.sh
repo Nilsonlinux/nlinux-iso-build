@@ -110,11 +110,11 @@ stage() {
 # Valores padrão. Sobrescreva exportando variáveis antes de executar:
 #   INSTALL_USER=foo INSTALL_DISK=/dev/sda ./install.sh
 # ---------------------------------------------------------------------------
-INSTALL_USER="${INSTALL_USER:-falconos}"
-INSTALL_USER_PASS="${INSTALL_USER_PASS:-falconos}"
-ROOT_PASS="${ROOT_PASS:-falconos}"
-LUKS_PASS="${LUKS_PASS:-falconos}"
-HOSTNAME="${HOSTNAME:-falconos}"
+INSTALL_USER="${INSTALL_USER:-nlinux}"
+INSTALL_USER_PASS="${INSTALL_USER_PASS:-nlinux}"
+ROOT_PASS="${ROOT_PASS:-nlinux}"
+LUKS_PASS="${LUKS_PASS:-nlinux}"
+HOSTNAME="${HOSTNAME:-nlinux}"
 LOCALE="${LOCALE:-pt_BR.UTF-8}"
 KEYMAP="${KEYMAP:-br-abnt2}"
 ZONEINFO="${ZONEINFO:-America/Sao_Paulo}"
@@ -312,7 +312,7 @@ collect_options() {
     return 0
   fi
   # Modo standalone: apenas prompts de texto no terminal (sem curses; a
-  # única interface gráfica do instalador é a web — falconos-installer).
+  # única interface gráfica do instalador é a web — nlinux-installer).
   info "Coletando opções de instalação."
   collect_options_prompt
   validate_options
@@ -534,7 +534,7 @@ resize_ntfs_for_dual_boot() {
   (( target_fs_bytes >= min_size + 1024**3 )) \
     || die "O tamanho deixaria o Windows abaixo do mínimo seguro informado pelo NTFS."
   (( DUAL_RESIZE_BYTES > 2 * 1024**3 && DUAL_RESIZE_BYTES % 512 == 0 )) \
-    || die "O espaço escolhido para a partição FalconOS é insuficiente ou inválido."
+    || die "O espaço escolhido para a partição NLinux é insuficiente ou inválido."
 
   base="${DUAL_RESIZE_PARTITION##*/}"
   [[ -r "/sys/class/block/$base/start" && -r "/sys/class/block/$base/size" ]] \
@@ -544,7 +544,7 @@ resize_ntfs_for_dual_boot() {
   new_sectors=$(((target_fs_bytes + 1024**2 + 511) / 512))
   root_sectors=$(((DUAL_RESIZE_BYTES - 2 * 1024**2) / 512))
   (( new_sectors < old_sectors && root_sectors > 5 * 1024**3 / 512 )) \
-    || die "Os tamanhos escolhidos não deixam espaço contínuo suficiente para o FalconOS."
+    || die "Os tamanhos escolhidos não deixam espaço contínuo suficiente para o NLinux."
   info "Testando o redimensionamento NTFS sem alterar a partição."
   if ! ntfsresize --no-action --size "$target_fs_bytes" --no-progress-bar "$DUAL_RESIZE_PARTITION"; then
     die "O NTFS não passou no teste de redimensionamento. Execute chkdsk no Windows; nenhuma alteração foi feita."
@@ -562,7 +562,7 @@ resize_ntfs_for_dual_boot() {
   DUAL_ROOT_END_SECTOR=$((DUAL_ROOT_START_SECTOR + root_sectors - 1))
   partprobe "$DISK" >/dev/null 2>&1 || true
   udevadm settle 2>/dev/null || true
-  info "Partição NTFS ajustada com segurança. Espaço livre criado para o FalconOS."
+  info "Partição NTFS ajustada com segurança. Espaço livre criado para o NLinux."
 }
 
 partition_disk() {
@@ -582,7 +582,7 @@ partition_disk() {
   if [[ "$INSTALL_MODE" == "dual" ]]; then
     # -------------------------------------------------------------------
     # DUAL BOOT: preserva o sistema existente (ex.: Windows). Reutiliza a
-    # ESP (partição EFI System FAT32) que já existe e cria a raiz FalconOS no
+    # ESP (partição EFI System FAT32) que já existe e cria a raiz NLinux no
     # MAIOR espaço livre contínuo do disco, exceto quando a interface pediu
     # explicitamente a criação do root no espaço liberado do NTFS.
     # -------------------------------------------------------------------
@@ -603,14 +603,14 @@ partition_disk() {
       free_num=$((free_num + 1))
     done
     (( free_num <= 128 )) || die "Dual boot: não há número de partição GPT disponível em $DISK."
-    info "Criando partição raiz FalconOS em $DISK"
+    info "Criando partição raiz NLinux em $DISK"
     if (( DUAL_RESIZE_BYTES > 0 )); then
       if ! sgdisk --new="$free_num:$DUAL_ROOT_START_SECTOR:$DUAL_ROOT_END_SECTOR" \
-        --typecode="$free_num:8304" --change-name="$free_num:FalconOS" "$DISK" >/dev/null 2>&1; then
-        die "Não foi possível criar a partição FalconOS no espaço NTFS liberado."
+        --typecode="$free_num:8304" --change-name="$free_num:NLinux" "$DISK" >/dev/null 2>&1; then
+        die "Não foi possível criar a partição NLinux no espaço NTFS liberado."
       fi
-    elif ! sgdisk --largest-new="$free_num" --typecode="$free_num:8304" --change-name="$free_num:FalconOS" "$DISK" >/dev/null 2>&1; then
-      die "Dual boot: sem espaço livre suficiente em $DISK para a raiz FalconOS."
+    elif ! sgdisk --largest-new="$free_num" --typecode="$free_num:8304" --change-name="$free_num:NLinux" "$DISK" >/dev/null 2>&1; then
+      die "Dual boot: sem espaço livre suficiente em $DISK para a raiz NLinux."
     fi
     p_root="$(part_path "$DISK" "$free_num")"
     note "stage.dual.create"
@@ -644,9 +644,9 @@ partition_disk() {
   info "Criando partição EFI (1G) e raiz (restante)"
   sgdisk --new=1:0:+1G --typecode=1:ef00 --change-name=1:EFI "$DISK" >/dev/null
   if (( USE_LUKS )); then
-    sgdisk --new=2:0:0 --typecode=2:8309 --change-name=2:FalconOS "$DISK" >/dev/null
+    sgdisk --new=2:0:0 --typecode=2:8309 --change-name=2:NLinux "$DISK" >/dev/null
   else
-    sgdisk --new=2:0:0 --typecode=2:8304 --change-name=2:FalconOS "$DISK" >/dev/null
+    sgdisk --new=2:0:0 --typecode=2:8304 --change-name=2:NLinux "$DISK" >/dev/null
   fi
   partprobe "$DISK" >/dev/null 2>&1 || true
   udevadm trigger --subsystem-match=block 2>/dev/null || true
@@ -684,7 +684,7 @@ setup_filesystem() {
 
 if [[ "$FS_TYPE" == "btrfs" ]]; then
     info "Formatando btrfs em $root_dev"
-    mkfs.btrfs -f -L FalconOS "$root_dev" >/dev/null
+    mkfs.btrfs -f -L NLinux "$root_dev" >/dev/null
     sync
     udevadm settle 2>/dev/null || true
     blkid -s UUID -o value "$root_dev" >/dev/null 2>&1 \
@@ -703,7 +703,7 @@ if [[ "$FS_TYPE" == "btrfs" ]]; then
     mount -o subvol=@pkg "$root_dev" "$MNT/var/cache/pacman/pkg"
   else
     info "Formatando ext4 em $root_dev"
-    mkfs.ext4 -F -L FalconOS "$root_dev" >/dev/null
+    mkfs.ext4 -F -L NLinux "$root_dev" >/dev/null
     sync
     udevadm settle 2>/dev/null || true
     blkid -s UUID -o value "$root_dev" >/dev/null 2>&1 \
@@ -767,7 +767,7 @@ offline_clone() {
 
   while :; do
     rm -f "$log"; umask 022
-    { echo "# FalconOS - cópia offline em $(date -Is)  rsync $(rsync --version 2>/dev/null | awk 'NR==1{print $3}')"; echo "# Fonte: /  Alvo: $MNT"; echo; } >> "$log"
+    { echo "# NLinux - cópia offline em $(date -Is)  rsync $(rsync --version 2>/dev/null | awk 'NR==1{print $3}')"; echo "# Fonte: /  Alvo: $MNT"; echo; } >> "$log"
     extra=()
     (( attempt > 1 )) && extra+=(--partial)   # retoma os arquivos já copiados
 
@@ -827,7 +827,7 @@ offline_clone() {
 
   cp -f "$log" "$MNT/var/log/offline-rsync.log" 2>/dev/null || true
 
-  info "Removendo resíduos específicos do live (archiso, autologin, auto-run, usuário falconos)"
+  info "Removendo resíduos específicos do live (archiso, autologin, auto-run, usuário nlinux)"
   # /etc/mkinitcpio.conf.d/archiso.conf injeta hooks archiso_loop_mnt/archiso_pxe_*
   # no initramfs instalado (referem /run/archiso, inexistente). Sem ele o
   # mkinitcpio -P do chroot (10-system.sh) gera um initramfs limpo.
@@ -835,9 +835,9 @@ offline_clone() {
   rm -rf "$MNT/var/lib/archiso" 2>/dev/null || true
   rm -rf "$MNT/etc/systemd/system/getty@tty1.service.d" 2>/dev/null || true
   rm -f "$MNT/root/.bash_profile" "$MNT/root/.zprofile" 2>/dev/null || true
-  sed -i '/^falconos:/d' "$MNT/etc/passwd" "$MNT/etc/shadow" 2>/dev/null || true
-  sed -i '/^falconos:/d' "$MNT/etc/group" "$MNT/etc/gshadow" 2>/dev/null || true
-  rm -f "$MNT/etc/sudoers.d/10-falconos-user" 2>/dev/null || true
+  sed -i '/^nlinux:/d' "$MNT/etc/passwd" "$MNT/etc/shadow" 2>/dev/null || true
+  sed -i '/^nlinux:/d' "$MNT/etc/group" "$MNT/etc/gshadow" 2>/dev/null || true
+  rm -f "$MNT/etc/sudoers.d/10-nlinux-user" 2>/dev/null || true
   : > "$MNT/etc/machine-id"
   ok "Sistema copiado para o disco."
 }
@@ -899,7 +899,7 @@ apply_live_options() {
   echo "LANG=$LOCALE" > /etc/locale.conf
   umask 022
   mkdir -p /etc/profile.d
-  echo "export LANG=$LOCALE" > /etc/profile.d/falconos-lang.sh
+  echo "export LANG=$LOCALE" > /etc/profile.d/nlinux-lang.sh
   export LANG="$LOCALE"
 
   if [[ -n "$KEYMAP" ]]; then
@@ -914,7 +914,7 @@ apply_mirror() {
   if [[ -n "$MIRROR" ]]; then
     info "Definindo espelho de repositórios: $MIRROR"
     {
-      echo "# FalconOS - espelho escolhido no instalador"
+      echo "# NLinux - espelho escolhido no instalador"
       echo "Server = $MIRROR/\$repo/os/\$arch"
       cat "$mlist"
     } > "${mlist}.tmp" && mv "${mlist}.tmp" "$mlist"
@@ -955,7 +955,7 @@ run_chroot_setup() {
   if [[ -n "$resolver_source" ]]; then
     cp -L "$resolver_source" "$MNT/etc/resolv.conf"
   else
-    printf '# FalconOS: o NetworkManager configurará o DNS após a primeira conexão.\n' \
+    printf '# NLinux: o NetworkManager configurará o DNS após a primeira conexão.\n' \
       > "$MNT/etc/resolv.conf"
   fi
   chmod 0644 "$MNT/etc/resolv.conf"
@@ -995,27 +995,27 @@ run_chroot_setup() {
 }
 
 # ---------------------------------------------------------------------------
-# Loja de software (falconos-software): copia o app + atalho + ícone para o
-# sistema instalado. No offline o rsync do live já traz /opt/falconos-software;
+# Loja de software (nlinux-software): copia o app + atalho + ícone para o
+# sistema instalado. No offline o rsync do live já traz /opt/nlinux-software;
 # aqui garante o arquivo igual no modo online (pacstrap) e os demais arquivos
 # de integração (menu, ícone, wrapper) nos dois modos.
 # ---------------------------------------------------------------------------
 stage_software_store() {
-  [[ -d /opt/falconos-software ]] || { warn "Loja de software ausente no live; ignorando."; return 0; }
-  info "Incluindo a loja de software falconos-software no sistema instalado"
-  if [[ ! -e "$MNT/opt/falconos-software/falconos-software" ]]; then
-    cp -a /opt/falconos-software "$MNT/opt/falconos-software"
+  [[ -d /opt/nlinux-software ]] || { warn "Loja de software ausente no live; ignorando."; return 0; }
+  info "Incluindo a loja de software nlinux-software no sistema instalado"
+  if [[ ! -e "$MNT/opt/nlinux-software/nlinux-software" ]]; then
+    cp -a /opt/nlinux-software "$MNT/opt/nlinux-software"
   fi
-  rm -rf "$MNT/opt/falconos-software/src/falconos/__pycache__" 2>/dev/null || true
-  if [[ -f /usr/share/applications/falconosstore.desktop ]]; then
-    install -Dm644 /usr/share/applications/falconosstore.desktop \
-      "$MNT/usr/share/applications/falconosstore.desktop"
+  rm -rf "$MNT/opt/nlinux-software/src/nlinux/__pycache__" 2>/dev/null || true
+  if [[ -f /usr/share/applications/nlinuxstore.desktop ]]; then
+    install -Dm644 /usr/share/applications/nlinuxstore.desktop \
+      "$MNT/usr/share/applications/nlinuxstore.desktop"
   fi
-  install -Dm755 /usr/local/bin/falconos-software "$MNT/usr/local/bin/falconos-software"
-  chmod 0755 "$MNT/opt/falconos-software/falconos-software" 2>/dev/null || true
-  if [[ -f /usr/share/pixmaps/falconos-software.png ]]; then
-    install -Dm644 /usr/share/pixmaps/falconos-software.png \
-      "$MNT/usr/share/pixmaps/falconos-software.png"
+  install -Dm755 /usr/local/bin/nlinux-software "$MNT/usr/local/bin/nlinux-software"
+  chmod 0755 "$MNT/opt/nlinux-software/nlinux-software" 2>/dev/null || true
+  if [[ -f /usr/share/pixmaps/nlinux-software.png ]]; then
+    install -Dm644 /usr/share/pixmaps/nlinux-software.png \
+      "$MNT/usr/share/pixmaps/nlinux-software.png"
   fi
 }
 
@@ -1039,7 +1039,7 @@ stage_app_shortcuts() {
 }
 
 # Despeja a NVRAM no log. Sem isso não há como descobrir, depois do reboot,
-# por que a entrada não ficou com o rótulo FalconOS — o efibootmgr só fala o
+# por que a entrada não ficou com o rótulo NLinux — o efibootmgr só fala o
 # erro no stderr, e stderr sumia em /dev/null.
 _efivars_dump() {
   local quando="$1" saida
@@ -1082,7 +1082,7 @@ _efiboot_rotulo() {
 # Reescreve o rótulo de uma entrada de boot que JÁ EXISTE.
 #
 # Nada aqui usa o efibootmgr para renomear porque ele não sabe: o -L/--label
-# só é lido por --create e por --delete, então o `efibootmgr -b 0001 -L "FalconOS"`
+# só é lido por --create e por --delete, então o `efibootmgr -b 0001 -L "NLinux"`
 # que circula em wiki é um no-op nesta versão (e no main do upstream também).
 #
 # E também não vale criar uma entrada nova com --create: ele grava uma variável
@@ -1152,8 +1152,8 @@ _efiboot_renomear() {
 }
 
 # Entradas que apontam para o systemd-boot desta ESP. É o que separa a entrada
-# do FalconOS das entradas de outras distribuições — e das sobras de instalações
-# antigas do próprio FalconOS, que precisam sair.
+# do NLinux das entradas de outras distribuições — e das sobras de instalações
+# antigas do próprio NLinux, que precisam sair.
 #
 # Sai em três colunas: número, rótulo e o caminho do loader como a NVRAM o
 # guarda. O caminho é o que permite conferir se o arquivo existe de verdade, e
@@ -1179,21 +1179,21 @@ _efiboot_no_disco() {
 
 # ---------------------------------------------------------------------------
 # Boot UEFI: instala o systemd-boot, garante o fallback /EFI/BOOT e deixa
-# exatamente UMA entrada systemd-boot na ESP do FalconOS, com o rótulo "FalconOS".
+# exatamente UMA entrada systemd-boot na ESP do NLinux, com o rótulo "NLinux".
 #
 # O `bootctl install` já cria a entrada, e ele cria com o rótulo fixo
 # "Linux Boot Manager". Como o efibootmgr não sabe renomear e o --create dele
 # falha neste kernel (ver _efiboot_renomear), o caminho é deixar o bootctl criar
 # e reescrever só o rótulo da variável que ele gravou.
 #
-# Instalações antigas do próprio FalconOS deixam entradas a mais na mesma ESP, e
+# Instalações antigas do próprio NLinux deixam entradas a mais na mesma ESP, e
 # o bootctl ainda registra a entrada do loader de fallback junto com a
 # principal — então as outras são removidas. Só nesta ESP: entrada de outra
 # distribuição é problema dela, e a do Windows nunca aparece aqui porque não é
 # systemd-boot.
 # ---------------------------------------------------------------------------
 register_uefi() {
-  info "Instalando systemd-boot na ESP e registrando 'FalconOS' na lista UEFI"
+  info "Instalando systemd-boot na ESP e registrando 'NLinux' na lista UEFI"
 
   if command -v efibootmgr >/dev/null 2>&1; then
     _efivars_dump "antes do bootctl install"
@@ -1210,7 +1210,7 @@ register_uefi() {
   fi
 
   # A NVRAM não guarda o disco e a partição, e sim o PARTUUID da ESP. É por ele
-  # que a entrada do FalconOS é distinguida das entradas de outras distribuições.
+  # que a entrada do NLinux é distinguida das entradas de outras distribuições.
   local efi_part esp_guid
   efi_part="$(cat "$INSTALL_BASE/.part_efi")"
   esp_guid="$(lsblk -no PARTUUID "$efi_part" 2>/dev/null | head -n1 | tr 'A-Z' 'a-z')"
@@ -1237,7 +1237,7 @@ register_uefi() {
 
   if [[ "$total" -eq 0 ]]; then
     warn "Nenhuma entrada systemd-boot na ESP; a firmware vai mostrar 'UEFI: <disco>'."
-    warn "A NVRAM completa está no log: /var/log/falconos-install.log no sistema instalado."
+    warn "A NVRAM completa está no log: /var/log/nlinux-install.log no sistema instalado."
     return 0
   fi
 
@@ -1274,8 +1274,8 @@ register_uefi() {
   if (( melhor_nota == 2 )); then
     warn "Nenhuma entrada desta ESP tem o arquivo do loader em disco."
     warn "A firmware apaga da NVRAM a entrada que ela não resolve, então é isso que"
-    warn "impede o rótulo FalconOS de aparecer no menu. Nada foi apagado aqui."
-    warn "A NVRAM completa está no log: /var/log/falconos-install.log no sistema instalado."
+    warn "impede o rótulo NLinux de aparecer no menu. Nada foi apagado aqui."
+    warn "A NVRAM completa está no log: /var/log/nlinux-install.log no sistema instalado."
     _efivars_dump "final (nenhuma entrada com o loader em disco)"
     return 0
   fi
@@ -1287,8 +1287,8 @@ register_uefi() {
   # Falha aqui não é motivo para apagar nada: a entrada do bootctl continua
   # funcionando, e é melhor "Linux Boot Manager" do que deixar a máquina sem
   # entrada além do fallback /EFI/BOOT.
-  _efiboot_renomear "$meu" FalconOS || \
-    warn "A firmware vai mostrar 'Linux Boot Manager'; o FalconOS continua na partição."
+  _efiboot_renomear "$meu" NLinux || \
+    warn "A firmware vai mostrar 'Linux Boot Manager'; o NLinux continua na partição."
 
   _efivars_dump "depois de renomear a entrada"
 
@@ -1317,14 +1317,14 @@ register_uefi() {
 # Desmontagem
 # ---------------------------------------------------------------------------
 # Em caso de falha, grava o erro NO DISCO-ALVO antes de desmontar, para ser
-# lido depois sem a VM (ex.: /run/media/<user>/FalconOS/@log/install-error.log).
+# lido depois sem a VM (ex.: /run/media/<user>/NLinux/@log/install-error.log).
 _save_error_marker() {
   local rc=$1
   mkdir -p "$MNT/var/log" 2>/dev/null || true
   { echo "=== INSTALAÇÃO FALHOU (rc=$rc) em $(date -Is) ==="; echo; } \
     > "$MNT/var/log/install-error.log" 2>/dev/null || true
-  [[ -f /tmp/falconos-install.log ]] \
-    && tail -n 150 /tmp/falconos-install.log >> "$MNT/var/log/install-error.log" 2>/dev/null || true
+  [[ -f /tmp/nlinux-install.log ]] \
+    && tail -n 150 /tmp/nlinux-install.log >> "$MNT/var/log/install-error.log" 2>/dev/null || true
   warn "Erro da instalação salvo em: $MNT/var/log/install-error.log"
 }
 
@@ -1332,10 +1332,10 @@ _save_error_marker() {
 # copiada, o que impedia investigar uma instalação que deu certo no painel mas
 # ficou errada no boot (o rótulo da entrada UEFI, por exemplo).
 _save_install_log() {
-  [[ -f /tmp/falconos-install.log ]] || return 0
+  [[ -f /tmp/nlinux-install.log ]] || return 0
   mkdir -p "$MNT/var/log" 2>/dev/null || return 0
-  cp -f /tmp/falconos-install.log "$MNT/var/log/falconos-install.log" 2>/dev/null || return 0
-  ok "Log da instalação em /var/log/falconos-install.log"
+  cp -f /tmp/nlinux-install.log "$MNT/var/log/nlinux-install.log" 2>/dev/null || return 0
+  ok "Log da instalação em /var/log/nlinux-install.log"
 }
 
 umount_all() {
@@ -1358,12 +1358,12 @@ umount_all() {
 remove_installer_artifacts() {
   info "Removendo o instalador do sistema instalado (menu, ícone e binários)"
   rm -rf "$MNT/opt/noctalia-installer"
-  rm -f "$MNT/usr/local/bin/falconos-installer" "$MNT/usr/local/bin/falconos-installer-gui"
-  rm -f "$MNT/usr/share/applications/falconos-installer.desktop"
-  rm -f "$MNT/usr/share/pixmaps/falconos-installer.png"
-  rm -f "$MNT/home/$INSTALL_USER/Desktop/falconos-installer.desktop" 2>/dev/null || true
+  rm -f "$MNT/usr/local/bin/nlinux-installer" "$MNT/usr/local/bin/nlinux-installer-gui"
+  rm -f "$MNT/usr/share/applications/nlinux-installer.desktop"
+  rm -f "$MNT/usr/share/pixmaps/nlinux-installer.png"
+  rm -f "$MNT/home/$INSTALL_USER/Desktop/nlinux-installer.desktop" 2>/dev/null || true
   rm -f "$MNT/root/.automated_script.sh" 2>/dev/null || true
-  rm -f "$MNT/etc/sudoers.d/10-falconos-builder" 2>/dev/null || true
+  rm -f "$MNT/etc/sudoers.d/10-nlinux-builder" 2>/dev/null || true
 }
 
 main() {

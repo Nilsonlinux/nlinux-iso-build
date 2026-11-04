@@ -24,26 +24,26 @@ echo "$HOSTNAME" > /etc/hostname
   echo "127.0.1.1   $HOSTNAME.localdomain   $HOSTNAME"
 } > /etc/hosts
 
-echo "FalconOS \r (\l)" > /etc/issue
+echo "NLinux \r (\l)" > /etc/issue
 
-log "Branding FalconOS no /etc/os-release"
+log "Branding NLinux no /etc/os-release"
 cat > /etc/os-release <<'EOF'
-NAME="FalconOS"
-PRETTY_NAME="FalconOS"
+NAME="NLinux"
+PRETTY_NAME="NLinux"
 ID=arch
 ID_LIKE=arch
 BUILD_ID=rolling
 ANSI_COLOR="38;2;23;147;209"
 HOME_URL="https://github.com"
-LOGO=falconos
+LOGO=nlinux
 EOF
 
 log "Ativando downloads paralelos e cores no pacman"
 sed -i 's/^#ParallelDownloads/ParallelDownloads/' /etc/pacman.conf
 sed -i 's/^#Color/Color/' /etc/pacman.conf
 
-# multilib: programas 32-bit. A loja do FalconOS já esperava por isso — o
-# REPO_FILES dela (falconos-software/src/falconos/pacman_db.py) lê core, extra e
+# multilib: programas 32-bit. A loja do NLinux já esperava por isso — o
+# REPO_FILES dela (nlinux-software/src/nlinux/pacman_db.py) lê core, extra e
 # multilib — mas sem a seção no pacman.conf o sync db do multilib nunca baixa e
 # a loja fica sem os pacotes de lá, incluindo o Steam.
 # ATENÇÃO: este mesmo bloco está em install/chroot/10-system.sh, para o sistema
@@ -129,7 +129,7 @@ fi
 sed -i "s|^HOOKS=(.*)|HOOKS=(base systemd autodetect microcode modconf kms keyboard sd-vconsole block ${encrypt_hook}filesystems fsck)|" /etc/mkinitcpio.conf
 if ! mkinitcpio -P; then
   warn "mkinitcpio falhou com autodetect; tentando gerar initramfs com todos os módulos."
-  fallback_config="$(mktemp /tmp/falconos-mkinitcpio.XXXXXX)"
+  fallback_config="$(mktemp /tmp/nlinux-mkinitcpio.XXXXXX)"
   if ! sed -E '/^HOOKS=/s/(^|[[:space:]])autodetect([[:space:])]|$)/\1\2/g' \
     /etc/mkinitcpio.conf > "$fallback_config"; then
     rm -f "$fallback_config"
@@ -200,7 +200,7 @@ if [[ "$USE_LUKS" == "1" && -n "${LUKS_UUID:-}" ]]; then
 fi
 
 cat > /boot/loader/entries/arch.conf <<EOF
-title   FalconOS
+title   NLinux
 linux   /vmlinuz-linux
 $microcode_initrd
 initrd  /initramfs-linux.img
