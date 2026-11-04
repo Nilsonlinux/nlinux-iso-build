@@ -32,9 +32,8 @@ chave primária  (só certifica; guardada OFFLINE, fora das duas máquinas)
   subchaves, porque a verificação sobe até a chave primária publicada.
 
 O UID padrão de chaves novas é `NLinux Releases <nilsonlinux@gmail.com>`. A
-chave de releases atual foi criada antes da renomeação e ainda usa o UID
-`FalconOS Releases <nilsonlinux@gmail.com>`; o e-mail precisa estar verificado
-na sua conta do GitHub para o selo aparecer.
+chave de releases atual foi criada antes da renomeação e mantém seu UID original;
+o e-mail precisa estar verificado na sua conta do GitHub para o selo aparecer.
 
 ```bash
 # conferir o UID da chave que está no repositório

@@ -773,8 +773,8 @@ essa pasta do usuário em vez de dar escrita no `/opt`.
 ## Assinatura das releases (GPG)
 
 As tags de release e os commits deste repositório são assinados com a chave GPG
-de releases do projeto (UID atual `FalconOS Releases`, criado antes da
-renomeação; chaves novas usam `NLinux Releases`):
+de releases do projeto (o UID atual foi criado antes da renomeação; chaves novas
+usam `NLinux Releases`):
 
 - Chave: `FFDFD46A8DE7F79F`
 - Impressão digital: `247C C0FF CA3C C9ED 0F0C 3027 FFDF D46A 8DE7 F79F`
