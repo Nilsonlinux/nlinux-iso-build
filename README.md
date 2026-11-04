@@ -775,14 +775,22 @@ essa pasta do usuário em vez de dar escrita no `/opt`.
 As tags de release e os commits deste repositório são assinados com a chave GPG
 **FalconOS Releases**:
 
-- Chave: `69B8B38D1DFF6CDA`
-- Impressão digital: `5122 1C0F B2B1 B421 64EB  1511 69B8 B38D 1DFF 6CDA`
+- Chave: `FFDFD46A8DE7F79F`
+- Impressão digital: `247C C0FF CA3C C9ED 0F0C 3027 FFDF D46A 8DE7 F79F`
+- Chave legada (releases antigas): [`falconos-releases-gpg-pub-legacy.asc`](falconos-releases-gpg-pub-legacy.asc)
 - Chave pública: [`falconos-releases-gpg-pub.asc`](falconos-releases-gpg-pub.asc)
+- Configuração das máquinas de release: [`SIGNING.md`](SIGNING.md)
+
+> A chave antiga (`69B8B38D1DFF6CDA`) assinou as releases até 2026.10.15 e está
+> aposentada: não há backup da parte secreta dela. A chave nova, o modelo de uma
+> subchave por máquina e o passo a passo de casa/trabalho estão em
+> [`SIGNING.md`](SIGNING.md).
 
 Para verificar localmente:
 
 ```bash
 gpg --import falconos-releases-gpg-pub.asc   # só na primeira vez
+gpg --import falconos-releases-gpg-pub-legacy.asc   # opcional: releases antigas
 git tag -v 2026.10.09                       # verifica uma tag de release
 git verify-commit <commit>                  # verifica um commit
 ```

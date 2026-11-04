@@ -10,6 +10,13 @@ __pycache__/
 # ISOs
 *.iso
 
+# Material de assinatura (nunca versionar segredos)
+keys.env
+*-secret*.asc
+machine-*.asc
+revocation.asc
+*.rev
+
 # Dependências das suítes de teste (jsdom/css-tree): web/tests/README.md
 # Sem barra no fim de propósito: casa também com o link simbólico que o
 # `npm install` deixa quando se aponta node_modules de outro lugar.
