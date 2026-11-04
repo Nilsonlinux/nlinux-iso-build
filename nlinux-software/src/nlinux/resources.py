@@ -15,20 +15,11 @@ BUNDLED_APPS_DIR = os.path.join(SRC_ROOT, 'apps')
 # Subpasta do app. Não pode ser 'nlinux-software': esse nome pertence ao
 # WebKitGTK, que cria ~/.local/share/nlinux-software para os dados do site.
 APP_DIRNAME = 'nlinux'
-# Pasta usada pelo FalconOS antes da padronização do nome. Se só ela
-# existir, `data_home()` a renomeia para `nlinux` na primeira execução.
-LEGACY_APP_DIRNAME = 'falconos'
 
 
 def env(name: str, default=None):
-    """Lê `NLINUX_<nome>`, com fallback para o prefixo antigo `FALCONOS_`.
-
-    O prefixo FALCONOS_ é mantido só por compatibilidade com scripts e
-    documentação anteriores; todo nome novo usa NLINUX_.
-    """
+    """Lê `NLINUX_<nome>` do ambiente."""
     value = os.environ.get(f"NLINUX_{name}")
-    if value is None:
-        value = os.environ.get(f"FALCONOS_{name}")
     return default if value is None else value
 
 
@@ -50,21 +41,13 @@ def _running_from_home() -> bool:
 def data_home() -> str:
     """Base dos dados graváveis, numa pasta oculta (XDG).
 
-    `NLINUX_DATA_DIR` troca a base inteira (útil para testes); o prefixo
-    antigo `FALCONOS_DATA_DIR` continua aceito.
+    `NLINUX_DATA_DIR` troca a base inteira (útil para testes).
     """
     base = env('DATA_DIR')
     if not base:
         base = os.environ.get('XDG_DATA_HOME') \
             or os.path.join(os.path.expanduser('~'), '.local', 'share')
-    novo = os.path.join(base, APP_DIRNAME)
-    antigo = os.path.join(base, LEGACY_APP_DIRNAME)
-    if not os.path.exists(novo) and os.path.isdir(antigo):
-        try:
-            shutil.move(antigo, novo)
-        except OSError:
-            pass
-    return novo
+    return os.path.join(base, APP_DIRNAME)
 
 
 def data_dir(role: str) -> str:
@@ -95,13 +78,10 @@ def writable(path: str) -> str:
 
 
 def _migrate_logo(target: str) -> None:
-    """Renomeia a logo antiga e garante a versão atual na pasta gravável."""
-    legacy = os.path.join(target, 'falconos-logo.png')
+    """Garante a versão atual da logo na pasta gravável."""
     new = os.path.join(target, 'nlinux-logo.png')
     bundled = os.path.join(BUNDLED_APPS_DIR, 'nlinux-logo.png')
     try:
-        if os.path.exists(legacy):
-            os.remove(legacy)
         if os.path.exists(bundled) \
                 and os.path.realpath(bundled) != os.path.realpath(new):
             shutil.copy2(bundled, new)

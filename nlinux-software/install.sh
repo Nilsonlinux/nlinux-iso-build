@@ -30,13 +30,7 @@ fi
 # tarballs na pasta, head -n1 pegava o MAIS ANTIGO, nao o
 # mais novo. sort -V ordena por numero de versao.
 TARBALL="$(ls "$SRC"/nlinux-software-v*.tar.gz "$SRC"/../nlinux-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)"
-if [ -z "$TARBALL" ]; then
-  # fallback para o nome antigo (FalconOS), caso a pasta venha de
-  # uma publicação anterior à padronização do nome
-  TARBALL="$(ls "$SRC"/falconos-software-v*.tar.gz "$SRC"/../falconos-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)"
-fi
 PUBASC="$SRC/nlinux-software_pub.asc"
-[ -f "$PUBASC" ] || PUBASC="$SRC/falconos-software_pub.asc"
 if [ -z "$TARBALL" ]; then
   echo "Aviso: nenhum nlinux-software-v<N>.tar.gz encontrado em $SRC."
   echo "         Instalando a loja a partir do src/ sem validar assinatura."
@@ -81,23 +75,14 @@ STORE_USER="${SUDO_USER:-root}"
 STORE_HOME="$(getent passwd "$STORE_USER" | cut -d: -f6)"
 if [ -n "$STORE_HOME" ] && [ "$STORE_USER" != "root" ]; then
   STORE_DATA="${XDG_DATA_HOME:-$STORE_HOME/.local/share}"
-  # migra a pasta de dados do nome antigo (FalconOS) sem sobrescrever
-  if [ -d "$STORE_DATA/falconos" ]; then
-    mkdir -p "$STORE_DATA/nlinux"
-    cp -an "$STORE_DATA/falconos/." "$STORE_DATA/nlinux/" 2>/dev/null || true
-    rm -rf "$STORE_DATA/falconos"
-  fi
   APP_DATA="$STORE_DATA/nlinux"
   DATA_DIR="$APP_DATA/store"
   mkdir -p "$DATA_DIR"
   if [ ! -d "$DATA_DIR/apps" ]; then
     cp -a "$DEST/src/apps" "$DATA_DIR/apps"
   fi
-  # a logo mudou de nome e de conteudo: atualiza a copia gravavel
-  rm -f "$DATA_DIR/apps/falconos-logo.png"
+  # atualiza a copia gravavel da logo
   cp -f "$DEST/src/apps/nlinux-logo.png" "$DATA_DIR/apps/nlinux-logo.png"
-  # dados de site/cache do WebKit que ficaram com o nome antigo
-  rm -rf "$STORE_DATA/falconosstore" "$STORE_HOME/.cache/falconosstore"
   # o chown tem de pegtar a arvore inteira: um 'mkdir -p' como root
   # deixa os diretorios intermediarios do root, e sem dono o usuario
   # nao consegue criar mais nada dentro deles
@@ -105,12 +90,6 @@ if [ -n "$STORE_HOME" ] && [ "$STORE_USER" != "root" ]; then
   echo "Catalogo e midia: $DATA_DIR/apps"
 fi
 # --- ícone + atalho no menu de aplicativos --------------------------
-# remove a instalação anterior com a marca FalconOS (nome antigo)
-rm -rf /opt/falconos-software
-rm -f /usr/local/bin/falconos-software
-rm -f /usr/share/applications/falconosstore.desktop
-rm -f /usr/share/applications/falconossoftware.desktop
-rm -f /usr/share/pixmaps/falconos-software.png
 mkdir -p /usr/share/pixmaps
 cp "$DEST/src/apps/nlinux-logo.png" /usr/share/pixmaps/nlinux-software.png
 rm -f /usr/share/icons/hicolor/scalable/apps/nlinux-software.svg

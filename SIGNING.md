@@ -188,14 +188,14 @@ git push origin 2026.12.01
 
 Com `tag.gpgSign = true` no Git global, até `git tag -a ...` sai assinada. Tags
 **lightweight** (`git tag nome`, sem `-a`/`-s`) não têm assinatura e não devem ser
-usadas em release. A tag `2026.11.03` atual é lightweight; se quiser corrigi-la:
+usadas em release. A tag `2026.11.03` existente é anotada e sua assinatura GPG
+é válida. Não recrie tags já publicadas; para corrigir uma release, publique
+uma nova versão:
 
 ```bash
-# ATENÇÃO: recria uma tag já publicada. Só faça se puder mexer no remoto.
-git tag -d 2026.11.03
-git push origin :refs/tags/2026.11.03
-git tag -s 2026.11.03 -m "NLinux 2026.11.03"
-git push origin 2026.11.03
+git tag -s 2026.11.04 -m "NLinux 2026.11.04"
+git tag -v 2026.11.04
+git push origin 2026.11.04
 ```
 
 Para verificar tags antigas depois da troca, importe também a chave legada:

@@ -205,6 +205,10 @@ configure_pinentry() {
   fi
 
   gpgconf --kill gpg-agent >/dev/null 2>&1 || true
+  if [[ -t 0 ]]; then
+    export GPG_TTY="$(tty)"
+    gpg-connect-agent updatestartuptty /bye >/dev/null
+  fi
   ok "pinentry configurado: ${pin:-já existente}"
 }
 
@@ -435,6 +439,7 @@ cmd_verify() {
   require_cmd gpg "gnupg"
   require_cmd git "git"
   load_env
+  configure_pinentry
 
   gpg --list-secret-keys "$FPR" >/dev/null 2>&1 \
     || die "chave secreta $FPR não está disponível nesta máquina."

@@ -2152,13 +2152,7 @@ def admin_build(progress=None):
                     "# tarballs na pasta, head -n1 pegava o MAIS ANTIGO, nao o\n"
                     "# mais novo. sort -V ordena por numero de versao.\n"
                     "TARBALL=\"$(ls \"$SRC\"/nlinux-software-v*.tar.gz \"$SRC\"/../nlinux-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)\"\n"
-                    "if [ -z \"$TARBALL\" ]; then\n"
-                    "  # fallback para o nome antigo (FalconOS), caso a pasta venha de\n"
-                    "  # uma publicação anterior à padronização do nome\n"
-                    "  TARBALL=\"$(ls \"$SRC\"/falconos-software-v*.tar.gz \"$SRC\"/../falconos-software-v*.tar.gz 2>/dev/null | sort -V | tail -n1)\"\n"
-                    "fi\n"
                     "PUBASC=\"$SRC/nlinux-software_pub.asc\"\n"
-                    "[ -f \"$PUBASC\" ] || PUBASC=\"$SRC/falconos-software_pub.asc\"\n"
                     "if [ -z \"$TARBALL\" ]; then\n"
                     "  echo \"Aviso: nenhum nlinux-software-v<N>.tar.gz encontrado em $SRC.\"\n"
                     "  echo \"         Instalando a loja a partir do src/ sem validar assinatura.\"\n"
@@ -2203,23 +2197,14 @@ def admin_build(progress=None):
                     "STORE_HOME=\"$(getent passwd \"$STORE_USER\" | cut -d: -f6)\"\n"
                     "if [ -n \"$STORE_HOME\" ] && [ \"$STORE_USER\" != \"root\" ]; then\n"
                     "  STORE_DATA=\"${XDG_DATA_HOME:-$STORE_HOME/.local/share}\"\n"
-                    "  # migra a pasta de dados do nome antigo (FalconOS) sem sobrescrever\n"
-                    "  if [ -d \"$STORE_DATA/falconos\" ]; then\n"
-                    "    mkdir -p \"$STORE_DATA/nlinux\"\n"
-                    "    cp -an \"$STORE_DATA/falconos/.\" \"$STORE_DATA/nlinux/\" 2>/dev/null || true\n"
-                    "    rm -rf \"$STORE_DATA/falconos\"\n"
-                    "  fi\n"
                     "  APP_DATA=\"$STORE_DATA/nlinux\"\n"
                     "  DATA_DIR=\"$APP_DATA/store\"\n"
                     "  mkdir -p \"$DATA_DIR\"\n"
                     "  if [ ! -d \"$DATA_DIR/apps\" ]; then\n"
                     "    cp -a \"$DEST/src/apps\" \"$DATA_DIR/apps\"\n"
                     "  fi\n"
-                    "  # a logo mudou de nome e de conteudo: atualiza a copia gravavel\n"
-                    "  rm -f \"$DATA_DIR/apps/falconos-logo.png\"\n"
+                    "  # atualiza a copia gravavel da logo\n"
                     "  cp -f \"$DEST/src/apps/nlinux-logo.png\" \"$DATA_DIR/apps/nlinux-logo.png\"\n"
-                    "  # dados de site/cache do WebKit que ficaram com o nome antigo\n"
-                    "  rm -rf \"$STORE_DATA/falconosstore\" \"$STORE_HOME/.cache/falconosstore\"\n"
                     "  # o chown tem de pegtar a arvore inteira: um 'mkdir -p' como root\n"
                     "  # deixa os diretorios intermediarios do root, e sem dono o usuario\n"
                     "  # nao consegue criar mais nada dentro deles\n"
@@ -2227,12 +2212,6 @@ def admin_build(progress=None):
                     "  echo \"Catalogo e midia: $DATA_DIR/apps\"\n"
                     "fi\n"
                     "# --- ícone + atalho no menu de aplicativos --------------------------\n"
-                    "# remove a instalação anterior com a marca FalconOS (nome antigo)\n"
-                    "rm -rf /opt/falconos-software\n"
-                    "rm -f /usr/local/bin/falconos-software\n"
-                    "rm -f /usr/share/applications/falconosstore.desktop\n"
-                    "rm -f /usr/share/applications/falconossoftware.desktop\n"
-                    "rm -f /usr/share/pixmaps/falconos-software.png\n"
                     "mkdir -p /usr/share/pixmaps\n"
                     "cp \"$DEST/src/apps/nlinux-logo.png\" /usr/share/pixmaps/nlinux-software.png\n"
                     "rm -f /usr/share/icons/hicolor/scalable/apps/nlinux-software.svg\n"
@@ -2318,7 +2297,6 @@ def admin_build(progress=None):
             # para o pacote sair instalável em outra máquina.
             pub_candidates = (
                 os.path.expanduser("~/nlinux-software_pub.asc"),
-                os.path.expanduser("~/falconos-software_pub.asc"),
                 os.path.join(ISO_BUILD_DIR, ISO_STORE_DIRNAME,
                              "nlinux-software_pub.asc"),
             )
@@ -3010,10 +2988,7 @@ def ensure_admin_shortcut() -> None:
     )
     apps_dir = desktop_dir
     path = os.path.join(apps_dir, "nlinuxcuradoria.desktop")
-    for old_name in ("nlinuxsoftware.desktop", "nlinux-software-admin.desktop",
-                     # nomes da marca anterior, para não sobrar atalho quebrado
-                     "falconoscuradoria.desktop", "falconossoftware.desktop",
-                     "falconos-software-admin.desktop"):
+    for old_name in ("nlinuxsoftware.desktop", "nlinux-software-admin.desktop"):
         try:
             old_path = os.path.join(apps_dir, old_name)
             if os.path.exists(old_path):
