@@ -773,8 +773,7 @@ essa pasta do usuário em vez de dar escrita no `/opt`.
 ## Assinatura das releases (GPG)
 
 As tags de release e os commits deste repositório são assinados com a chave GPG
-de releases do projeto (o UID atual foi criado antes da renomeação; chaves novas
-usam `NLinux Releases`):
+de releases do projeto (`NLinux Releases`):
 
 - Chave: `48B7F637A3A00DD1`
 - Impressão digital: `F50E 5F47 4BEE 10CC 256F CBFC 48B7 F637 A3A0 0DD1`
