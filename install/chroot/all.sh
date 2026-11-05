@@ -34,6 +34,9 @@ log "Boas-vindas no primeiro login"
 cnote stage.note.welcome
 "$SHARE_DIR/chroot/41-welcome.sh"
 
+log "Configurações da Lixeira do Nautilus"
+"$SHARE_DIR/chroot/45-trash-settings.sh"
+
 log "Serviços do sistema"
 cnote stage.note.services
 "$SHARE_DIR/chroot/50-services.sh"

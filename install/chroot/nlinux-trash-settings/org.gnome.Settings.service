@@ -1,0 +1,7 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Substitui o painel de privacidade/lixeira do gnome-control-center.
+# Instalado em /usr/local/share para ter prioridade sobre o serviço do
+# /usr/share (caso o gnome-control-center seja instalado depois).
+[D-BUS Service]
+Name=org.gnome.Settings
+Exec=/usr/local/bin/nautilus-trash-settings

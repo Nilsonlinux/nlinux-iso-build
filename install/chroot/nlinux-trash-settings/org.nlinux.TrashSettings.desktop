@@ -1,0 +1,25 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Identidade visual do painel da lixeira para o dock/alternador do Noctalia.
+# O nome do arquivo PRECISA ser igual ao APP_ID do nautilus-trash-settings:
+# e assim que o Noctalia (app_identity) associa a janela ao icone e ao nome.
+#
+# Nao use NoDisplay=true: o Noctalia exclui entradas NoDisplay/Hidden da
+# lista usada para identificar janelas em execucao, e o dock voltaria a
+# mostrar o app id com um icone generico.
+[Desktop Entry]
+Type=Application
+Version=1.0
+Name=Configurações da Lixeira
+Name[en]=Trash Settings
+Name[pt_BR]=Configurações da Lixeira
+GenericName=Privacidade e lixeira
+GenericName[en]=Privacy and trash
+Comment=Itens antigos da lixeira e arquivos temporários
+Comment[en]=Old trash items and temporary files
+Exec=/usr/local/bin/nautilus-trash-settings
+Icon=org.gnome.Nautilus
+Terminal=false
+StartupNotify=false
+StartupWMClass=org.nlinux.TrashSettings
+Categories=Settings;System;
+Keywords=trash;lixeira;privacy;privacidade;settings;configurações;limpeza;

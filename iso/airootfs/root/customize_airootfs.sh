@@ -320,6 +320,14 @@ if [[ -d /opt/nlinux-software/src/apps ]]; then
   chmod -R u+rwX /home/nlinux/.local/share/nlinux
 fi
 
+# --- Configurações da Lixeira do Nautilus (sem gnome-control-center) --------
+# O Nautilus 51 delega "Configurações da Lixeira" ao org.gnome.Settings
+# (gnome-control-center), que não é instalado na NLinux. O painel local assume
+# esse nome D-Bus e abre um diálogo GTK equivalente. No sistema instalado o
+# mesmo script roda via install/chroot/all.sh (45-trash-settings.sh).
+log "Instalando o painel local de Configurações da Lixeira"
+bash /opt/noctalia-installer/install/chroot/45-trash-settings.sh
+
 # --- Marca os atalhos da Área de Trabalho como confiáveis (GNOME pediria
 # permissão a cada clique e poderia "não abrir" o app).
 command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinuxstore; do

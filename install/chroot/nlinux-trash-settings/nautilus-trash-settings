@@ -1,0 +1,300 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Substituto leve para o painel "Privacidade > Lixeira" do GNOME.
+
+O Nautilus 51 nao tem tela propria de configuracoes da lixeira: ele chama
+
+    org.gnome.Settings -> /org/gnome/Settings
+    org.gtk.Actions.Activate('launch-panel', [('privacy', ['usage'])], {})
+
+ou seja, delega para o gnome-control-center. Este script assume o nome D-Bus
+"org.gnome.Settings" e mostra um dialogo GTK com as opcoes equivalentes, sem
+instalar o gnome-control-center.
+
+Instalado pela ISO NLinux em /usr/local/bin/nautilus-trash-settings, com o
+servico D-Bus em /usr/local/share/dbus-1/services/org.gnome.Settings.service e
+o atalho/identidade visual em
+/usr/local/share/applications/org.nlinux.TrashSettings.desktop.
+
+O .desktop e necessario para o dock (Noctalia) resolver o icone e o nome da
+janela pelo app id: sem ele, o dock mostra o proprio app id e um icone
+generico de engrenagem.
+"""
+
+import sys
+
+import gi
+
+gi.require_version("Gtk", "4.0")
+gi.require_version("Adw", "1")
+
+from gi.repository import Adw, Gio, GLib, GObject, Gtk
+
+SERVICE_NAME = "org.gnome.Settings"
+OBJECT_PATH = "/org/gnome/Settings"
+INTERFACE = "org.gtk.Actions"
+SCHEMA = "org.gnome.desktop.privacy"
+APP_ID = "org.nlinux.TrashSettings"
+APP_NAME = "Configurações da Lixeira"
+ICON_NAME = "org.gnome.Nautilus"  # mesmo icone do Nautilus
+
+INTROSPECTION_XML = """
+<node>
+  <interface name="org.gtk.Actions">
+    <method name="Activate">
+      <arg type="s" name="action_name" direction="in"/>
+      <arg type="av" name="parameter" direction="in"/>
+      <arg type="a{sv}" name="platform_data" direction="in"/>
+    </method>
+    <method name="List">
+      <arg type="as" name="actions" direction="out"/>
+    </method>
+  </interface>
+</node>
+"""
+
+_app = None
+_connection = None
+
+
+class TrashSettingsWindow(Adw.ApplicationWindow):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+        self.set_default_size(560, 620)
+        self.set_title(APP_NAME)
+        self.set_icon_name(ICON_NAME)
+
+        self.settings = Gio.Settings.new(SCHEMA)
+        self._updating = False
+
+        toolbar = Adw.ToolbarView()
+
+        header = Adw.HeaderBar()
+        header.set_title_widget(
+            Adw.WindowTitle(
+                title=APP_NAME,
+                subtitle="Privacidade e lixeira",
+            )
+        )
+        toolbar.add_top_bar(header)
+
+        page = Adw.PreferencesPage()
+
+        trash_group = Adw.PreferencesGroup(
+            title="Lixeira",
+            description="Itens antigos podem ser removidos automaticamente.",
+        )
+
+        self.trash_switch = Adw.SwitchRow(
+            title="Excluir automaticamente itens da lixeira",
+        )
+        self.settings.bind(
+            "remove-old-trash-files",
+            self.trash_switch,
+            "active",
+            Gio.SettingsBindFlags.DEFAULT,
+        )
+        trash_group.add(self.trash_switch)
+
+        self.age_row = Adw.SpinRow(
+            title="Itens com mais de",
+            subtitle="dias",
+        )
+        self.age_row.set_digits(0)
+        self.age_row.set_adjustment(
+            Gtk.Adjustment(
+                value=self.settings.get_uint("old-files-age"),
+                lower=1,
+                upper=365,
+                step_increment=1,
+                page_increment=7,
+            )
+        )
+        self.age_row.connect("notify::value", self._on_age_changed)
+        self.trash_switch.bind_property(
+            "active",
+            self.age_row,
+            "sensitive",
+            GObject.BindingFlags.SYNC_CREATE,
+        )
+        trash_group.add(self.age_row)
+
+        temp_group = Adw.PreferencesGroup(
+            title="Arquivos temporários",
+        )
+        self.temp_switch = Adw.SwitchRow(
+            title="Excluir automaticamente arquivos temporários antigos",
+        )
+        self.settings.bind(
+            "remove-old-temp-files",
+            self.temp_switch,
+            "active",
+            Gio.SettingsBindFlags.DEFAULT,
+        )
+        temp_group.add(self.temp_switch)
+
+        about_group = Adw.PreferencesGroup()
+        info = Adw.ActionRow(
+            title="Limpeza periódica",
+            subtitle=(
+                "Estas opções ficam salvas nas preferências do GNOME. "
+                "No Umbriel, o serviço de manutenção (gsd-housekeeping) não "
+                "está ativo, então a limpeza automática periódica pode não "
+                "ser executada."
+            ),
+        )
+        info.set_subtitle_lines(4)
+        about_group.add(info)
+
+        page.add(trash_group)
+        page.add(temp_group)
+        page.add(about_group)
+
+        scrolled = Gtk.ScrolledWindow()
+        scrolled.set_policy(Gtk.PolicyType.NEVER, Gtk.PolicyType.AUTOMATIC)
+        scrolled.set_vexpand(True)
+        scrolled.set_child(page)
+        toolbar.set_content(scrolled)
+
+        self.set_content(toolbar)
+
+        self.settings.connect("changed::old-files-age", self._on_settings_changed)
+
+    def _on_age_changed(self, row, _pspec):
+        if self._updating:
+            return
+        self.settings.set_uint("old-files-age", int(row.get_value()))
+
+    def _on_settings_changed(self, settings, key):
+        if key != "old-files-age":
+            return
+        self._updating = True
+        self.age_row.set_value(settings.get_uint(key))
+        self._updating = False
+
+
+class TrashSettingsApp(Adw.Application):
+    def __init__(self):
+        super().__init__(
+            application_id=APP_ID,
+            flags=Gio.ApplicationFlags.NON_UNIQUE | Gio.ApplicationFlags.IS_SERVICE,
+        )
+        self.window = None
+        self._idle_timeout_id = None
+
+    def do_activate(self):
+        self.show_window()
+
+    def show_window(self):
+        if self._idle_timeout_id is not None:
+            GLib.source_remove(self._idle_timeout_id)
+            self._idle_timeout_id = None
+
+        if self.window is None:
+            self.window = TrashSettingsWindow(application=self)
+            self.window.connect("destroy", self._on_window_destroyed)
+        self.window.present()
+
+    def arm_idle_timeout(self, seconds=30):
+        """Encerra o processo se nenhuma chamada útil chegar (evita ficar residente)."""
+        if self._idle_timeout_id is None:
+            self._idle_timeout_id = GLib.timeout_add_seconds(
+                seconds, self._on_idle_timeout
+            )
+
+    def _on_idle_timeout(self):
+        self._idle_timeout_id = None
+        if self.window is None:
+            self.quit()
+        return GLib.SOURCE_REMOVE
+
+    def _on_window_destroyed(self, _window):
+        self.window = None
+        self.quit()
+
+
+def _on_method_call(connection, sender, object_path, interface_name,
+                    method_name, parameters, invocation):
+    if method_name == "List":
+        invocation.return_value(GLib.Variant("(as)", (["launch-panel"],)))
+        return
+
+    if method_name != "Activate":
+        invocation.return_value(None)
+        return
+
+    try:
+        action_name, parameter, _platform_data = parameters.unpack()
+    except Exception as error:  # pragma: no cover - defensivo
+        print(f"nautilus-trash-settings: parâmetro inválido: {error}", file=sys.stderr)
+        invocation.return_value(None)
+        return
+
+    invocation.return_value(None)
+
+    panel = None
+    if action_name == "launch-panel" and parameter:
+        first = parameter[0]
+        if isinstance(first, (tuple, list)) and first:
+            panel = first[0]
+
+    if panel == "privacy":
+        if _app is not None:
+            GLib.idle_add(_app.show_window)
+    else:
+        print(
+            f"nautilus-trash-settings: painel não suportado: "
+            f"{action_name} {parameter!r}",
+            file=sys.stderr,
+        )
+
+
+def _on_name_acquired(connection, name):
+    print(f"nautilus-trash-settings: nome D-Bus '{name}' adquirido", file=sys.stderr)
+
+
+def _on_name_lost(connection, name):
+    print(f"nautilus-trash-settings: não foi possível adquirir '{name}'", file=sys.stderr)
+    if _app is not None:
+        GLib.idle_add(_app.quit)
+
+
+def main():
+    global _app, _connection
+
+    GLib.set_application_name(APP_NAME)
+
+    if "--self-test" in sys.argv:
+        _app = TrashSettingsApp()
+        _app.register(None)
+        TrashSettingsWindow(application=_app)
+        print("self-test OK")
+        return 0
+
+    _app = TrashSettingsApp()
+
+    _connection = Gio.bus_get_sync(Gio.BusType.SESSION, None)
+    node_info = Gio.DBusNodeInfo.new_for_xml(INTROSPECTION_XML)
+    _connection.register_object(
+        OBJECT_PATH,
+        node_info.interfaces[0],
+        _on_method_call,
+        None,
+        None,
+    )
+    Gio.bus_own_name_on_connection(
+        _connection,
+        SERVICE_NAME,
+        Gio.BusNameOwnerFlags.NONE,
+        _on_name_acquired,
+        _on_name_lost,
+    )
+
+    _app.arm_idle_timeout()
+
+    return _app.run(sys.argv)
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
