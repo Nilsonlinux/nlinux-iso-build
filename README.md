@@ -776,8 +776,8 @@ As tags de release e os commits deste repositório são assinados com a chave GP
 de releases do projeto (o UID atual foi criado antes da renomeação; chaves novas
 usam `NLinux Releases`):
 
-- Chave: `FFDFD46A8DE7F79F`
-- Impressão digital: `247C C0FF CA3C C9ED 0F0C 3027 FFDF D46A 8DE7 F79F`
+- Chave: `48B7F637A3A00DD1`
+- Impressão digital: `F50E 5F47 4BEE 10CC 256F CBFC 48B7 F637 A3A0 0DD1`
 - Chave legada (releases antigas): [`nlinux-releases-gpg-pub-legacy.asc`](nlinux-releases-gpg-pub-legacy.asc)
 - Chave pública: [`nlinux-releases-gpg-pub.asc`](nlinux-releases-gpg-pub.asc)
 - Configuração das máquinas de release: [`SIGNING.md`](SIGNING.md)

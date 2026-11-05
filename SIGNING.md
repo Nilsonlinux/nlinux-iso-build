@@ -31,9 +31,11 @@ chave primária  (só certifica; guardada OFFLINE, fora das duas máquinas)
 - O GitHub mostra **Verified** para commits/tags assinados por qualquer uma das
   subchaves, porque a verificação sobe até a chave primária publicada.
 
-O UID padrão de chaves novas é `NLinux Releases <nilsonlinux@gmail.com>`. A
-chave de releases atual foi criada antes da renomeação e mantém seu UID original;
-o e-mail precisa estar verificado na sua conta do GitHub para o selo aparecer.
+A chave de releases atual usa o UID
+`NLinux Releases <nilsonlinux@users.noreply.github.com>`. Chaves novas podem
+usar `nilsonlinux@gmail.com` ou o endereço `users.noreply.github.com`; em ambos
+os casos o e-mail precisa estar associado à sua conta do GitHub para o selo
+**Verified** aparecer.
 
 ```bash
 # conferir o UID da chave que está no repositório
@@ -142,8 +144,9 @@ Isso é feito **uma vez só**, em qualquer uma das máquinas:
    cat ~/.config/nlinux-signing/public.asc
    ```
 
-3. Confirme em <https://github.com/settings/emails> que
-   `nilsonlinux@gmail.com` está verificado.
+3. Confirme em <https://github.com/settings/emails> que o e-mail do UID
+   (`nilsonlinux@users.noreply.github.com` ou `nilsonlinux@gmail.com`) está
+   associado à conta.
 
 A partir daí, commits e tags assinados por `casa` ou `trabalho` aparecem como
 **Verified**.
@@ -187,9 +190,9 @@ git push origin 2026.12.01
 
 Com `tag.gpgSign = true` no Git global, até `git tag -a ...` sai assinada. Tags
 **lightweight** (`git tag nome`, sem `-a`/`-s`) não têm assinatura e não devem ser
-usadas em release. A tag `2026.11.03` existente é anotada e sua assinatura GPG
-é válida. Não recrie tags já publicadas; para corrigir uma release, publique
-uma nova versão:
+usadas em release. A tag `2026.11.05` é anotada e sua assinatura GPG é válida.
+Não recrie tags já publicadas; para corrigir uma release, publique uma nova
+versão:
 
 ```bash
 git tag -s 2026.11.04 -m "NLinux 2026.11.04"
