@@ -14,6 +14,8 @@ Resultado instalado / ao vivo:
 - **systemd-boot**, **LUKS2 opcional**, **ext4 ou btrfs** (subvolumes `@`, `@home`, `@log`, `@pkg`)
 - **Shell padrão do usuário: fish**; terminal padrão: **kitty** (`Mod+T` / `Mod+Shift+T`)
 - **NLinux Software** (nlinux-software com PackageKit + metadados AppStream)
+- **Configurações da Lixeira do Nautilus** — painel local para preferências de
+  remoção automática de itens antigos da lixeira e de arquivos temporários
 - **Boas-vindas no primeiro login** do sistema instalado (janela única, `zenity`)
 - **fastfetch** mostra a logo do NLinux (PNG via protocolo kitty em `config/.config/fastfetch/img/nlinux.png`) + especificações do sistema em pt-BR
 - **Desktop no live** com os mesmos apps da instalação (Firefox, kitty, NLinux Software…)
@@ -610,7 +612,26 @@ avisa é o `all.sh`, com `cstage`/`cnote`/`cact` (ver
 | 3 | `30-greetd.sh` | `/etc/greetd/config.toml` com o **noctalia-greeter** (sessão padrão `umbriel`) + setup do pacote |
 | 4 | `40-user-config.sh` | copia `config/.config` → `~/.config` do usuário (`.tpl` resolvidos com `__KEYBOARD_LAYOUT__` derivado do keymap) e `config/.local` → `~/.local` (ícones/cursor Bibata, logo do fastfetch), delega ao usuário |
 | 5 | `41-welcome.sh` | marca `/etc/nlinux-installed` e instala `/usr/local/bin/nlinux-welcome` (janela de boas-vindas única no 1º login; no live é inócuo) — acionado pelo autostart do Umbriel |
-| 6 | `50-services.sh` | habilita NetworkManager, bluetooth, greetd, accounts-daemon, **packagekit**, **rtkit-daemon**; **desabilita o `systemd-networkd`** e confere que só o NetworkManager ficou de gerente (o preset do Arch habilita os dois, e eles disputam o link); adiciona o **Flathub** para o usuário (loja NLinux Software); **`appstreamcli refresh --force`** (metadados para a loja); `/etc/environment` (Wayland + `XCURSOR_THEME=Bibata-Modern-Ice`); NTP (`systemd-timesyncd`) |
+| 6 | `45-trash-settings.sh` | instala o painel local de configurações da lixeira chamado pelo Nautilus, substituindo a integração com `gnome-control-center` sem instalar esse pacote |
+| 7 | `50-services.sh` | habilita NetworkManager, bluetooth, greetd, accounts-daemon, **packagekit**, **rtkit-daemon**; **desabilita o `systemd-networkd`** e confere que só o NetworkManager ficou de gerente (o preset do Arch habilita os dois, e eles disputam o link); adiciona o **Flathub** para o usuário (loja NLinux Software); **`appstreamcli refresh --force`** (metadados para a loja); `/etc/environment` (Wayland + `XCURSOR_THEME=Bibata-Modern-Ice`); NTP (`systemd-timesyncd`) |
+
+### Configurações da Lixeira do Nautilus
+
+O Nautilus 51 solicita o painel `privacy/usage` do `gnome-control-center` ao
+abrir as configurações da lixeira. Como esse pacote não faz parte do NLinux,
+`install/chroot/45-trash-settings.sh` instala um painel GTK local que atende
+à chamada D-Bus `org.gnome.Settings` e usa o ícone e a identidade do Nautilus.
+Assim, o botão de configurações da lixeira funciona sem adicionar o
+`gnome-control-center` à ISO.
+
+O painel permite ativar a remoção automática de itens antigos da lixeira,
+definir a idade limite (de 1 a 365 dias) e ativar a remoção de arquivos
+temporários antigos. As preferências ficam salvas em
+`org.gnome.desktop.privacy`. O script é executado ao personalizar o ambiente
+live e durante a instalação online; no modo offline, os arquivos já chegam
+pela cópia do sistema live. **Atenção:** no Umbriel, o serviço GNOME
+`gsd-housekeeping` não fica ativo; portanto, salvar essas preferências não
+garante que a limpeza periódica seja executada.
 
 ---
 
