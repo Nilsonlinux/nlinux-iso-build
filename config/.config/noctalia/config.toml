@@ -59,7 +59,7 @@ polkit_agent = true
 
     [shell.panel]
     transparency_mode = "glass"
-    polkit_placement = "attached"
+    polkit_placement = "floating"
     
     [shell.screenshot]
     annotate = true
@@ -150,7 +150,7 @@ hide_when_no_media = true
 rotate_album_art = true
 show_progress = true
 title_scroll = "always"
-max_length = 165
+max_length = 140
 
 [widget.weather]
 show_condition = false
