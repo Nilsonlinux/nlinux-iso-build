@@ -93,6 +93,11 @@ zram-generator
 mpv
 mpv-mpris
 ffmpeg
+# Stack GStreamer completa: codecs extras do Showtime/WebKit (gst-libav usa
+# o FFmpeg) e os plugins "bad"; sem eles só entra o gst-plugins-good via
+# dependência do Showtime.
+gst-libav
+gst-plugins-bad
 imagemagick
 
 jq
