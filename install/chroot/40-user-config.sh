@@ -46,21 +46,9 @@ if [[ ! -f "$user_home/.config/user-dirs.dirs" ]]; then
   done
 fi
 
-# Atalho da loja de software na Área de Trabalho do usuário.
-if [[ -f /usr/share/applications/nlinuxstore.desktop ]]; then
-  mkdir -p "$user_home/Desktop"
-  cp -a /usr/share/applications/nlinuxstore.desktop "$user_home/Desktop/"
-  chmod +x "$user_home/Desktop/nlinuxstore.desktop" 2>/dev/null || true
-  chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/Desktop" 2>/dev/null || true
-fi
-
-# Atalho de boas-vindas (janela da distro) na Área de Trabalho do usuário.
-if [[ -f /usr/share/applications/nlinux-welcome.desktop ]]; then
-  mkdir -p "$user_home/Desktop"
-  cp -a /usr/share/applications/nlinux-welcome.desktop "$user_home/Desktop/"
-  chmod +x "$user_home/Desktop/nlinux-welcome.desktop" 2>/dev/null || true
-  chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/Desktop" 2>/dev/null || true
-fi
+# Sem atalhos na Área de Trabalho: o Umbriel/Noctalia não tem desktop ativo e
+# ~/Desktop só aparece no gerenciador de arquivos. Os atalhos de menu continuam
+# em /usr/share/applications/ (loja, boas-vindas etc.).
 
 # Loja gravável pelo usuário: desde a v117 o app não escreve mais em /opt — o
 # catálogo e a mídia foram para ~/.local/share/nlinux/store e o /opt é só a
@@ -75,11 +63,5 @@ if [[ -d /opt/nlinux-software/src/apps ]]; then
   chown -R "$INSTALL_USER:$INSTALL_USER" "$user_home/.local/share/nlinux"
   chmod -R u+rwX "$user_home/.local/share/nlinux"
 fi
-
-# Marca os atalhos da Área de Trabalho como confiáveis (senão o GNOME cobra
-# permissão a cada clique e dá impressão de que o app "não abre").
-command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinuxstore nlinux-welcome; do
-  gio set "$user_home/Desktop/$d.desktop" metadata::trusted true 2>/dev/null || true
-done
 
 ok "Configurações do usuário aplicadas."

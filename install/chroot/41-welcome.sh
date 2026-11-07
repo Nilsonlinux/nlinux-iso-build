@@ -40,7 +40,7 @@ if [[ ! -f /etc/nlinux-release ]]; then
   } > /etc/nlinux-release
 fi
 
-# --- Atalho do app no menu e na área de trabalho do usuário ------------
+# --- Atalho do app no menu ---------------------------------------------
 chmod 0644 /usr/share/applications/nlinux-welcome.desktop
 mkdir -p /usr/share/pixmaps
 install -m 0644 "$WELCOME_DST/welcome-logo.png" /usr/share/pixmaps/nlinux-welcome.png

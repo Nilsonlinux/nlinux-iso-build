@@ -3,8 +3,8 @@
 # SPDX-License-Identifier: GPL-3.0-or-later
 """Janela de boas-vindas do NLinux (primeiro login / atalho manual).
 
-Usa a mesma stack da loja (python-gobject + GTK3) e carrega o idioma que foi
-escolhido no instalador web (lido de /etc/locale.conf no sistema instalado).
+Usa python-gobject + GTK4 e carrega o idioma que foi escolhido no instalador
+web (lido de /etc/locale.conf no sistema instalado).
 
 Modos:
   padrão        -> exibe uma vez por usuário (marcador ~/.config/nlinux-welcome-v1),
@@ -18,7 +18,7 @@ import time
 import webbrowser
 from datetime import datetime
 
-APP_DIR = "/usr/share/nlinux-welcome"
+APP_DIR = os.environ.get("NLINUX_WELCOME_DIR", "/usr/share/nlinux-welcome")
 MARKER = os.path.expanduser("~/.config/nlinux-welcome-v1")
 
 REPO_URL = "https://github.com/Nilsonlinux/nlinux-iso-build"
@@ -225,12 +225,25 @@ T = {
 
 CSS = """
 window {
-  background-image: linear-gradient(to bottom, #171738, #0b0b18);
+  background-image: linear-gradient(155deg, #191938 0%, #0b0b18 72%);
+}
+
+headerbar {
+  background: transparent;
+  border: none;
+  box-shadow: none;
+  min-height: 38px;
+}
+
+headerbar .title,
+.window-title {
+  color: #f0f0ff;
+  font-weight: 700;
 }
 
 .hello {
-  font-size: 26px;
-  font-weight: 700;
+  font-size: 28px;
+  font-weight: 800;
   color: #ffffff;
 }
 
@@ -239,14 +252,15 @@ window {
   color: #b8b8d0;
 }
 
-#card {
+.card {
   background-color: rgba(255, 255, 255, 0.06);
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+  padding: 14px 16px;
 }
 
 .card-title {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
   color: #9d9dbb;
@@ -436,97 +450,124 @@ def fetch_latest_release():
         return None
 
 
-def build_ui(lang, release):
+def _apply_css():
     import gi
 
-    gi.require_version("Gtk", "3.0")
-    gi.require_version("Gdk", "3.0")
-    from gi.repository import Gdk, GdkPixbuf, GLib, Gtk
-
-    t = T.get(lang, T["pt"])
-
-    wm_class = "nlinux-welcome"
-    GLib.set_prgname(wm_class)
-    try:
-        Gdk.set_program_class(wm_class)
-    except Exception:
-        pass
-
-    win = Gtk.Window()
-    win.set_wmclass(wm_class, wm_class)
-    win.set_title(t["window.title"])
-    win.set_position(Gtk.WindowPosition.CENTER)
-    win.set_default_size(580, 430)
-    win.set_resizable(False)
-    try:
-        win.set_icon(
-            GdkPixbuf.Pixbuf.new_from_file_at_scale(
-                os.path.join(APP_DIR, "welcome-logo.png"), 128, 128, True))
-    except Exception:
-        pass
+    gi.require_version("Gdk", "4.0")
+    from gi.repository import Gdk, Gtk
 
     provider = Gtk.CssProvider()
     provider.load_from_data(CSS.encode("utf-8"))
-    screen = Gdk.Screen.get_default()
-    if screen is not None:
-        Gtk.StyleContext.add_provider_for_screen(
-            screen, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+    display = Gdk.Display.get_default()
+    if display is not None:
+        Gtk.StyleContext.add_provider_for_display(
+            display, provider, Gtk.STYLE_PROVIDER_PRIORITY_APPLICATION)
+
+
+def build_ui(lang, release):
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    from gi.repository import Gio, Gtk
+
+    app = Gtk.Application(
+        application_id="org.nlinux.Welcome",
+        flags=Gio.ApplicationFlags.DEFAULT_FLAGS,
+    )
+
+    def on_activate(application):
+        _apply_css()
+        win = build_window(application, lang, release)
+        win.present()
+
+    app.connect("activate", on_activate)
+    return app.run([])
+
+
+def build_window(app, lang, release):
+    import gi
+
+    gi.require_version("Gtk", "4.0")
+    from gi.repository import GLib, Gtk
+
+    t = T.get(lang, T["pt"])
+
+    win = Gtk.ApplicationWindow(application=app)
+    win.set_title(t["window.title"])
+    win.set_default_size(660, 560)
+    win.set_resizable(False)
+    try:
+        win.set_icon_name("nlinux-welcome")
+    except Exception:
+        pass
+
+    header = Gtk.HeaderBar()
+    header.set_show_title_buttons(True)
+    title = Gtk.Label(label=t["window.title"])
+    title.add_css_class("window-title")
+    header.set_title_widget(title)
+    win.set_titlebar(header)
 
     root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-    root.set_margin_top(14)
-    root.set_margin_bottom(12)
-    root.set_margin_start(40)
-    root.set_margin_end(40)
-    win.add(root)
+    root.set_margin_top(10)
+    root.set_margin_bottom(14)
+    root.set_margin_start(42)
+    root.set_margin_end(42)
+    win.set_child(root)
 
-    try:
-        logo_pixbuf = GdkPixbuf.Pixbuf.new_from_file_at_scale(
-            os.path.join(APP_DIR, "welcome-logo.png"), 140, 140, True)
-        logo = Gtk.Image.new_from_pixbuf(logo_pixbuf)
-    except Exception:
-        logo = Gtk.Label()
-        logo.set_text("NLinux")
-        logo.set_name("hello")
-    root.pack_start(logo, False, False, 0)
+    logo_path = os.path.join(APP_DIR, "welcome-logo.png")
+    if os.path.exists(logo_path):
+        logo = Gtk.Image.new_from_file(logo_path)
+        logo.set_pixel_size(128)
+        logo.set_halign(Gtk.Align.CENTER)
+    else:
+        logo = Gtk.Label(label="NLinux")
+        logo.add_css_class("hello")
+    root.append(logo)
 
     hello = Gtk.Label(label=t["hello"])
-    hello.get_style_context().add_class("hello")
+    hello.add_css_class("hello")
     hello.set_margin_top(8)
-    root.pack_start(hello, False, False, 0)
+    root.append(hello)
 
     msg = Gtk.Label(label=t["msg"])
-    msg.get_style_context().add_class("msg")
-    msg.set_line_wrap(True)
+    msg.add_css_class("msg")
+    msg.set_wrap(True)
     msg.set_justify(Gtk.Justification.CENTER)
     msg.set_margin_top(2)
-    root.pack_start(msg, False, False, 0)
+    root.append(msg)
 
-    board = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
-    board.set_margin_top(12)
+    board = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=14)
+    board.set_homogeneous(True)
+    board.set_margin_top(14)
+    root.append(board)
 
-    info_card = _card(board, t["card.title"])
+    info_card = _card(t["card.title"])
     installed = format_date(
         release.get("NLINUX_BUILT") or release.get("NLINUX_VERSION"), lang)
     latest = cached_latest_release() or release.get("NLINUX_VERSION", "rolling")
-    info_card.pack_start(_info_row(t["label.name"], "NLinux"), False, False, 5)
-    info_card.pack_start(_info_row(t["label.update"], installed), False, False, 5)
+    info_card.append(_info_row(t["label.name"], "NLinux"))
+    info_card.append(_info_row(t["label.update"], installed))
     latest_row = _info_row(t["label.iso_latest"], latest)
-    info_card.pack_start(latest_row, False, False, 5)
-    info_card.pack_start(_info_row(t["label.author"], AUTHOR), False, False, 5)
+    info_card.append(latest_row)
+    info_card.append(_info_row(t["label.author"], AUTHOR))
+    board.append(info_card)
 
-    feat_card = _card(board, t["features.title"])
+    feat_card = _card(t["features.title"])
     for feat in t["features"]:
         feat_label = Gtk.Label(label="•  " + feat)
-        feat_label.get_style_context().add_class("feature")
+        feat_label.add_css_class("feature")
         feat_label.set_halign(Gtk.Align.START)
+        feat_label.set_xalign(0.0)
+        feat_label.set_wrap(True)
         feat_label.set_margin_top(2)
-        feat_card.pack_start(feat_label, False, False, 0)
-
-    root.pack_start(board, False, False, 0)
+        feat_card.append(feat_label)
+    board.append(feat_card)
 
     btns = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=10)
     btns.set_homogeneous(True)
-    btns.set_margin_top(12)
+    btns.set_margin_top(14)
+    root.append(btns)
 
     def _open(url):
         try:
@@ -534,28 +575,28 @@ def build_ui(lang, release):
         except Exception:
             pass
 
-    btns.pack_start(_link_button(t["btn.github"], t["tip.github"],
-                                 github=True, on_click=lambda *_: _open(REPO_URL)),
-                    True, True, 0)
-    btns.pack_start(_link_button(t["btn.site"], t["tip.site"],
-                                 on_click=lambda *_: _open(SITE_URL)),
-                    True, True, 0)
-    root.pack_start(btns, False, False, 0)
+    github_btn = _link_button(t["btn.github"], t["tip.github"],
+                              github=True,
+                              on_click=lambda *_: _open(REPO_URL))
+    github_btn.set_hexpand(True)
+    btns.append(github_btn)
+
+    site_btn = _link_button(t["btn.site"], t["tip.site"],
+                            on_click=lambda *_: _open(SITE_URL))
+    site_btn.set_hexpand(True)
+    btns.append(site_btn)
 
     close = Gtk.Button(label=t["btn.close"])
-    close.get_style_context().add_class("primary")
-    close.set_margin_top(8)
+    close.add_css_class("primary")
+    close.set_margin_top(10)
     close.set_halign(Gtk.Align.CENTER)
-    close.connect("clicked", lambda *_: win.destroy())
-    root.pack_start(close, False, False, 0)
+    close.connect("clicked", lambda *_: win.close())
+    root.append(close)
 
     footer = Gtk.Label(label=("© NLinux   ·   " + t["footer"]))
-    footer.get_style_context().add_class("footer")
+    footer.add_css_class("footer")
     footer.set_margin_top(10)
-    root.pack_start(footer, False, False, 0)
-
-    win.connect("destroy", Gtk.main_quit)
-    win.show_all()
+    root.append(footer)
 
     # A "versão atual" vem da rede; a janela não espera por ela. Aparece já com
     # o cache (ou com a versão instalada) e é atualizada quando a resposta
@@ -576,70 +617,64 @@ def build_ui(lang, release):
 
     import threading
     threading.Thread(target=_load_latest, daemon=True).start()
-    Gtk.main()
+    return win
 
 
-def _card(parent, title):
+def _card(title):
     from gi.repository import Gtk
-    card = Gtk.Frame()
-    card.set_name("card")
-    card.set_shadow_type(Gtk.ShadowType.NONE)
+
+    card = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=6)
+    card.add_css_class("card")
     card.set_hexpand(True)
-    inner = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
-    inner.set_margin_start(14)
-    inner.set_margin_end(14)
-    inner.set_margin_top(8)
-    inner.set_margin_bottom(8)
-    card.add(inner)
-    ctitle = Gtk.Label(label=title)
-    ctitle.get_style_context().add_class("card-title")
-    ctitle.set_halign(Gtk.Align.START)
-    inner.pack_start(ctitle, False, False, 0)
-    parent.pack_start(card, True, True, 0)
-    return inner
+    title_label = Gtk.Label(label=title)
+    title_label.add_css_class("card-title")
+    title_label.set_halign(Gtk.Align.START)
+    card.append(title_label)
+    return card
 
 
 def _info_row(label, value):
     from gi.repository import Gtk
-    row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=16)
+
+    row = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=12)
     row.set_margin_top(3)
-    l1 = Gtk.Label(label=label)
-    l1.get_style_context().add_class("info-label")
-    l1.set_halign(Gtk.Align.START)
-    v1 = Gtk.Label(label=value)
-    v1.get_style_context().add_class("info-value")
-    v1.set_halign(Gtk.Align.END)
-    v1.set_hexpand(True)
-    sep = "  "
-    row.pack_start(l1, False, False, 0)
-    row.pack_start(v1, True, True, 0)
+    left = Gtk.Label(label=label)
+    left.add_css_class("info-label")
+    left.set_halign(Gtk.Align.START)
+    left.set_xalign(0.0)
+    right = Gtk.Label(label=value)
+    right.add_css_class("info-value")
+    right.set_halign(Gtk.Align.END)
+    right.set_xalign(1.0)
+    right.set_hexpand(True)
+    row.append(left)
+    row.append(right)
     # Guarda o rótulo do valor para poder atualizá-lo depois (ex.: "Versão
     # atual" chega da rede após a janela já estar visível).
-    row.value_label = v1
+    row.value_label = right
     return row
 
 
 def _link_button(text, tooltip, on_click, github=False):
     from gi.repository import Gtk
+
     btn = Gtk.Button()
-    btn.get_style_context().add_class("link")
+    btn.add_css_class("link")
     box = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
-    center = Gtk.Align.CENTER
+    box.set_halign(Gtk.Align.CENTER)
+    box.set_valign(Gtk.Align.CENTER)
     if github:
         try:
             img = Gtk.Image.new_from_file(
                 os.path.join(APP_DIR, "github.png"))
-            box.pack_start(img, False, False, 0)
+            img.set_pixel_size(18)
+            box.append(img)
         except Exception:
             pass
-        box.set_halign(center)
-        box.set_valign(center)
     lbl = Gtk.Label(label=text)
-    lbl.get_style_context().add_class("btn-label")
-    box.pack_start(lbl, False, False, 0)
-    box.set_halign(center)
-    box.set_valign(center)
-    btn.add(box)
+    lbl.add_css_class("btn-label")
+    box.append(lbl)
+    btn.set_child(box)
     btn.set_tooltip_text(tooltip)
     btn.connect("clicked", on_click)
     return btn

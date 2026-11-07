@@ -50,6 +50,8 @@ xdg-desktop-portal-gtk
 # Dependências da Loja de Software NLinux (janela GTK3/WebKit2 em Python)
 python
 python-gobject
+# GTK4: janela de boas-vindas (NLinux Welcome).
+gtk4
 webkit2gtk-4.1
 
 zram-generator

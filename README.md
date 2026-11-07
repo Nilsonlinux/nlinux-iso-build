@@ -283,7 +283,7 @@ sudo dd if=iso/out/*.iso of=/dev/sdX bs=4M status=progress conv=fsync
   O tema vem apontado em `config.toml`
   (`[audio] sound_theme = "nlinux"`), não no `settings.toml` de estado:
   assim o usuário continua podendo trocar o tema pela interface.
-- **Instalar** (somente pelo live): atalho **Instalar NLinux** do desktop/menu
+- **Instalar** (somente pelo live): atalho **Instalar NLinux** do menu
   (roda `/usr/local/bin/nlinux-installer-gui`) abre o Firefox em kiosk apontando
   para o servidor web local (`http://127.0.0.1:8765`, root via sudo). Não há
   instalador TUI. O servidor roda sob um **supervisor** (reinicia em 2 s se

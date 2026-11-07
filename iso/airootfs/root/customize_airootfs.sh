@@ -288,21 +288,10 @@ log "Variáveis de ambiente do live (Wayland + cursor Bibata)"
   echo "XCURSOR_SIZE=20"
 } >> /etc/environment
 
-# --- Atalho do instalador no menu (e na Área de Trabalho do live)
-log "Instalando atalho 'Instalar NLinux' (menu + Desktop do live)"
-if [[ -f /usr/share/applications/nlinux-installer.desktop ]]; then
-  mkdir -p /home/nlinux/Desktop
-  cp -a /usr/share/applications/nlinux-installer.desktop /home/nlinux/Desktop/
-  chmod +x /home/nlinux/Desktop/nlinux-installer.desktop 2>/dev/null || true
-fi
-
-# --- Loja de software no menu e na Área de Trabalho do live
-log "Instalando atalho 'Loja de Software' (menu + Desktop do live)"
-if [[ -f /usr/share/applications/nlinuxstore.desktop ]]; then
-  mkdir -p /home/nlinux/Desktop
-  cp -a /usr/share/applications/nlinuxstore.desktop /home/nlinux/Desktop/
-  chmod +x /home/nlinux/Desktop/nlinuxstore.desktop 2>/dev/null || true
-fi
+# --- Atalhos apenas no menu. Sem atalhos na Área de Trabalho: o
+# Umbriel/Noctalia não tem desktop ativo e ~/Desktop só aparece no
+# gerenciador de arquivos.
+log "Atalhos 'Instalar NLinux' e 'Loja de Software' no menu"
 chmod +x /usr/local/bin/nlinux-software 2>/dev/null || true
 chmod 0755 /opt/nlinux-software/nlinux-software 2>/dev/null || true
 
@@ -327,13 +316,6 @@ fi
 # mesmo script roda via install/chroot/all.sh (45-trash-settings.sh).
 log "Instalando o painel local de Configurações da Lixeira"
 bash /opt/noctalia-installer/install/chroot/45-trash-settings.sh
-
-# --- Marca os atalhos da Área de Trabalho como confiáveis (GNOME pediria
-# permissão a cada clique e poderia "não abrir" o app).
-command -v gio >/dev/null 2>&1 && for d in nlinux-installer nlinuxstore; do
-  gio set "/home/nlinux/Desktop/$d.desktop" metadata::trusted true 2>/dev/null || true
-done
-chown -R nlinux:nlinux /home/nlinux/Desktop 2>/dev/null || true
 
 # Identidade da distro gerada no build (persiste no sistema instalado via
 # cópia offline). Usa a mesma numeração do profiledef (Y.M.D da ISO).
