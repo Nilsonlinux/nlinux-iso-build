@@ -138,10 +138,9 @@ class TrashSettingsWindow(Adw.ApplicationWindow):
         info = Adw.ActionRow(
             title="Limpeza periódica",
             subtitle=(
-                "Estas opções ficam salvas nas preferências do GNOME. "
-                "No Umbriel, o serviço de manutenção (gsd-housekeeping) não "
-                "está ativo, então a limpeza automática periódica pode não "
-                "ser executada."
+                "A lixeira é verificada de hora em hora por uma tarefa do usuário. "
+                "Arquivos antigos pertencentes a você também são removidos de "
+                "/tmp e /var/tmp, sem atravessar links ou outros sistemas de arquivos."
             ),
         )
         info.set_subtitle_lines(4)

@@ -1,0 +1,10 @@
+[Unit]
+Description=Verificação periódica da lixeira do usuário
+
+[Timer]
+OnCalendar=hourly
+Persistent=true
+Unit=nlinux-trash-cleanup.service
+
+[Install]
+WantedBy=default.target

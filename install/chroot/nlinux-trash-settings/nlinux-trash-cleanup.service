@@ -1,0 +1,6 @@
+[Unit]
+Description=Limpeza automática da lixeira do usuário
+
+[Service]
+Type=oneshot
+ExecStart=/usr/local/bin/nlinux-trash-cleanup

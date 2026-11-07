@@ -25,13 +25,29 @@ dest="${DESTDIR:-}"
   || die "Serviço D-Bus ausente: $src/org.gnome.Settings.service"
 [[ -f "$src/org.nlinux.TrashSettings.desktop" ]] \
   || die "Atalho/identidade visual ausente: $src/org.nlinux.TrashSettings.desktop"
+[[ -f "$src/nlinux-trash-cleanup" ]] \
+  || die "Limpador da lixeira ausente: $src/nlinux-trash-cleanup"
+[[ -f "$src/nlinux-trash-cleanup.service" ]] \
+  || die "Serviço systemd da lixeira ausente: $src/nlinux-trash-cleanup.service"
+[[ -f "$src/nlinux-trash-cleanup.timer" ]] \
+  || die "Timer systemd da lixeira ausente: $src/nlinux-trash-cleanup.timer"
 
 log "Instalando o painel local de Configurações da Lixeira (Nautilus)"
 install -d -m 0755 "$dest/usr/local/bin" \
+  "$dest/usr/lib/systemd/user" \
+  "$dest/etc/systemd/user/default.target.wants" \
   "$dest/usr/local/share/dbus-1/services" \
   "$dest/usr/local/share/applications"
 install -m 0755 "$src/nautilus-trash-settings" \
   "$dest/usr/local/bin/nautilus-trash-settings"
+install -m 0755 "$src/nlinux-trash-cleanup" \
+  "$dest/usr/local/bin/nlinux-trash-cleanup"
+install -m 0644 "$src/nlinux-trash-cleanup.service" \
+  "$dest/usr/lib/systemd/user/nlinux-trash-cleanup.service"
+install -m 0644 "$src/nlinux-trash-cleanup.timer" \
+  "$dest/usr/lib/systemd/user/nlinux-trash-cleanup.timer"
+ln -sfn /usr/lib/systemd/user/nlinux-trash-cleanup.timer \
+  "$dest/etc/systemd/user/default.target.wants/nlinux-trash-cleanup.timer"
 install -m 0644 "$src/org.gnome.Settings.service" \
   "$dest/usr/local/share/dbus-1/services/org.gnome.Settings.service"
 # O .desktop tem o MESMO nome do app id (org.nlinux.TrashSettings) para o
@@ -42,6 +58,9 @@ install -m 0644 "$src/org.nlinux.TrashSettings.desktop" \
 grep -qx 'Exec=/usr/local/bin/nautilus-trash-settings' \
   "$dest/usr/local/share/dbus-1/services/org.gnome.Settings.service" \
   || die "O serviço D-Bus não aponta para /usr/local/bin/nautilus-trash-settings."
+grep -qx 'ExecStart=/usr/local/bin/nlinux-trash-cleanup' \
+  "$dest/usr/lib/systemd/user/nlinux-trash-cleanup.service" \
+  || die "O serviço systemd não aponta para /usr/local/bin/nlinux-trash-cleanup."
 grep -qx 'Icon=org.gnome.Nautilus' \
   "$dest/usr/local/share/applications/org.nlinux.TrashSettings.desktop" \
   || die "O .desktop não usa o ícone do Nautilus."
@@ -59,8 +78,16 @@ path = sys.argv[1]
 with open(path, encoding="utf-8") as fp:
     ast.parse(fp.read(), filename=path)
 PY
+  python3 - "$dest/usr/local/bin/nlinux-trash-cleanup" <<'PY'
+import ast
+import sys
+
+path = sys.argv[1]
+with open(path, encoding="utf-8") as fp:
+    ast.parse(fp.read(), filename=path)
+PY
 else
-  warn "python3 ausente; a sintaxe do painel da lixeira não foi validada."
+  warn "python3 ausente; a sintaxe dos utilitários da lixeira não foi validada."
 fi
 
-ok "Configurações da Lixeira instaladas em /usr/local/bin/nautilus-trash-settings"
+ok "Configurações e limpeza automática da lixeira instaladas"

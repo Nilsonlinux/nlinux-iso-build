@@ -627,11 +627,15 @@ Assim, o botão de configurações da lixeira funciona sem adicionar o
 O painel permite ativar a remoção automática de itens antigos da lixeira,
 definir a idade limite (de 1 a 365 dias) e ativar a remoção de arquivos
 temporários antigos. As preferências ficam salvas em
-`org.gnome.desktop.privacy`. O script é executado ao personalizar o ambiente
-live e durante a instalação online; no modo offline, os arquivos já chegam
-pela cópia do sistema live. **Atenção:** no Umbriel, o serviço GNOME
-`gsd-housekeeping` não fica ativo; portanto, salvar essas preferências não
-garante que a limpeza periódica seja executada.
+`org.gnome.desktop.privacy`. Como o Umbriel não inicia o serviço GNOME
+`gsd-housekeeping`, o instalador também habilita um timer `systemd --user` que
+verifica de hora em hora os itens da lixeira e remove os que passaram da idade
+configurada. A tarefa respeita a opção de ativação e roda na sessão do usuário.
+Quando ativada, a mesma tarefa também limpa arquivos antigos de propriedade
+do usuário em `/tmp` e `/var/tmp`, sem seguir links simbólicos nem atravessar
+outros sistemas de arquivos; não depende do `gsd-housekeeping`.
+O script é executado ao personalizar o ambiente live e durante a instalação
+online; no modo offline, os arquivos já chegam pela cópia do sistema live.
 
 ---
 

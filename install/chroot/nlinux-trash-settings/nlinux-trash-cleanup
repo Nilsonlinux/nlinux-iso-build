@@ -1,0 +1,200 @@
+#!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+"""Remove itens antigos da lixeira e arquivos temporários do usuário."""
+
+import os
+import re
+import shutil
+import stat
+import subprocess
+import sys
+from datetime import datetime, timedelta
+from pathlib import Path
+
+SCHEMA = "org.gnome.desktop.privacy"
+
+
+def setting(key):
+    result = subprocess.run(
+        ["gsettings", "get", SCHEMA, key],
+        check=False,
+        capture_output=True,
+        text=True,
+    )
+    if result.returncode:
+        detail = result.stderr.strip() or f"código {result.returncode}"
+        raise RuntimeError(f"não foi possível ler {SCHEMA} {key}: {detail}")
+    return result.stdout.strip()
+
+
+def deletion_date(info_path):
+    try:
+        lines = info_path.read_text(encoding="utf-8").splitlines()
+    except (OSError, UnicodeError) as error:
+        raise RuntimeError(f"não foi possível ler {info_path}: {error}") from error
+
+    for line in lines:
+        if line.startswith("DeletionDate="):
+            value = line.partition("=")[2]
+            try:
+                return datetime.strptime(value, "%Y-%m-%dT%H:%M:%S")
+            except ValueError:
+                print(
+                    f"nlinux-trash-cleanup: data inválida em {info_path}",
+                    file=sys.stderr,
+                )
+                return None
+    print(
+        f"nlinux-trash-cleanup: data de exclusão ausente em {info_path}",
+        file=sys.stderr,
+    )
+    return None
+
+
+def remove_item(path):
+    if path.is_symlink() or not path.is_dir():
+        path.unlink(missing_ok=True)
+    else:
+        shutil.rmtree(path)
+
+
+def cleanup_trash(trash_dir, age_days, now=None):
+    now = now or datetime.now()
+    cutoff = now - timedelta(days=age_days)
+    files_dir = trash_dir / "files"
+    info_dir = trash_dir / "info"
+    removed = 0
+    failures = 0
+
+    if not info_dir.is_dir():
+        return removed
+
+    for info_path in info_dir.glob("*.trashinfo"):
+        trashed_at = deletion_date(info_path)
+        if trashed_at is None or trashed_at > cutoff:
+            continue
+
+        item_path = files_dir / info_path.name.removesuffix(".trashinfo")
+        try:
+            remove_item(item_path)
+            info_path.unlink(missing_ok=True)
+            removed += 1
+        except OSError as error:
+            print(
+                f"nlinux-trash-cleanup: não foi possível remover {item_path}: {error}",
+                file=sys.stderr,
+            )
+            failures += 1
+
+    if failures:
+        raise RuntimeError(f"falha ao remover {failures} item(ns) da lixeira")
+    return removed
+
+
+def cleanup_temp_dir(path, age_days, now=None):
+    cutoff = (now or datetime.now()).timestamp() - age_days * 24 * 60 * 60
+    uid = os.getuid()
+    flags = os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW
+    removed = 0
+    failures = 0
+
+    try:
+        root_fd = os.open(path, flags)
+    except FileNotFoundError:
+        return removed
+
+    root_device = os.fstat(root_fd).st_dev
+    pending = [root_fd]
+    while pending:
+        dir_fd = pending.pop()
+        try:
+            with os.scandir(dir_fd) as entries:
+                for entry in entries:
+                    try:
+                        item_stat = os.stat(
+                            entry.name,
+                            dir_fd=dir_fd,
+                            follow_symlinks=False,
+                        )
+                        if item_stat.st_uid != uid or item_stat.st_dev != root_device:
+                            continue
+
+                        if stat.S_ISDIR(item_stat.st_mode):
+                            child_fd = os.open(entry.name, flags, dir_fd=dir_fd)
+                            pending.append(child_fd)
+                        elif (
+                            stat.S_ISREG(item_stat.st_mode)
+                            or stat.S_ISLNK(item_stat.st_mode)
+                        ) and item_stat.st_ctime <= cutoff:
+                            os.unlink(entry.name, dir_fd=dir_fd)
+                            removed += 1
+                    except FileNotFoundError:
+                        continue
+                    except OSError as error:
+                        print(
+                            f"nlinux-trash-cleanup: não foi possível limpar "
+                            f"{path}/{entry.name}: {error}",
+                            file=sys.stderr,
+                        )
+                        failures += 1
+        except OSError as error:
+            print(
+                f"nlinux-trash-cleanup: não foi possível acessar {path}: {error}",
+                file=sys.stderr,
+            )
+            failures += 1
+        finally:
+            os.close(dir_fd)
+
+    if failures:
+        raise RuntimeError(f"falha ao limpar {failures} item(ns) temporário(s)")
+    return removed
+
+
+def main():
+    try:
+        trash_enabled = setting("remove-old-trash-files")
+        temp_enabled = setting("remove-old-temp-files")
+        if trash_enabled not in {"true", "false"}:
+            raise RuntimeError(
+                f"valor inválido para remove-old-trash-files: {trash_enabled}"
+            )
+        if temp_enabled not in {"true", "false"}:
+            raise RuntimeError(
+                f"valor inválido para remove-old-temp-files: {temp_enabled}"
+            )
+        if trash_enabled == "false" and temp_enabled == "false":
+            print("nlinux-trash-cleanup: limpeza automática desativada")
+            return 0
+
+        age_value = setting("old-files-age")
+        age_match = re.fullmatch(r"(?:uint32 )?([0-9]+)", age_value)
+        if age_match is None:
+            raise RuntimeError(f"idade inválida para limpeza automática: {age_value}")
+        age_days = int(age_match.group(1))
+        if age_days < 1:
+            raise RuntimeError(f"idade inválida para limpeza automática: {age_value}")
+
+        trash_removed = 0
+        temp_removed = 0
+        if trash_enabled == "true":
+            data_home = Path(
+                os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")
+            )
+            trash_removed = cleanup_trash(data_home / "Trash", age_days)
+        if temp_enabled == "true":
+            for temp_dir in dict.fromkeys(("/tmp", "/var/tmp")):
+                temp_removed += cleanup_temp_dir(temp_dir, age_days)
+    except (OSError, RuntimeError, ValueError) as error:
+        print(f"nlinux-trash-cleanup: {error}", file=sys.stderr)
+        return 1
+
+    print(
+        f"nlinux-trash-cleanup: {trash_removed} item(ns) da lixeira e "
+        f"{temp_removed} arquivo(s) temporário(s) removido(s)"
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
