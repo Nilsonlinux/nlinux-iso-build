@@ -23,6 +23,8 @@ MARKER = os.path.expanduser("~/.config/nlinux-welcome-v1")
 
 REPO_URL = "https://github.com/Nilsonlinux/nlinux-iso-build"
 SITE_URL = "https://nilsonlinux.github.io/"
+DONATE_URL = "https://nilsonlinux.github.io/doar.html"
+ABOUT_URL = "https://nilsonlinux.github.io/sobre.html"
 AUTHOR = "Nilsonlinux"
 
 # Última release publicada (a data que aparece em "Versão atual"). Consultada
@@ -66,6 +68,9 @@ T = {
         "tip.github": "Abrir github.com/Nilsonlinux/nlinux-iso-build",
         "btn.site": "Acessar o site",
         "tip.site": "Abrir nilsonlinux.github.io",
+        "menu.donate": "Fazer doação",
+        "menu.about": "Sobre o NLinux",
+        "menu.tooltip": "Mais opções",
         "btn.close": "Começar a usar",
         "footer": "Feito com carinho por Nilsonlinux",
         "date_fmt": "%d/%m/%Y",
@@ -91,6 +96,9 @@ T = {
         "tip.github": "Open github.com/Nilsonlinux/nlinux-iso-build",
         "btn.site": "Visit the website",
         "tip.site": "Open nilsonlinux.github.io",
+        "menu.donate": "Make a donation",
+        "menu.about": "About",
+        "menu.tooltip": "More options",
         "btn.close": "Get started",
         "footer": "Made with love by Nilsonlinux",
         "date_fmt": "%m/%d/%Y",
@@ -116,6 +124,9 @@ T = {
         "tip.github": "Abrir github.com/Nilsonlinux/nlinux-iso-build",
         "btn.site": "Visitar el sitio",
         "tip.site": "Abrir nilsonlinux.github.io",
+        "menu.donate": "Hacer una donación",
+        "menu.about": "Acerca de",
+        "menu.tooltip": "Más opciones",
         "btn.close": "Empezar",
         "footer": "Hecho con cariño por Nilsonlinux",
         "date_fmt": "%d/%m/%Y",
@@ -141,6 +152,9 @@ T = {
         "tip.github": "Ouvrir github.com/Nilsonlinux/nlinux-iso-build",
         "btn.site": "Visiter le site",
         "tip.site": "Ouvrir nilsonlinux.github.io",
+        "menu.donate": "Faire un don",
+        "menu.about": "À propos",
+        "menu.tooltip": "Plus d'options",
         "btn.close": "Commencer",
         "footer": "Fait avec amour par Nilsonlinux",
         "date_fmt": "%d/%m/%Y",
@@ -166,6 +180,9 @@ T = {
         "tip.github": "github.com/Nilsonlinux/nlinux-iso-build öffnen",
         "btn.site": "Website besuchen",
         "tip.site": "nilsonlinux.github.io öffnen",
+        "menu.donate": "Spenden",
+        "menu.about": "Über",
+        "menu.tooltip": "Weitere Optionen",
         "btn.close": "Loslegen",
         "footer": "Mit Liebe von Nilsonlinux erstellt",
         "date_fmt": "%d.%m.%Y",
@@ -191,6 +208,9 @@ T = {
         "tip.github": "Apri github.com/Nilsonlinux/nlinux-iso-build",
         "btn.site": "Visita il sito",
         "tip.site": "Apri nilsonlinux.github.io",
+        "menu.donate": "Fai una donazione",
+        "menu.about": "Informazioni",
+        "menu.tooltip": "Altre opzioni",
         "btn.close": "Inizia",
         "footer": "Creato con amore da Nilsonlinux",
         "date_fmt": "%d/%m/%Y",
@@ -216,6 +236,9 @@ T = {
         "tip.github": "github.com/Nilsonlinux/nlinux-iso-build を開く",
         "btn.site": "ウェブサイトへ",
         "tip.site": "nilsonlinux.github.io を開く",
+        "menu.donate": "寄付する",
+        "menu.about": "NLinux について",
+        "menu.tooltip": "その他のオプション",
         "btn.close": "はじめる",
         "footer": "Nilsonlinux によって作られた NLinux",
         "date_fmt": "%Y/%m/%d",
@@ -239,6 +262,70 @@ headerbar .title,
 .window-title {
   color: #f0f0ff;
   font-weight: 700;
+}
+
+menubutton.welcome-menu-button > button {
+  background: transparent;
+  border: none;
+  border-radius: 6px;
+  box-shadow: none;
+}
+
+menubutton.welcome-menu-button > button:hover {
+  background-color: alpha(white, 0.15);
+}
+
+button.highlighted:hover,
+menubutton.highlighted > button:hover,
+windowcontrols.overlaid > button:hover > image {
+  background-color: alpha(white, 0.15);
+}
+
+button.highlighted,
+menubutton.highlighted > button,
+windowcontrols.overlaid > button > image {
+  background-color: transparent;
+}
+
+button.highlighted:active > *,
+menubutton.highlighted > button:active > *,
+windowcontrols.overlaid > button:active > image {
+  transform: scale(0.8);
+}
+
+button.highlighted > *,
+menubutton.highlighted > button > *,
+windowcontrols.overlaid > button > image {
+  transition: transform 0.2s;
+}
+
+image.overlaid,
+menubutton.overlaid > button > box > image,
+windowcontrols.overlaid > button > image {
+  color: white;
+  filter: drop-shadow(0 0 1px alpha(black, 0.4))
+    drop-shadow(0 0 3px alpha(black, 0.1))
+    drop-shadow(0 0 9px alpha(black, 0.3));
+}
+
+popover.welcome-menu.background,
+popover.welcome-menu.background > contents,
+popover.welcome-menu.background > arrow {
+  background-color: rgb(28, 28, 54);
+  background-image: none;
+  color: #eaf1ff;
+  border: none;
+  box-shadow: none;
+}
+
+popover.welcome-menu.background,
+popover.welcome-menu.background > contents {
+  border-radius: 12px;
+}
+
+popover.welcome-menu modelbutton:hover,
+popover.welcome-menu modelbutton:selected {
+  background-color: alpha(white, 0.12);
 }
 
 .hello {
@@ -292,29 +379,51 @@ button {
 }
 
 button.link {
-  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.04));
-  background-color: transparent;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  padding: 10px 14px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
+  background-color: rgba(255, 255, 255, 0.02);
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  padding: 10px 26px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.16);
 }
 
 button.link:hover {
-  background-image: linear-gradient(to bottom, rgba(31, 111, 235, 0.60), rgba(31, 111, 235, 0.28));
-  border-color: #7fb0ff;
-  box-shadow: 0 0 0 1px rgba(31, 111, 235, 0.55), 0 4px 16px rgba(31, 111, 235, 0.35);
+  background-image: linear-gradient(to bottom, rgba(43, 122, 245, 0.72), rgba(31, 111, 235, 0.30));
+  border-color: #8dbcff;
+  box-shadow: 0 0 0 1px rgba(64, 140, 255, 0.65),
+              0 6px 20px rgba(31, 111, 235, 0.42),
+              inset 0 1px 0 rgba(255, 255, 255, 0.22);
 }
 
 button.link:active {
-  background-image: linear-gradient(to bottom, rgba(31, 111, 235, 0.75), rgba(31, 111, 235, 0.45));
+  background-image: linear-gradient(to bottom, rgba(31, 111, 235, 0.78), rgba(31, 111, 235, 0.48));
   border-color: #9cc2ff;
   box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+}
+
+button.link:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px rgba(111, 168, 255, 0.85),
+              0 6px 20px rgba(31, 111, 235, 0.35);
 }
 
 button.link label {
   color: #eaf1ff;
   font-weight: 600;
+}
+
+button.link:hover label {
+  color: #ffffff;
+}
+
+/* O PNG do GitHub é preto; inverte para branco sobre o fundo escuro. */
+.github-icon {
+  filter: invert(1);
+  opacity: 0.92;
+}
+
+button.link:hover .github-icon {
+  opacity: 1;
 }
 
 button.primary {
@@ -345,6 +454,37 @@ button.primary label {
 .footer {
   font-size: 11px;
   color: #6f6f92;
+}
+
+/* Tooltips: cápsula escura com borda azul e texto claro. */
+tooltip {
+  padding: 7px 12px;
+  border-radius: 12px;
+  box-shadow: none;
+}
+
+tooltip.background {
+  background-color: rgba(18, 18, 38, 0.97);
+  background-clip: padding-box;
+  border: 1px solid rgba(127, 176, 255, 0.42);
+  border-radius: 12px;
+  color: #eef3ff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+tooltip > box {
+  border-spacing: 6px;
+}
+
+tooltip label {
+  color: #eef3ff;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+tooltip.csd {
+  border-radius: 12px;
+  box-shadow: none;
 }
 """
 
@@ -476,6 +616,10 @@ def build_ui(lang, release):
     )
 
     def on_activate(application):
+        settings = Gtk.Settings.get_default()
+        if settings is not None:
+            settings.set_property(
+                "gtk-interface-color-scheme", Gtk.InterfaceColorScheme.DARK)
         _apply_css()
         win = build_window(application, lang, release)
         win.present()
@@ -488,9 +632,21 @@ def build_window(app, lang, release):
     import gi
 
     gi.require_version("Gtk", "4.0")
-    from gi.repository import GLib, Gtk
+    from gi.repository import Gio, GLib, Gtk
 
     t = T.get(lang, T["pt"])
+
+    def _open_donation(*_args):
+        try:
+            webbrowser.open(DONATE_URL)
+        except Exception:
+            pass
+
+    def _open_about(*_args):
+        try:
+            webbrowser.open(ABOUT_URL)
+        except Exception:
+            pass
 
     win = Gtk.ApplicationWindow(application=app)
     win.set_title(t["window.title"])
@@ -502,10 +658,53 @@ def build_window(app, lang, release):
         pass
 
     header = Gtk.HeaderBar()
-    header.set_show_title_buttons(True)
+    header.set_show_title_buttons(False)
     title = Gtk.Label(label=t["window.title"])
     title.add_css_class("window-title")
     header.set_title_widget(title)
+
+    donate_action = Gio.SimpleAction.new("donate", None)
+    donate_action.connect("activate", _open_donation)
+    win.add_action(donate_action)
+    about_action = Gio.SimpleAction.new("about", None)
+    about_action.connect("activate", _open_about)
+    win.add_action(about_action)
+
+    menu = Gio.Menu()
+    donate_item = Gio.MenuItem.new(
+        t.get("menu.donate", "Fazer doação"), "win.donate")
+    try:
+        donate_item.set_icon(Gio.ThemedIcon.new("emote-love-symbolic"))
+    except Exception:
+        pass
+    menu.append_item(donate_item)
+    menu.append(
+        t.get("menu.about", "Sobre"), "win.about")
+
+    menu_button = Gtk.MenuButton()
+    menu_button.set_icon_name("open-menu-symbolic")
+    menu_button.set_tooltip_text(t.get("menu.tooltip", "Mais opções"))
+    menu_button.set_valign(Gtk.Align.CENTER)
+    menu_button.set_primary(True)
+    menu_popover = Gtk.PopoverMenu.new_from_model(menu)
+    menu_popover.add_css_class("welcome-menu")
+    menu_button.set_popover(menu_popover)
+    for css_class in ("highlighted", "overlaid", "welcome-menu-button"):
+        menu_button.add_css_class(css_class)
+
+    header_end = Gtk.Box(orientation=Gtk.Orientation.HORIZONTAL, spacing=6)
+    header_end.set_margin_top(6)
+    header_end.set_margin_bottom(3)
+    header_end.set_margin_start(3)
+    header_end.set_margin_end(6)
+    header_end.append(menu_button)
+
+    window_controls = Gtk.WindowControls.new(Gtk.PackType.END)
+    window_controls.set_valign(Gtk.Align.CENTER)
+    window_controls.add_css_class("overlaid")
+    header_end.append(window_controls)
+    header.pack_end(header_end)
+
     win.set_titlebar(header)
 
     root = Gtk.Box(orientation=Gtk.Orientation.VERTICAL, spacing=0)
@@ -668,6 +867,7 @@ def _link_button(text, tooltip, on_click, github=False):
             img = Gtk.Image.new_from_file(
                 os.path.join(APP_DIR, "github.png"))
             img.set_pixel_size(18)
+            img.add_css_class("github-icon")
             box.append(img)
         except Exception:
             pass
