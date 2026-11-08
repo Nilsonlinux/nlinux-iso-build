@@ -248,7 +248,8 @@ T = {
 
 CSS = """
 window {
-  background-image: linear-gradient(155deg, #191938 0%, #0b0b18 72%);
+  background-color: @window_bg_color;
+  background-image: none;
 }
 
 headerbar {
@@ -260,7 +261,7 @@ headerbar {
 
 headerbar .title,
 .window-title {
-  color: #f0f0ff;
+  color: @window_fg_color;
   font-weight: 700;
 }
 
@@ -272,13 +273,13 @@ menubutton.welcome-menu-button > button {
 }
 
 menubutton.welcome-menu-button > button:hover {
-  background-color: alpha(white, 0.15);
+  background-color: alpha(@window_fg_color, 0.12);
 }
 
 button.highlighted:hover,
 menubutton.highlighted > button:hover,
 windowcontrols.overlaid > button:hover > image {
-  background-color: alpha(white, 0.15);
+  background-color: alpha(@window_fg_color, 0.12);
 }
 
 button.highlighted,
@@ -302,7 +303,7 @@ windowcontrols.overlaid > button > image {
 image.overlaid,
 menubutton.overlaid > button > box > image,
 windowcontrols.overlaid > button > image {
-  color: white;
+  color: @window_fg_color;
   filter: drop-shadow(0 0 1px alpha(black, 0.4))
     drop-shadow(0 0 3px alpha(black, 0.1))
     drop-shadow(0 0 9px alpha(black, 0.3));
@@ -311,9 +312,9 @@ windowcontrols.overlaid > button > image {
 popover.welcome-menu.background,
 popover.welcome-menu.background > contents,
 popover.welcome-menu.background > arrow {
-  background-color: rgb(28, 28, 54);
+  background-color: @popover_bg_color;
   background-image: none;
-  color: #eaf1ff;
+  color: @popover_fg_color;
   border: none;
   box-shadow: none;
 }
@@ -325,24 +326,24 @@ popover.welcome-menu.background > contents {
 
 popover.welcome-menu modelbutton:hover,
 popover.welcome-menu modelbutton:selected {
-  background-color: alpha(white, 0.12);
+  background-color: alpha(@popover_fg_color, 0.12);
 }
 
 .hello {
   font-size: 28px;
   font-weight: 800;
-  color: #ffffff;
+  color: @window_fg_color;
 }
 
 .msg {
   font-size: 13px;
-  color: #b8b8d0;
+  color: alpha(@window_fg_color, 0.72);
 }
 
 .card {
-  background-color: rgba(255, 255, 255, 0.06);
+  background-color: @card_bg_color;
   border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.09);
+  border: 1px solid alpha(@card_fg_color, 0.12);
   padding: 14px 16px;
 }
 
@@ -350,23 +351,23 @@ popover.welcome-menu modelbutton:selected {
   font-size: 11px;
   font-weight: 700;
   letter-spacing: 2px;
-  color: #9d9dbb;
+  color: alpha(@card_fg_color, 0.66);
 }
 
 .info-label {
   font-size: 13px;
-  color: #9d9dbb;
+  color: alpha(@card_fg_color, 0.66);
 }
 
 .info-value {
   font-size: 14px;
   font-weight: 600;
-  color: #ffffff;
+  color: @card_fg_color;
 }
 
 .feature {
   font-size: 13px;
-  color: #d8d8ec;
+  color: alpha(@card_fg_color, 0.88);
 }
 
 .btn-label {
@@ -379,47 +380,46 @@ button {
 }
 
 button.link {
-  background-image: linear-gradient(to bottom, rgba(255, 255, 255, 0.15), rgba(255, 255, 255, 0.05));
-  background-color: rgba(255, 255, 255, 0.02);
+  background-image: none;
+  background-color: alpha(@window_fg_color, 0.02);
   border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid alpha(@window_fg_color, 0.22);
   padding: 10px 26px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.35), inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  box-shadow: 0 1px 2px alpha(@window_fg_color, 0.12);
 }
 
 button.link:hover {
-  background-image: linear-gradient(to bottom, rgba(43, 122, 245, 0.72), rgba(31, 111, 235, 0.30));
-  border-color: #8dbcff;
-  box-shadow: 0 0 0 1px rgba(64, 140, 255, 0.65),
-              0 6px 20px rgba(31, 111, 235, 0.42),
-              inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  background-color: @theme_selected_bg_color;
+  border-color: @theme_selected_bg_color;
+  box-shadow: 0 0 0 1px alpha(@theme_selected_bg_color, 0.45);
 }
 
 button.link:active {
-  background-image: linear-gradient(to bottom, rgba(31, 111, 235, 0.78), rgba(31, 111, 235, 0.48));
-  border-color: #9cc2ff;
-  box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.35);
+  background-color: @theme_selected_bg_color;
+  border-color: @theme_selected_bg_color;
+  box-shadow: inset 0 1px 3px alpha(@accent_fg_color, 0.25);
 }
 
 button.link:focus-visible {
   outline: none;
-  box-shadow: 0 0 0 2px rgba(111, 168, 255, 0.85),
-              0 6px 20px rgba(31, 111, 235, 0.35);
+  box-shadow: 0 0 0 2px alpha(@theme_selected_bg_color, 0.85);
 }
 
 button.link label {
-  color: #eaf1ff;
+  color: @window_fg_color;
   font-weight: 600;
 }
 
 button.link:hover label {
-  color: #ffffff;
+  color: @theme_selected_fg_color;
 }
 
-/* O PNG do GitHub é preto; inverte para branco sobre o fundo escuro. */
 .github-icon {
-  filter: invert(1);
   opacity: 0.92;
+}
+
+.github-icon.dark {
+  filter: invert(1);
 }
 
 button.link:hover .github-icon {
@@ -427,36 +427,36 @@ button.link:hover .github-icon {
 }
 
 button.primary {
-  background-image: linear-gradient(to bottom, #3583f6, #1a5fd6);
+  background-image: none;
+  background-color: @theme_selected_bg_color;
   border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+  border: 1px solid alpha(@accent_fg_color, 0.18);
   padding: 10px 22px;
-  box-shadow: 0 2px 10px rgba(31, 111, 235, 0.40), inset 0 1px 0 rgba(255, 255, 255, 0.22);
+  box-shadow: 0 2px 10px alpha(@theme_selected_bg_color, 0.3);
 }
 
 button.primary:hover {
-  background-image: linear-gradient(to bottom, #4b90f8, #2a6fe0);
-  border-color: #9cc2ff;
-  box-shadow: 0 4px 18px rgba(31, 111, 235, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.30);
+  background-color: shade(@theme_selected_bg_color, 1.08);
+  border-color: @theme_selected_bg_color;
+  box-shadow: 0 4px 18px alpha(@theme_selected_bg_color, 0.4);
 }
 
 button.primary:active {
-  background-image: linear-gradient(to bottom, #1556c9, #0f4ab0);
-  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.40);
+  background-color: shade(@theme_selected_bg_color, 0.9);
+  box-shadow: inset 0 2px 8px alpha(@accent_fg_color, 0.2);
 }
 
 button.primary label {
-  color: #ffffff;
+  color: @accent_fg_color;
   font-size: 13px;
   font-weight: 700;
 }
 
 .footer {
   font-size: 11px;
-  color: #6f6f92;
+  color: alpha(@window_fg_color, 0.56);
 }
 
-/* Tooltips: cápsula escura com borda azul e texto claro. */
 tooltip {
   padding: 7px 12px;
   border-radius: 12px;
@@ -464,12 +464,12 @@ tooltip {
 }
 
 tooltip.background {
-  background-color: rgba(18, 18, 38, 0.97);
+  background-color: alpha(@popover_bg_color, 0.97);
   background-clip: padding-box;
-  border: 1px solid rgba(127, 176, 255, 0.42);
+  border: 1px solid alpha(@popover_fg_color, 0.2);
   border-radius: 12px;
-  color: #eef3ff;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  color: @popover_fg_color;
+  box-shadow: inset 0 1px 0 alpha(@popover_fg_color, 0.08);
 }
 
 tooltip > box {
@@ -477,7 +477,7 @@ tooltip > box {
 }
 
 tooltip label {
-  color: #eef3ff;
+  color: @popover_fg_color;
   font-size: 12px;
   font-weight: 500;
 }
@@ -616,10 +616,6 @@ def build_ui(lang, release):
     )
 
     def on_activate(application):
-        settings = Gtk.Settings.get_default()
-        if settings is not None:
-            settings.set_property(
-                "gtk-interface-color-scheme", Gtk.InterfaceColorScheme.DARK)
         _apply_css()
         win = build_window(application, lang, release)
         win.present()
@@ -777,6 +773,25 @@ def build_window(app, lang, release):
     github_btn = _link_button(t["btn.github"], t["tip.github"],
                               github=True,
                               on_click=lambda *_: _open(REPO_URL))
+    github_icon = github_btn.get_child().get_first_child()
+    settings = Gtk.Settings.get_default()
+    if github_icon is not None and settings is not None:
+        def _sync_github_icon(*_args):
+            is_dark = (
+                settings.get_property("gtk-interface-color-scheme")
+                == Gtk.InterfaceColorScheme.DARK
+                or settings.get_property("gtk-application-prefer-dark-theme")
+            )
+            if is_dark:
+                github_icon.add_css_class("dark")
+            else:
+                github_icon.remove_css_class("dark")
+
+        _sync_github_icon()
+        settings.connect(
+            "notify::gtk-interface-color-scheme", _sync_github_icon)
+        settings.connect(
+            "notify::gtk-application-prefer-dark-theme", _sync_github_icon)
     github_btn.set_hexpand(True)
     btns.append(github_btn)
 
