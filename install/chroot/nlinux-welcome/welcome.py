@@ -423,33 +423,44 @@ button.link:hover label {
 }
 
 button.link:hover .github-icon {
+  filter: none;
   opacity: 1;
 }
 
 button.primary {
   background-image: none;
-  background-color: @theme_selected_bg_color;
-  border-radius: 10px;
-  border: 1px solid alpha(@accent_fg_color, 0.18);
+  background-color: alpha(@window_fg_color, 0.02);
+  border-radius: 999px;
+  border: 1px solid alpha(@window_fg_color, 0.22);
   padding: 10px 22px;
-  box-shadow: 0 2px 10px alpha(@theme_selected_bg_color, 0.3);
+  box-shadow: 0 1px 2px alpha(@window_fg_color, 0.12);
 }
 
 button.primary:hover {
-  background-color: shade(@theme_selected_bg_color, 1.08);
+  background-color: @theme_selected_bg_color;
   border-color: @theme_selected_bg_color;
-  box-shadow: 0 4px 18px alpha(@theme_selected_bg_color, 0.4);
+  box-shadow: 0 0 0 1px alpha(@theme_selected_bg_color, 0.45);
 }
 
 button.primary:active {
-  background-color: shade(@theme_selected_bg_color, 0.9);
-  box-shadow: inset 0 2px 8px alpha(@accent_fg_color, 0.2);
+  background-color: @theme_selected_bg_color;
+  border-color: @theme_selected_bg_color;
+  box-shadow: inset 0 1px 3px alpha(@accent_fg_color, 0.25);
+}
+
+button.primary:focus-visible {
+  outline: none;
+  box-shadow: 0 0 0 2px alpha(@theme_selected_bg_color, 0.85);
 }
 
 button.primary label {
-  color: @accent_fg_color;
+  color: @window_fg_color;
   font-size: 13px;
   font-weight: 700;
+}
+
+button.primary:hover label {
+  color: @theme_selected_fg_color;
 }
 
 .footer {
@@ -800,7 +811,12 @@ def build_window(app, lang, release):
     site_btn.set_hexpand(True)
     btns.append(site_btn)
 
-    close = Gtk.Button(label=t["btn.close"])
+    close = Gtk.Button()
+    close_content = Gtk.Box(
+        orientation=Gtk.Orientation.HORIZONTAL, spacing=8)
+    close_content.append(Gtk.Label(label="🚀"))
+    close_content.append(Gtk.Label(label=t["btn.close"]))
+    close.set_child(close_content)
     close.add_css_class("primary")
     close.set_margin_top(10)
     close.set_halign(Gtk.Align.CENTER)
