@@ -694,7 +694,10 @@ async function startInstall(product, btn, mode = "install") {
       statusCard(`${gerund} ${product.name}…`, tr("status.checking"), "", currentProgress);
       setTimeout(poll, 1400);
     }
-    else if (st.state === "pending") {
+    /* O fim é `done`, não a mudança de `state`: o servidor pode ter o estado
+       final pronto enquanto ainda monta o payload atualizado. Checar só o
+       estado fazia a janela anunciar falha numa instalação que deu certo. */
+    else if (!st.done && st.state !== "unknown") {
       currentProgress = Number.isFinite(st.progress)
         ? Math.max(currentProgress ?? 0, Math.min(99, st.progress))
         : null;
@@ -960,7 +963,7 @@ async function startSysUpdate() {
       statusCard(`${tr("status.updating").replace(/…$/, "")}…`, tr("status.checking"), "", currentProgress);
       setTimeout(poll, 1400);
     }
-    else if (st.state === "pending") {
+    else if (!st.done && st.state !== "unknown") {
       currentProgress = Number.isFinite(st.progress)
         ? Math.max(currentProgress ?? 0, Math.min(99, st.progress))
         : null;

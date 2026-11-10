@@ -626,7 +626,13 @@ class InstallJob:
                         os.unlink(a)
                     except OSError:
                         pass
-            self.state = "success" if self.success else "failed"
+            # O estado final NÃO é marcado aqui. Entre marcar "success" e
+            # terminar o trabalho ainda falta reconstruir o payload, que depois
+            # de um `pacman -Sy` relê o banco do pacman inteiro (~1,3 s). A
+            # janela consulta `/api/status` a cada 1,4 s e tratava qualquer
+            # estado diferente de "pending" como fim — pegava esse intervalo,
+            # via `done: false` e anunciava falha numa instalação que tinha dado
+            # certo. Quem fecha o job é `_finalize()`, no fim de cada caminho.
             if self.mode == "sysupdate":
                 if self.success:
                     self.progress = 100
@@ -657,7 +663,7 @@ class InstallJob:
                 except Exception as exc:
                     print(f"[nlinux] falha ao invalidar a lista de "
                           f"atualizações: {exc}")
-                self.done = True
+                self._finalize()
                 return
             if self.success:
                 self.progress = 100
@@ -673,11 +679,28 @@ class InstallJob:
                 rebuild_payload()
             except Exception as exc:
                 print(f"[nlinux] falha ao reconstruir o payload: {exc}")
-            self.done = True
+            self._finalize()
 
         threading.Thread(target=work, daemon=True).start()
 
+    def _finalize(self) -> None:
+        """Fecha o job: estado final e `done` andam juntos.
+
+        O estado só pode chegar ao cliente junto com `done = True`. Enquanto o
+        trabalho ainda está terminando (o payload, por exemplo), o status tem
+        de continuar "pending" — era exatamente a inconsistência que fazia a
+        janela anunciar falha depois de instalar com sucesso.
+        """
+        self.esperando_resposta = False
+        self._espera_desde = 0.0
+        self.state = "success" if self.success else "failed"
+        self.done = True
+
     def status(self) -> dict:
+        # Lê `done` uma vez: se ele já é True, `state` é final (é o último a ser
+        # escrito em `_finalize`). Se ainda não é, o job continua em andamento
+        # mesmo que outro campo já tenha sido atualizado.
+        done = self.done
         return {
             "esperando_resposta": self.esperando_resposta,
             "reiniciar": self.reiniciar,
@@ -685,9 +708,9 @@ class InstallJob:
             "id": self.id,
             "packages": self.packages,
             "mode": self.mode,
-            "state": self.state,
-            "done": self.done,
-            "success": self.success,
+            "state": self.state if done else "pending",
+            "done": done,
+            "success": self.success if done else False,
             "progress": self.progress,
             "lines": self.lines[-12:],
         }
