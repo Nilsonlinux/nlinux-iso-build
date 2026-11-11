@@ -5,7 +5,9 @@ set -euo pipefail
 source "$SHARE_DIR/chroot/helpers.sh"
 
 log "Janela de boas-vindas no primeiro login do sistema instalado"
-touch /etc/nlinux-installed
+INSTALLED_AT="$(date -Is)"
+mkdir -p /etc
+printf '%s\n' "$INSTALLED_AT" > /etc/nlinux-installed
 
 WELCOME_SRC="$SHARE_DIR/chroot/nlinux-welcome"
 WELCOME_DST="/usr/share/nlinux-welcome"
@@ -29,16 +31,22 @@ if command -v python3 >/dev/null 2>&1; then
 fi
 
 # --- /etc/nlinux-release: identidade da distro (nome, versão, data) -----
-# No modo offline a data do build já veio do live; o que falta (modo online)
-# é gravado aqui com a data da instalação.
+# No modo offline a identidade e a data do BUILD já vieram do live; no modo
+# online elas são geradas aqui. A data de INSTALAÇÃO é sempre gravada nesta
+# etapa, pois é ela que o NLinux Welcome mostra em "Data de instalação" (o
+# arquivo copiado do live carrega apenas a data em que a ISO foi gerada).
 if [[ ! -f /etc/nlinux-release ]]; then
-  log "Gravando /etc/nlinux-release (data da instalação)"
+  log "Gravando /etc/nlinux-release (identidade da distro)"
   {
     echo 'NLINUX_NAME="NLinux"'
     echo "NLINUX_VERSION=\"$(date +%Y.%m.%d)\""
-    echo "NLINUX_BUILT=\"$(date -Is)\""
+    echo "NLINUX_BUILT=\"$INSTALLED_AT\""
   } > /etc/nlinux-release
 fi
+
+log "Registrando a data de instalação em /etc/nlinux-release"
+sed -i '/^NLINUX_INSTALLED=/d' /etc/nlinux-release
+printf 'NLINUX_INSTALLED="%s"\n' "$INSTALLED_AT" >> /etc/nlinux-release
 
 # --- Atalho do app no menu ---------------------------------------------
 chmod 0644 /usr/share/applications/nlinux-welcome.desktop

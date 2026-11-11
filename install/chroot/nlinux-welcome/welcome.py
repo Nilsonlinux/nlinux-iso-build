@@ -538,6 +538,34 @@ def read_release():
     return data
 
 
+def installed_at(release):
+    """Data em que o sistema foi instalado.
+
+    Preferência: chave NLINUX_INSTALLED gravada pelo instalador. Em sistemas
+    instalados antes dessa chave existir, usa a data do marcador
+    /etc/nlinux-installed. Por último (ex.: execução no live) usa a data do
+    build da ISO.
+    """
+    ts = release.get("NLINUX_INSTALLED")
+    if ts:
+        return ts
+    try:
+        with open("/etc/nlinux-installed") as fh:
+            marker = fh.read().strip()
+        if marker:
+            return marker
+    except OSError:
+        pass
+    try:
+        st = os.stat("/etc/nlinux-installed")
+        birth = getattr(st, "st_birthtime", None)
+        return datetime.fromtimestamp(
+            birth if birth else st.st_mtime).strftime("%Y-%m-%dT%H:%M:%S")
+    except OSError:
+        pass
+    return release.get("NLINUX_BUILT") or release.get("NLINUX_VERSION")
+
+
 def format_date(ts, lang):
     """Formata uma data da ISO (2026.10.09) ou um timestamp para exibição."""
     if not ts:
@@ -749,8 +777,7 @@ def build_window(app, lang, release):
     root.append(board)
 
     info_card = _card(t["card.title"])
-    installed = format_date(
-        release.get("NLINUX_BUILT") or release.get("NLINUX_VERSION"), lang)
+    installed = format_date(installed_at(release), lang)
     latest = cached_latest_release() or release.get("NLINUX_VERSION", "rolling")
     info_card.append(_info_row(t["label.name"], "NLinux"))
     info_card.append(_info_row(t["label.update"], installed))
