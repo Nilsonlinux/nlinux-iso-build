@@ -161,6 +161,48 @@
       "proprietary": false,
       "alternate-to": null,
       "listed": true
+    },
+    "snes9x-gtk": {
+      "name": "Snes9x-gtk",
+      "summary": "Portable Super Nintendo Entertainment System (TM) emulator",
+      "description": "Portable Super Nintendo Entertainment System (TM) emulator",
+      "icon": "assets/snes9x-gtk.jpg",
+      "screenshots": [
+        "assets/snes9x-gtk-1.png",
+        "assets/snes9x-gtk-2.png"
+      ],
+      "developer-name": "",
+      "developer-url": "http://www.snes9x.com/",
+      "urls": {
+        "info": "http://www.snes9x.com/",
+        "android-app": "",
+        "ios-app": ""
+      },
+      "launch-cmd": "snes9x-gtk",
+      "arch": [
+        "x86_64"
+      ],
+      "releases": [
+        "rolling"
+      ],
+      "methods": [
+        "pacman"
+      ],
+      "pacman": {
+        "default": {
+          "source": "arch",
+          "main-package": "snes9x-gtk",
+          "install-packages": [
+            "snes9x-gtk"
+          ],
+          "remove-packages": [
+            "snes9x-gtk"
+          ]
+        }
+      },
+      "proprietary": false,
+      "alternate-to": null,
+      "listed": true
     }
   },
   "development": {
@@ -2616,9 +2658,9 @@
   },
   "stats": {
     "version": 7,
-    "revision": 374,
-    "compiled": 1793745474,
-    "apps": 63,
+    "revision": 375,
+    "compiled": 1794433256,
+    "apps": 64,
     "categories": 11
   },
   "distro": {

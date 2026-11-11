@@ -82,6 +82,9 @@
     "assets/simplescreenrecorder-1.jpg": "84cf25c00d7775ed47b1307c1c778f884e4ce83413cfd76501123c173ca60b23",
     "assets/simplescreenrecorder.png": "f47bf1ddbf0c96eed03079ac071e25ba7cceb99992fd23132789e05d8afe11a1",
     "assets/slack.png": "75a8e8c8b948e4cef4ccc3dc057af8fa8e8e2fbff3e4459046d4cccee2463b83",
+    "assets/snes9x-gtk-1.png": "4fccda51039d3e1716d6410deeeabf463ae3490c5698f43a41859a9362221ba8",
+    "assets/snes9x-gtk-2.png": "96883819770aa5ad478be64c2a661ca4fb345646f7273798cc5f0e56cdd7dd78",
+    "assets/snes9x-gtk.jpg": "298065a6b22296b5062af9c63e646b088221ab11d32ce037d5a51986174b686f",
     "assets/spotify-1.jpg": "004e08a6c23ed2083f5118e6d6c6a4a186da429c98a9d3fe62ee94821ecf1a8e",
     "assets/spotify.png": "7fb6433fd4be8c7a7cdef86d097b498dcadb77edad535e0438c15c1004ce440b",
     "assets/steam.webp": "eeb52baf81ab86fb67a5cbd89536388adcda3dd8d703f75f77d0ce39b3cf0aa8",
@@ -112,5 +115,5 @@
     "assets/zenmap-1.jpg": "136b7f268bd14d829843cb878c4f57db3fae8b4f551b392823e50d27d83efaa8",
     "assets/zenmap.png": "a18cd769f13f92d7ee70983893c977eaac5cce11f418314d337bf468ee745c17"
   },
-  "revision": 374
+  "revision": 375
 }
