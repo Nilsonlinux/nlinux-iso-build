@@ -277,32 +277,56 @@ menubutton.welcome-menu-button > button:hover {
 }
 
 button.highlighted:hover,
-menubutton.highlighted > button:hover,
-windowcontrols.overlaid > button:hover > image {
+menubutton.highlighted > button:hover {
   background-color: alpha(@window_fg_color, 0.12);
 }
 
 button.highlighted,
-menubutton.highlighted > button,
-windowcontrols.overlaid > button > image {
+menubutton.highlighted > button {
   background-color: transparent;
 }
 
 button.highlighted:active > *,
-menubutton.highlighted > button:active > *,
-windowcontrols.overlaid > button:active > image {
+menubutton.highlighted > button:active > * {
   transform: scale(0.8);
 }
 
 button.highlighted > *,
-menubutton.highlighted > button > *,
-windowcontrols.overlaid > button > image {
+menubutton.highlighted > button > * {
   transition: transform 0.2s;
 }
 
-image.overlaid,
-menubutton.overlaid > button > box > image,
+/* Mantém o botão do menu destacado enquanto o popover está aberto. */
+menubutton.welcome-menu-button > button:checked,
+menubutton.highlighted > button:checked {
+  background-color: alpha(@window_fg_color, 0.12);
+}
+
+menubutton.welcome-menu-button > button:checked:hover,
+menubutton.highlighted > button:checked:hover {
+  background-color: alpha(@window_fg_color, 0.15);
+}
+
+/* Botão de fechar: círculo de fundo como no Nautilus (libadwaita). */
 windowcontrols.overlaid > button > image {
+  color: @window_fg_color;
+  min-width: 24px;
+  min-height: 24px;
+  background-color: alpha(@window_fg_color, 0.10);
+  border-radius: 100%;
+  transition: background-color 200ms ease, transform 0.2s;
+}
+
+windowcontrols.overlaid > button:hover > image {
+  background-color: alpha(@window_fg_color, 0.15);
+}
+
+windowcontrols.overlaid > button:active > image {
+  background-color: alpha(@window_fg_color, 0.30);
+}
+
+image.overlaid,
+menubutton.overlaid > button > box > image {
   color: @window_fg_color;
   filter: drop-shadow(0 0 1px alpha(black, 0.4))
     drop-shadow(0 0 3px alpha(black, 0.1))
