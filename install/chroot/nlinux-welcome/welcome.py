@@ -309,18 +309,23 @@ windowcontrols.overlaid > button > image {
     drop-shadow(0 0 9px alpha(black, 0.3));
 }
 
-popover.welcome-menu.background,
-popover.welcome-menu.background > contents,
-popover.welcome-menu.background > arrow {
-  background-color: @popover_bg_color;
+popover.welcome-menu.background {
+  background-color: transparent;
   background-image: none;
-  color: @popover_fg_color;
-  border: none;
   box-shadow: none;
 }
 
-popover.welcome-menu.background,
+popover.welcome-menu.background > arrow,
 popover.welcome-menu.background > contents {
+  background-color: @popover_bg_color;
+  background-image: none;
+  color: @popover_fg_color;
+  border: 1px solid alpha(@popover_fg_color, 0.12);
+  box-shadow: none;
+}
+
+popover.welcome-menu.background > contents {
+  background-clip: padding-box;
   border-radius: 12px;
 }
 
@@ -723,6 +728,8 @@ def build_window(app, lang, release):
     menu_button.set_primary(True)
     menu_popover = Gtk.PopoverMenu.new_from_model(menu)
     menu_popover.add_css_class("welcome-menu")
+    menu_popover.set_position(Gtk.PositionType.BOTTOM)
+    menu_popover.set_has_arrow(True)
     menu_button.set_popover(menu_popover)
     for css_class in ("highlighted", "overlaid", "welcome-menu-button"):
         menu_button.add_css_class(css_class)
