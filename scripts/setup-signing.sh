@@ -139,7 +139,7 @@ EOF
 
 configure_pinentry() {
   # Respeita GNUPGHOME (usado nos testes e por quem separa o chaveiro).
-  local gpg_home conf pin=""
+  local gpg_home conf pin="" curses="" graphical="" candidate
   gpg_home="$(gpgconf --list-dirs homedir)"
   mkdir -p "$gpg_home"
   chmod 700 "$gpg_home"
@@ -149,28 +149,61 @@ configure_pinentry() {
   chmod 600 "$conf"
 
   if ! grep -q '^[[:space:]]*pinentry-program' "$conf"; then
-    # Para git em terminal, pinentry-curses é o mais confiável: funciona em
-    # Wayland, X11, SSH e console. Pinentry gráfico só entra se não houver
-    # nenhum pinentry de terminal (ou se o usuário pedir por variável).
     if [[ -n "${NLINUX_PINENTRY:-}" ]]; then
       pin="$(command -v "${NLINUX_PINENTRY}" || true)"
     fi
+
     if [[ -z "$pin" ]]; then
-      for candidate in pinentry-curses pinentry-tty pinentry; do
-        if command -v "$candidate" >/dev/null 2>&1; then
-          pin="$(command -v "$candidate")"
-          break
-        fi
-      done
-    fi
-    if [[ -z "$pin" && -n "${WAYLAND_DISPLAY:-}${DISPLAY:-}" ]]; then
+      # O build da curadoria (pkexec/runuser) roda SEM terminal. Um pinentry
+      # só-curses ali falha com "ioctl inapropriado para dispositivo", então
+      # geramos um wrapper que escolhe o backend conforme o contexto:
+      #   - com TTY  -> curses (git no terminal)
+      #   - sem TTY  -> gráfico (build da curadoria)
+      curses="$(command -v pinentry-curses || command -v pinentry-tty || true)"
       for candidate in pinentry-gnome3 pinentry-qt pinentry-gtk; do
-        if command -v "$candidate" >/dev/null 2>&1; then
-          pin="$(command -v "$candidate")"
-          break
+        graphical="$(command -v "$candidate" || true)"
+        [[ -n "$graphical" ]] || continue
+        # Backend com biblioteca faltando (ex.: gnome3 sem gcr) não serve.
+        if command -v ldd >/dev/null 2>&1 \
+           && ldd "$graphical" 2>/dev/null | grep -q 'not found'; then
+          graphical=""
+          continue
         fi
+        break
       done
+
+      if [[ -n "$curses" || -n "$graphical" ]]; then
+        pin="$gpg_home/pinentry-nlinux.sh"
+        {
+          echo '#!/bin/sh'
+          echo '# Gerado por scripts/setup-signing.sh. NÃO editar à mão.'
+          echo '# Escolhe o pinentry conforme o contexto passado pelo gpg-agent.'
+          echo 'tty=""; disp="${DISPLAY:-}"; prev=""'
+          echo 'for a in "$@"; do'
+          echo '  case "$prev" in'
+          echo '    --ttyname) tty="$a" ;;'
+          echo '    --display) disp="$a" ;;'
+          echo '  esac'
+          echo '  prev="$a"'
+          echo 'done'
+          if [[ -n "$curses" ]]; then
+            echo "if [ -n \"\$tty\" ] && [ -c \"\$tty\" ]; then exec \"$curses\" \"\$@\"; fi"
+          fi
+          if [[ -n "$graphical" ]]; then
+            # pinentry-gtk é GTK2 (só X11). Sessões Wayland exportam
+            # GDK_BACKEND=wayland e o backend gráfico falharia sem isto.
+            if [[ "$graphical" == *pinentry-gtk ]]; then
+              echo "if [ -n \"\$disp\" ]; then DISPLAY=\"\$disp\" GDK_BACKEND=x11 exec \"$graphical\" \"\$@\"; fi"
+            else
+              echo "if [ -n \"\$disp\" ]; then exec \"$graphical\" \"\$@\"; fi"
+            fi
+          fi
+          echo 'exec pinentry "$@"'
+        } > "$pin"
+        chmod 700 "$pin"
+      fi
     fi
+
     [[ -n "$pin" ]] || die "nenhum pinentry encontrado (instale pinentry)."
     {
       echo "# Adicionado por scripts/setup-signing.sh"
@@ -181,8 +214,10 @@ configure_pinentry() {
   grep -q '^[[:space:]]*default-cache-ttl' "$conf" || echo 'default-cache-ttl 3600' >> "$conf"
   grep -q '^[[:space:]]*max-cache-ttl'     "$conf" || echo 'max-cache-ttl 28800' >> "$conf"
 
-  # pinentry-curses/tty precisa saber em qual terminal falar.
-  if grep -q 'pinentry-program .*pinentry-\(curses\|tty\)' "$conf"; then
+  # pinentry-curses/tty precisa saber em qual terminal falar. O wrapper
+  # adaptativo também só usa curses quando o agente recebe o ttyname, que
+  # depende de GPG_TTY estar exportado no cliente.
+  if grep -qE 'pinentry-program .*(pinentry-(curses|tty)|pinentry-nlinux\.sh)' "$conf"; then
     local rc
     for rc in "$HOME/.bashrc" "$HOME/.zshrc"; do
       [[ -f "$rc" ]] || continue
